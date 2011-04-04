@@ -1,0 +1,14 @@
+Region Fixer 0.0.1
+
+This is a little script that tries to fix corrupted chunks in region files using old backup copies of the minecraft world. If you don't have a copy, you can eliminate the corrupted chunks.
+
+Supported platforms: Should work where python does.
+
+For more information run “python region-fixer.py --help”
+
+This is the very first version of the program and works perfectly for me. But the bugs always appear, so please, MAKE A BACKUP OF YOUR WORLD BEFORE RUNNING THIS, I'M NOT RESPONSIBLE OF WHAT HAPPENS TO YOUR WORLD. Think that you are playing with you precious saved games :P .
+
+Good luck! :)
+
+Written by Alejandro Aguilera (Fenixin) 
+Sponsored by NITRADO servers (http://nitrado.net)
