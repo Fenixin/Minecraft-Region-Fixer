@@ -20,7 +20,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import argparse
+from optparse import OptionParser
 from glob import glob
 from os.path import join, split, exists, getsize
 import nbt.region as region
@@ -93,32 +93,32 @@ def check_chunk(region_file, x, z):
 
 def main():
     
-    parser = argparse.ArgumentParser(description='Script to check the integrity of a region file, \
+    parser = OptionParser(description='Script to check the integrity of a region file, \
                                             and to fix it, when posible, using with a backup of the map. \
                                             It uses NBT by twoolie the fork by MidnightLightning. \
                                             Written by Alejandro Aguilera (Fenixin). Sponsored by \
                                             NITRADO Servers (http://nitrado.net)',\
-                                            prog = 'region-fixer')
-    parser.add_argument('--version', action='version', version='%(prog)s 0.0.1')
-    parser.add_argument('world', metavar = '<world>', type = str, help = 'Minecraft world directory. If it\'s called only with this \
+                                            prog = 'region-fixer', version='0.0.1')
+    #~ parser.add_option('--version', action='version', version='%(prog)s 0.0.1')
+    parser.add_option('--world', metavar = '<world>', type = str, help = 'Minecraft world directory. If it\'s called only with this \
                                             option it will scan the world and print the number of corrupted chunks ', default = None)
-    parser.add_argument('--backups', metavar = '<backups>', type = str, help = 'List of backup directories of the Minecraft world. \
+    parser.add_option('--backups', metavar = '<backups>', type = str, help = 'List of backup directories of the Minecraft world. \
                                         Warning! This script is not going to check if it\'s the same world, so be careful! \
                                         This argument can be a comma separated list (but never with spaces between elements!).', default = None)
-    parser.add_argument('--delete', action = 'store_true', help = '[WARNING!] This option deletes! And deleting can make you lose data, so be careful! :P \
+    parser.add_option('--delete', action = 'store_true', help = '[WARNING!] This option deletes! And deleting can make you lose data, so be careful! :P \
                                             This option will delete all the corrupted chunk. Used with --backups it will delete all the non-fixed chunks. \
                                             Minecraft will regenerate the chunk. TODO at the moment this only deletes the header \
                                             leaving the chunk data in place.', default = False)
-    args = parser.parse_args()
+    (options, args) = parser.parse_args()
 
     # do things with the args
-    world_backup_dirs = args.backups
+    world_backup_dirs = options.backups
     if world_backup_dirs: # create a list of directories containing the backup of the region files
         region_backup_dirs = parse_backup_list(world_backup_dirs)
         if not region_backup_dirs:
             print "[WARNING] No valid backup directories found. Will only scan the world."
 
-    world = args.world
+    world = options.world
     world_region_dir = join(world,"region")
     print "Scanning directory..."
     region_files = glob(world_region_dir + "/r.*.*.mcr")
@@ -206,7 +206,7 @@ def main():
         delete_chunks = bad_chunks
 
 
-    if args.delete:
+    if options.delete and delete_chunks:
         region_file = region_path = None # variable inizializations
         counter = 0
         
