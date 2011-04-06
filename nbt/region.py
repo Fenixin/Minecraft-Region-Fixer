@@ -1,8 +1,3 @@
-#
-# For more info of the region file format:
-# http://www.minecraftforum.net/viewtopic.php?f=25&t=120160
-# 
-
 from nbt import NBTFile
 from chunk import Chunk
 from struct import pack, unpack
@@ -11,6 +6,17 @@ import zlib
 from StringIO import StringIO
 import math, time, datetime
 from os.path import getsize
+
+class RegionHeaderError(Exception):
+	"""Error in the header of the region file for a given chunk"""
+	def __init__(self, msg):
+		self.msg = msg
+
+class ChunkDataError(Exception):
+	"""Error in the data of a chunk, included the bytes of lenght and byte version"""
+	def __init__(self, msg):
+		self.msg = msg
+		
 
 class RegionFile(object):
 	"""
@@ -24,6 +30,7 @@ class RegionFile(object):
 		if fileobj:
 			self.file = fileobj
 		self.chunks = []
+		self.header = {}
 		self.extents = None
 		if self.file:
 			self.parse_header()
@@ -33,7 +40,14 @@ class RegionFile(object):
 			self.file.close()
 
 	def parse_header(self):
-		pass
+		for index in range(0,4100,4):
+			self.file.seek(index)
+			offset, length = unpack(">IB", "\0"+self.file.read(4))
+			if offset:
+				x = (index/4) % 32
+				z = int(index/4)/32
+				self.header[x,z] = (offset,length,0)
+		print self.header
 	
 	def get_chunks(self):
 		index = 0
@@ -62,26 +76,24 @@ class RegionFile(object):
 		self.file.seek(block)
 		offset, length = unpack(">IB", "\0"+self.file.read(4))
 		offset = offset * 1024*4 # offset is in 4KiB sectors
-		
-		if offset >= getsize(self.filename) - 1024*4: # is trying to read the chunk outside the file, corrupted header!
-			raise zlib.error
-		#~ print offset
+		if offset >= getsize(self.filename) - 1024*4: # mininmun chunk size = 1 sector
+			raise RegionHeaderError('The offset of the chunk is outside the file')
+
 		if offset:
 			self.file.seek(offset)
 			length = unpack(">I", self.file.read(4))
 			length = length[0] # For some reason, this is coming back as a tuple
+			if length == 0: # no chunk can be 0 length!
+				raise ChunkDataError('The length of the chunk is 0')
+
+			if length > 32768 + 16384 + 16384 + 16384 + 256 + 1024: 
+			# aprox size of an uncompressed chunk: blocks + data + skylight + block light + heightmap + entities(~1024?)
+			# also a chunk can't be bigger than 1MB
+				raise ChunkDataError('The length of the chunk is too big')
+
 			compression = unpack(">B", self.file.read(1))
 			compression = compression[0]
-			#~ print length
-			if length == 0:
-				raise zlib.error # this is not a good idea... but we handle corrupt chunks with zlib.error! TODO TODO TODO
-                
-			elif length > 82432: # aprox. size of an uncompressed chunk, if it's bigger the header is corrupted!
-				raise zlib.error
-			else:
-				chunk = self.file.read(length-1)
-            
-			#~ try: # This solves problems with bad gzip header
+			chunk = self.file.read(length-1)
 			if (compression == 2):
 				chunk = zlib.decompress(chunk)
 				chunk = StringIO(chunk)
@@ -89,9 +101,6 @@ class RegionFile(object):
 			else:
 				chunk = StringIO(chunk)
 				return NBTFile(fileobj=chunk) #pass compressed; will be filtered through Gzip
-
-			#~ except:
-				raise zlib.error# this is not a good idea... but we handle corrupt chunks with this!
 		else:
 			return None
 	
@@ -137,7 +146,7 @@ class RegionFile(object):
 					if found:
 						break
 
-		#write out chunk to regionz
+		#write out chunk to region
 		self.file.seek(sector*4096)
 		self.file.write(pack(">I", data.len+1)) #length field
 		self.file.write(pack(">B", 2)) #compression field
@@ -154,12 +163,4 @@ class RegionFile(object):
 		#write timestamp
 		self.file.seek(4096+4*(x+z*32))
 		timestamp = time.mktime(datetime.datetime.now().timetuple())
-		self.file.write(pack(">I", int(timestamp)))
-
-	def unlink_chunk(self, x, z):
-		""" Removes a chunk from the header of the region file (write zeros in the offset of the chunk).
-		Using only this method leaves the chunk data intact, fragmenting the region file (unconfirmed).
-		This is an start to a better function remove_chunk"""
-		
-		self.file.seek(4*(x+z*32))
-		self.file.write(pack(">IB", 0, 0)[1:])
+		self.file.write(pack(">I", timestamp))

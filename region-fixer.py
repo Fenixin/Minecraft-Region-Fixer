@@ -84,19 +84,18 @@ def check_chunk(region_file, x, z):
         if chunk:
             data_coords = get_chunk_data_coords(chunk)
             header_coords = get_global_chunk_coords(region_file.filename, x, z)
-            #~ print type(data_coords[0]),type(data_coords[1]),type(header_coords[0]),type(header_coords[1])
             if data_coords != header_coords:
                 return -2
 
-    except zlib.error: # nbt and region files have workarounds!
+    except zlib.error:
         return -1
-        
-    #~ except IOError: # This one and the next are a workaround!
-        #~ return -1
-    
-    #~ except OverflowError: # they need to be handled in nbt and region
-        #~ return -1
-    
+
+    except region.RegionHeaderError:
+        return -1
+		
+    except region.ChunkDataError:
+        return -1
+
     return chunk
 
 def get_global_chunk_coords(region_filename, chunkX, chunkZ):
