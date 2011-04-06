@@ -137,7 +137,7 @@ class RegionFile(object):
 					if found:
 						break
 
-		#write out chunk to region
+		#write out chunk to regionz
 		self.file.seek(sector*4096)
 		self.file.write(pack(">I", data.len+1)) #length field
 		self.file.write(pack(">B", 2)) #compression field
@@ -154,7 +154,7 @@ class RegionFile(object):
 		#write timestamp
 		self.file.seek(4096+4*(x+z*32))
 		timestamp = time.mktime(datetime.datetime.now().timetuple())
-		self.file.write(pack(">I", timestamp))
+		self.file.write(pack(">I", int(timestamp)))
 
 	def unlink_chunk(self, x, z):
 		""" Removes a chunk from the header of the region file (write zeros in the offset of the chunk).
