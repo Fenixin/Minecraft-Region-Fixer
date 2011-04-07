@@ -87,15 +87,15 @@ def check_chunk(region_file, x, z):
             if data_coords != header_coords:
                 return -2
 
-    except zlib.error:
-        return -1
-
     except region.RegionHeaderError:
         return -1
 		
     except region.ChunkDataError:
         return -1
 
+    except region.ChunkHeaderError:
+        return -1
+		
     return chunk
 
 def get_global_chunk_coords(region_filename, chunkX, chunkZ):
@@ -155,13 +155,12 @@ def delete_chunk_list(list):
 
 def replace_chunk_list(list, backup_list):
 
-    unfixed_list = list
-    
+    unfixed_list = []
+    unfixed_list.extend(list)
+
     counter = 0
-    
+
     for corrupted_chunk in list:
-        print counter
-        print corrupted_chunk
         x = corrupted_chunk[1]
         z = corrupted_chunk[2]
 
