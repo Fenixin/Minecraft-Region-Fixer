@@ -249,3 +249,12 @@ class RegionFile(object):
 		self.file.seek(4096+4*(x+z*32))
 		timestamp = time.mktime(datetime.datetime.now().timetuple())
 		self.file.write(pack(">I", timestamp))
+
+
+	def unlink_chunk(self, x, z):
+		""" Removes a chunk from the header of the region file (write zeros in the offset of the chunk).
+		Using only this method leaves the chunk data intact, fragmenting the region file (unconfirmed).
+		This is an start to a better function remove_chunk"""
+		
+		self.file.seek(4*(x+z*32))
+		self.file.write(pack(">IB", 0, 0)[1:])
