@@ -41,6 +41,20 @@ def parse_backup_list(world_backup_dirs):
             print "[ATTENTION] The directory \"{0}\" is not a minecraft world directory".format(dir)
     return region_backup_dirs
 
+
+
+def parse_chunk_list(chunk_list, region_dir):
+    """ Fenerate a list of chunk as done by check_region_file
+        but using a list of global chunk coords tuples as input"""
+    parsed_list = []
+    for chunk in chunk_list:
+        region_name = get_chunk_region(chunk[0], chunk[1])
+        fullpath = join(region_dir, region_name)
+        parsed_list.append((fullpath, chunk[0], chunk[1]))
+
+    return parsed_list
+    
+
 def check_region_file(region_file):
     """ Takes a RegionFile obj and returns a list of corrupted 
     chunks where each element represents a corrupted chunk and
@@ -107,8 +121,18 @@ def get_global_chunk_coords(region_filename, chunkX, chunkZ):
     chunkZ += regionZ*32
     
     return chunkX, chunkZ
+
+def get_chunk_region(chunkX, chunkZ):
+    """ Returns the name of the region file given global chunk coords """
     
+    regionX = chunkX / 32
+    regionZ = chunkZ / 32
     
+    region_name = 'r.' + str(regionX) + '.' + str(regionZ) + '.mcr'
+    
+    return region_name
+    
+
 def get_region_coords(region_filename):
     """ Splits the region filename (full pathname or just filename)
         and returns his region coordinates.
@@ -236,8 +260,9 @@ def main():
                                             leaving the chunk data in place.', default = False)
     parser.add_option('--delete-wrong-located', action = 'store_true', help = '[WARNING!] This option deletes! The same as --delete-corrupted but for \
                                             wrong located chunks', default = False)
+    parser.add_option('--delete-list', metavar = 'delete_list', type = str, help = 'This is a list of chunks to delete, the list must be a python list: \
+                                            [(1,1), (-10,32)]. [INFO] if you use this option the world won\'t be scanned', default = None)
 
-                                            
     (options, args) = parser.parse_args()
     
     if not options.world:
@@ -245,7 +270,6 @@ def main():
         exit()
     
     print "Welcome to Region Fixer!"
-
 
     # do things with the args
     world_backup_dirs = options.backups_corrupted
@@ -267,37 +291,37 @@ def main():
 
     print "There are {0} region files found on the world directory.".format(len(region_files))
 
+    if not options.delete_list:
+        # check for corrupted chunks
+        print 
+        print "{0:#^60}".format(' Scanning for corrupted chunks ')
 
-    # check for corrupted chunks
-    print 
-    print "{0:#^60}".format(' Scanning for corrupted chunks ')
+        total_chunks = 0
+        bad_chunks = []
+        wrong_located_chunks = []
+        total_regions = len(region_files)
+        counter_region = 0
+        for region_path in region_files:
+            counter_region += 1
+            print "Scanning {0}   ...  {1}/{2}".format(region_path, counter_region, total_regions)
+            if getsize(region_path) != 0: # some region files are 0 bytes size!
+                region_file = region.RegionFile(region_path)
+            else:
+                continue
+            bad_list, wrong_list, chunks = check_region_file(region_file)
+            
+            bad_chunks.extend(bad_list)
+            wrong_located_chunks.extend(wrong_list)
+            
+            total_chunks += chunks
 
-    total_chunks = 0
-    bad_chunks = []
-    wrong_located_chunks = []
-    total_regions = len(region_files)
-    counter_region = 0
-    for region_path in region_files:
-        counter_region += 1
-        print "Scanning {0}   ...  {1}/{2}".format(region_path, counter_region, total_regions)
-        if getsize(region_path) != 0: # some region files are 0 bytes size!
-            region_file = region.RegionFile(region_path)
-        else:
-            continue
-        bad_list, wrong_list, chunks = check_region_file(region_file)
-        
-        bad_chunks.extend(bad_list)
-        wrong_located_chunks.extend(wrong_list)
-        
-        total_chunks += chunks
-
-    print "Found {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(\
-                                len(bad_chunks), len(wrong_located_chunks),total_chunks)
+        print "Found {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(\
+                                    len(bad_chunks), len(wrong_located_chunks),total_chunks)
 
 
     # Try to fix corrupted chunks with the backup copy
 
-    if options.backups_corrupted and bad_chunks:
+    if options.backups_corrupted and bad_chunks and not options.delete_list:
         print "{0:#^60}".format(' Trying to fix corrupted chunks ')
         #~ delete_chunks = bad_chunks # don't worry, fixed chunk are removed
                            # from this list, and this will be used
@@ -305,11 +329,11 @@ def main():
         unfixed_list, counter = replace_chunk_list(bad_chunks, backup_dirs_corrupted)
         print "\n{0} fixed chunks of a total of {1} corrupted chunks".format(counter, len(bad_chunks))
         
-    else:
+    elif not options.delete_list and bad_chunks:
         delete_chunks = bad_chunks
 
 
-    if options.backups_wrong_located and wrong_located_chunks:
+    if options.backups_wrong_located and wrong_located_chunks and not options.delete_list:
         print "{0:#^60}".format(' Trying to fix wrong located chunks ')
         #~ delete_chunks = bad_chunks # don't worry, fixed chunk are removed
                            # from this list, and this will be used
@@ -317,13 +341,13 @@ def main():
         unfixed_list, counter = replace_chunk_list(bad_chunks, backup_dirs_corrupted)
         print "\n{0} fixed chunks of a total of {1} wrong located chunks".format(counter, len(bad_chunks))
         
-    else:
+    elif not options.delete_list and bad_chunks:
         delete_chunks = bad_chunks
 
 
     # delete bad chunks! (if asked for)
     
-    if options.delete_corrupted and delete_chunks:
+    if options.delete_corrupted and delete_chunks and not options.delete_list:
         
         print "{0:#^60}".format(' Deleting  corrupted chunks ')
 
@@ -334,7 +358,7 @@ def main():
         print "Deleted {0} corrupted chunks".format(counter)
     
     
-    if options.delete_wrong_located and wrong_located_chunks:
+    if options.delete_wrong_located and wrong_located_chunks and not options.delete_list:
         
         print "{0:#^60}".format(' Deleting wrong located chunks ')
         
@@ -343,6 +367,25 @@ def main():
         print "Done!"
         
         print "Deleted {0} wrong located chunks".format(counter)
+    
+    if options.delete_list:
+        try:
+            delete_list = eval(options.delete_list)
+        except:
+            print 'Wrong chunklist!'
+            exit()
+            
+        delete_list = parse_chunk_list(delete_list, world_region_dir)
         
+        print delete_list
+        print "{0:#^60}".format(' Deleting the chunks on the list ')
+        
+        print "... ",
+        
+        counter = delete_chunk_list(delete_list)
+        print "Done!"
+        
+        print "Deleted {0} chunks".format(counter)
+
 if __name__ == '__main__':
     exit(main())
