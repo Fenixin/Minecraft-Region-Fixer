@@ -330,7 +330,7 @@ def main():
         print "\n{0} fixed chunks of a total of {1} corrupted chunks".format(counter, len(bad_chunks))
         
     elif not options.delete_list and bad_chunks:
-        delete_chunks = bad_chunks
+        delete_chunks = unfixed_list
 
 
     if options.backups_wrong_located and wrong_located_chunks and not options.delete_list:
@@ -342,12 +342,12 @@ def main():
         print "\n{0} fixed chunks of a total of {1} wrong located chunks".format(counter, len(bad_chunks))
         
     elif not options.delete_list and bad_chunks:
-        delete_chunks = bad_chunks
+        delete_chunks = unfixed_list
 
 
     # delete bad chunks! (if asked for)
     
-    if options.delete_corrupted and delete_chunks and not options.delete_list:
+    if options.delete_corrupted and bad_chunks and not options.delete_list:
         
         print "{0:#^60}".format(' Deleting  corrupted chunks ')
 
@@ -377,7 +377,6 @@ def main():
             
         delete_list = parse_chunk_list(delete_list, world_region_dir)
         
-        print delete_list
         print "{0:#^60}".format(' Deleting the chunks on the list ')
         
         print "... ",
