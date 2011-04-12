@@ -264,9 +264,9 @@ def main():
     # Other options
     other_group = OptionGroup(parser, "Others", "This option is a different part of the program and is incompatible with the options above.")
     
-    other_group.add_option('--delete-list', metavar = 'delete_list', type = str, help = 'This is a list of chunks to delete, the list must be a python list: \
-                                            [(1,1), (-10,32)]. [INFO] if you use this option the world won\'t be scanned', default = None)
-
+    other_group.add_option('--delete-list', metavar = '<delete_list>', type = str, help = 'This is a list of chunks to delete, the list must be a python list: \
+                                            [(1,1), (-10,32)]. [INFO] if you use this option the world won\'t be scanned. Protect the parthesis from bash!', default = None)
+    parser.add_option_group(other_group)
     (options, args) = parser.parse_args()
 
     # Only the world directory goes to args
