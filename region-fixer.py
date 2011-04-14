@@ -55,7 +55,7 @@ def parse_chunk_list(chunk_list, region_dir):
     return parsed_list
     
 
-def check_region_file(region_file):
+def check_region_file(region_file, delete_entities = False, entity_limit = 1000):
     """ Takes a RegionFile obj and returns a list of corrupted 
     chunks where each element represents a corrupted chunk and
     contains a tuple:
@@ -68,9 +68,23 @@ def check_region_file(region_file):
     try:
         for x in range(32):
             for z in range(32):
+                #~ print "In chunk ({0},{1})".format(x,z)
                 chunk = check_chunk(region_file, x, z)
                 if isinstance(chunk, nbt.TAG_Compound):
                     total_chunks += 1
+                    total_entities = len(chunk['Level']['Entities'].tags)
+                    # deleting entities is here because to parse a chunk with thousands of wrong entities
+                    # takes a long time, and once detected is better to fix it at once.
+                    if delete_entities == True and total_entities > entity_limit:
+                        
+                        #~ print len(chunk['Level']['Entities'].tags)
+                        empty_tag_list = nbt.TAG_List(nbt.TAG_Byte,'','Entities')
+
+                        chunk['Level']['Entities'] = empty_tag_list
+                        #~ print len(chunk['Level']['Entities'].tags)
+                        print "Deleted {0} entities in chunk ({1},{2}).".format(total_entities, x, z)
+                        region_file.write_chunk(x, z, chunk)
+                        
                 elif chunk == -1:
                     total_chunks += 1
                     bad_chunks.append((region_file.filename,x,z))
@@ -78,8 +92,9 @@ def check_region_file(region_file):
                     total_chunks += 1
                     wrong_located_chunks.append((region_file.filename,x,z))
                 # if is None do nothing
-                
-        region_file.__del__()
+                del chunk
+
+        del region_file
         
     except KeyboardInterrupt:
         print "\nInterrupted by user\n"
@@ -260,6 +275,10 @@ def main():
                                             leaving the chunk data in place.', default = False)
     parser.add_option('--delete-wrong-located', '--dw', action = 'store_true', help = '[WARNING!] This option deletes! The same as --delete-corrupted but for \
                                             wrong located chunks', default = False)
+                                            
+    parser.add_option('--delete-entities', '--de', action = 'store_true', help = '[WARNING!] This option deletes! This deletes ALL the entities of a chunk when it has more entities than --entity-limit (1000 by default). Please, make sure you know the meaning of "it deletes all the entities" before using this option. Region-Fixer will delete the entities when scanning so you can stop and resume the process', default = False, dest = 'delete_entities')
+    parser.add_option('--entity-limit', '--el', action = 'store', type = int, help = '[WARNING!] This option deletes! Specify the limit for the \
+                                            --delete-entities option (detaulft = 1000).', dest = 'entity_limit', default = 1000,)
     
     # Other options
     other_group = OptionGroup(parser, "Others", "This option is a different part of the program and is incompatible with the options above.")
@@ -356,7 +375,7 @@ def main():
                 region_file = region.RegionFile(region_path)
             else:
                 continue
-            bad_list, wrong_list, chunks = check_region_file(region_file)
+            bad_list, wrong_list, chunks = check_region_file(region_file, options.delete_entities, options.entity_limit)
 
             corrupted_chunks.extend(bad_list)
             wrong_located_chunks.extend(wrong_list)
