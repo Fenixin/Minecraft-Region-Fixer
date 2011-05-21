@@ -5,6 +5,7 @@
 #   Region Fixer.
 #   Fix your region files with a backup copy of your Minecraft world.
 #   Copyright (C) 2011  Alejandro Aguilera (Fenixin)
+#   https://github.com/Fenixin/Minecraft-Region-Fixer
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -23,6 +24,7 @@
 from optparse import OptionParser, OptionGroup
 from glob import glob
 from os.path import join, split, exists, getsize
+import sys
 import nbt.region as region
 import zlib
 import gzip
@@ -53,7 +55,7 @@ def parse_chunk_list(chunk_list, region_dir):
         parsed_list.append((fullpath, chunk[0], chunk[1]))
 
     return parsed_list
-    
+		
 
 def check_region_file(region_file, delete_entities = False, entity_limit = 1000):
     """ Takes a RegionFile obj and returns a list of corrupted 
@@ -62,6 +64,7 @@ def check_region_file(region_file, delete_entities = False, entity_limit = 1000)
      (region file, coord x, coord y) 
      and returns also the total number of chunks (including corrupted ones)
      """
+
     total_chunks = 0
     bad_chunks = []
     wrong_located_chunks = []
@@ -98,7 +101,7 @@ def check_region_file(region_file, delete_entities = False, entity_limit = 1000)
         
     except KeyboardInterrupt:
         print "\nInterrupted by user\n"
-        exit()
+        sys.exit()
         
     return bad_chunks, wrong_located_chunks, total_chunks
 
@@ -255,12 +258,16 @@ def replace_chunk_list(list, backup_list):
 def main():
     
     usage = 'usage: %prog [options] <world-path>'
+    epilog = 'Copyright (C) 2011  Alejandro Aguilera (Fenixin) \
+    https://github.com/Fenixin/Minecraft-Region-Fixer                                        \
+    This program comes with ABSOLUTELY NO WARRANTY; for details see COPYING.txt. This is free software, and you are welcome to redistribute it under certain conditions; see COPYING.txt for details.'
+
     parser = OptionParser(description='Script to check the integrity of a region file, \
                                             and to fix it, when posible, using with a backup of the map. \
                                             It uses NBT by twoolie the fork by MidnightLightning. \
                                             Written by Alejandro Aguilera (Fenixin). Sponsored by \
                                             NITRADO Servers (http://nitrado.net)',\
-                                            prog = 'region-fixer', version='0.0.1', usage=usage)
+                                            prog = 'region-fixer', version='0.0.1', usage=usage, epilog=epilog)
     parser.add_option('--backups', '-b', metavar = '<backups>', type = str, dest = 'backups', help = 'List of backup directories of the Minecraft \
                                         world to use to fix corrupted chunks and/or wrong located chunks. Warning! This script is not going \
                                         to check if it \'s the same world, so be careful! \
@@ -292,15 +299,15 @@ def main():
 
     if not args:
         parser.error("No world path specified!")
-        exit()
+        sys.exit()
     elif len(args) > 1:
         parser.error("Only one world dirctory needed!")
-        exit()
+        sys.exit()
 
     world_path = args[0]
     if not exists(world_path):
         parser.error("The world path doesn't exists!")
-        exit()
+        sys.exit()
 
     # Check basic options incompatibilities
     if options.backups and not (options.fix_corrupted or options.fix_wrong_located):
@@ -328,14 +335,14 @@ def main():
     world_region_dir = join(world_path,"region")
     if not exists(world_region_dir):
         print "Error: Doesn't look like a minecraft world directory!"
-        exit()
+        sys.exit()
 
     print "Scanning directory..."
     region_files = glob(world_region_dir + "/r.*.*.mcr")
 
     if not region_files:
         print "Error: No region files found!"
-        exit()
+        sys.exit()
     
     print "There are {0} region files found on the world directory.".format(len(region_files))
 
@@ -345,7 +352,7 @@ def main():
             delete_list = eval(options.delete_list)
         except:
             print 'Error: Wrong chunklist!'
-            exit()
+            sys.exit()
             
         delete_list = parse_chunk_list(delete_list, world_region_dir)
         
@@ -425,4 +432,4 @@ def main():
 
 
 if __name__ == '__main__':
-    exit(main())
+    main()

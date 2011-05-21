@@ -1,7 +1,6 @@
 ======================
 Minecraft Region Fixer
 ======================
-(version 0.0.1)
 
 By Alejandro Aguilera (Fenixin) 
 Sponsored by NITRADO servers (http://nitrado.net)
@@ -23,6 +22,9 @@ This script works with Python 2.7.x, and DOESN'T work with python 3.x.
 Usage
 =====
 You can read the program help running: “python region-fixer.py --help”
+
+(NOTE: if you downloaded the .exe version for windows, use 
+ "region-fixer.exe" instead of "python region-fixer.py")
 
 Here are some examples:
 
