@@ -337,14 +337,20 @@ def main():
         print "Error: Doesn't look like a minecraft world directory!"
         sys.exit()
 
-    print "Scanning directory..."
-    region_files = glob(world_region_dir + "/r.*.*.mcr")
+    world_nether_region_dir = join(world_path,"DIM-1/region")
+    if not exists(world_nether_region_dir):
+        print "Info: No nether dimension in the world directory."
 
-    if not region_files:
+    print "Scanning directory..."
+    normal_region_files = glob(world_region_dir + "/r.*.*.mcr")
+    nether_region_files = glob(world_nether_region_dir + "/r.*.*.mcr")
+
+    if not normal_region_files and not nether_regioin_files:
         print "Error: No region files found!"
         sys.exit()
-    
-    print "There are {0} region files found on the world directory.".format(len(region_files))
+
+    print "There are {0} region files found on the world directory.".format(len(normal_region_files) + len(nether_region_files))
+    region_files = normal_region_files + nether_region_files
 
     # The program starts
     if options.delete_list: # Delete the given list of chunks
