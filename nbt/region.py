@@ -86,8 +86,9 @@ class RegionFile(object):
 
 			elif offset < 2 and offset != 0:
 				status = self.STATUS_CHUNK_IN_HEADER
-
-			elif (offset + length)*4 > self.size:
+			
+			# (don't forget!) offset and length comes in sectors of 4096 bytes
+			elif (offset + length)*4096 > self.size:
 				status = self.STATUS_CHUNK_OUT_OF_FILE
 
 			else:
