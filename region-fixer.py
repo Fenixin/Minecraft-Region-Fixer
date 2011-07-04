@@ -88,7 +88,7 @@ def check_region_file(region_file, delete_entities = False, entity_limit = 500):
                         print "Deleted {0} entities in chunk ({1},{2}).".format(total_entities, x, z)
                         region_file.write_chunk(x, z, chunk)
                     
-                    elif total_entities > 500:
+                    elif total_entities > entity_limit:
                         print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,region_file,total_entities)
                         
                 elif chunk == -1:
@@ -104,7 +104,7 @@ def check_region_file(region_file, delete_entities = False, entity_limit = 500):
         
     except KeyboardInterrupt:
         print "\nInterrupted by user\n"
-        sys.exit()
+        sys.exit(1)
         
     return bad_chunks, wrong_located_chunks, total_chunks
 
