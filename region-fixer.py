@@ -57,7 +57,7 @@ def parse_chunk_list(chunk_list, region_dir):
     return parsed_list
 		
 
-def check_region_file(region_file, delete_entities = False, entity_limit = 1000):
+def check_region_file(region_file, delete_entities = False, entity_limit = 500):
     """ Takes a RegionFile obj and returns a list of corrupted 
     chunks where each element represents a corrupted chunk and
     contains a tuple:
@@ -87,6 +87,9 @@ def check_region_file(region_file, delete_entities = False, entity_limit = 1000)
                         #~ print len(chunk['Level']['Entities'].tags)
                         print "Deleted {0} entities in chunk ({1},{2}).".format(total_entities, x, z)
                         region_file.write_chunk(x, z, chunk)
+                    
+                    elif total_entities > 500:
+                        print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,region_file,total_entities)
                         
                 elif chunk == -1:
                     total_chunks += 1
@@ -94,8 +97,8 @@ def check_region_file(region_file, delete_entities = False, entity_limit = 1000)
                 elif chunk == -2:
                     total_chunks += 1
                     wrong_located_chunks.append((region_file.filename,x,z))
-                # if is None do nothing
-                del chunk
+                # if None do nothing
+                del chunk # unload chunk from memory
 
         del region_file
         
@@ -384,7 +387,7 @@ def main():
         for region_path in region_files:
             counter_region += 1
             print "Scanning {0}   ...  {1}/{2}".format(region_path, counter_region, total_regions)
-            if getsize(region_path) != 0: # some region files are 0 bytes size!
+            if getsize(region_path) != 0: # some region files are 0 bytes size! And minecraft seems to handle them without problem.
                 region_file = region.RegionFile(region_path)
             else:
                 continue
