@@ -133,6 +133,30 @@ def check_chunk(region_file, x, z):
 		
     return chunk
 
+def check_level_file(level_file):
+    """ At the moment only tries to read a level.dat file and print a
+    warning if there are problems. """
+    try:
+        level_dat = nbt.NBTFile(filename = level_file)
+        print "\'level.dat\' is redable."
+        del level_dat
+        
+    except Exception, e:
+        print  "[WARNING!] The level.dat may be corrupted. Exception: \'{0}\'".format(e)
+
+def check_player_file(player_file):
+    """ At the moment only tries to read a .dat player file. it returns
+    0 if it's ok and 1 if has some problem """
+    try:
+        player_dat = nbt.NBTFile(filename = player_file)
+        del player_dat
+        return 0
+        
+    except Exception, e:
+        print  "[WARNING!] The player file {0} may be corrupted. Exception: \'{1}\'".format(player_file, e)
+        return 1
+    
+
 def get_global_chunk_coords(region_filename, chunkX, chunkZ):
     """ Takes the region filename and the chunk local 
     coords and returns the global chunkcoords as integerss """
@@ -321,6 +345,9 @@ def main():
 
 
     # do things with the option args
+    level_dat_filename = join(world_path, "level.dat")
+    player_files = glob(join(join(world_path, "players"), "*.dat"))
+
     backups = options.backups
     use_backups = False
     if backups: # create a list of directories containing the backup of the region files
@@ -350,7 +377,11 @@ def main():
         print "Error: No region files found!"
         sys.exit()
 
-    print "There are {0} region files found on the world directory.".format(len(normal_region_files) + len(nether_region_files))
+    if len(player_files) != 0:
+        print "There are {0} region files and {1} player files in the world directory.".format(len(normal_region_files) + len(nether_region_files), len(player_files))
+    else:
+        print "There are {0} region files in the world directory.".format(len(normal_region_files) + len(nether_region_files))
+
     region_files = normal_region_files + nether_region_files
 
     # The program starts
@@ -360,7 +391,7 @@ def main():
         except:
             print 'Error: Wrong chunklist!'
             sys.exit()
-            
+
         delete_list = parse_chunk_list(delete_list, world_region_dir)
         
         print "{0:#^60}".format(' Deleting the chunks on the list ')
@@ -373,9 +404,28 @@ def main():
         print "Deleted {0} chunks".format(counter)
         
     else:
+        # check the level.dat file and the *.dat files in players directory
+
+        print "\n{0:#^60}".format(' Scanning level.dat ')
+
+        if not exists(level_dat_filename):
+            print "[WARNING!] \'level.dat\' doesn't exist!"
+        else:
+            check_level_file(level_dat_filename)
+        
+        print "\n{0:#^60}".format(' Scanning player files ')
+        
+        problems = 0
+        for player in player_files:
+            problems += check_player_file(player)
+        
+        if not problems:
+            print "All player files are redable."
+
+
         # check for corrupted chunks
 
-        print "\n{0:#^60}".format(' Scanning for corrupted chunks ')
+        print "\n{0:#^60}".format(' Scanning region files ')
 
         total_chunks = 0
         corrupted_chunks = []

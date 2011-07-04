@@ -11,6 +11,10 @@ Tries to fix corrupted chunks in region files using old backup copies
 of the Minecraft world. If you don't have a copy, you can eliminate the
 corrupted chunks.
 
+Also it scans the 'level.dat' file and the player '*.dat' and tries to 
+read them. If there are problems prints warnings. At the moment it
+doesn't fix any problem in these files.
+
 Web page:
 https://github.com/Fenixin/Minecraft-Region-Fixer
 
