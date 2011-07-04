@@ -286,9 +286,9 @@ def main():
     parser.add_option('--delete-wrong-located', '--dw', action = 'store_true', help = '[WARNING!] This option deletes! The same as --delete-corrupted but for \
                                             wrong located chunks', default = False)
                                             
-    parser.add_option('--delete-entities', '--de', action = 'store_true', help = '[WARNING!] This option deletes! This deletes ALL the entities of a chunk when it has more entities than --entity-limit (1000 by default). Please, make sure you know the meaning of "it deletes all the entities" before using this option. Region-Fixer will delete the entities when scanning so you can stop and resume the process', default = False, dest = 'delete_entities')
+    parser.add_option('--delete-entities', '--de', action = 'store_true', help = '[WARNING!] This option deletes! This deletes ALL the entities of a chunk when it has more entities than --entity-limit (500 by default). Please, make sure you know the meaning of "it deletes all the entities" before using this option. Region-Fixer will delete the entities when scanning so you can stop and resume the process', default = False, dest = 'delete_entities')
     parser.add_option('--entity-limit', '--el', action = 'store', type = int, help = '[WARNING!] This option deletes! Specify the limit for the \
-                                            --delete-entities option (detaulft = 1000).', dest = 'entity_limit', default = 1000,)
+                                            --delete-entities option (detaulft = 1000).', dest = 'entity_limit', default = 500,)
     
     # Other options
     other_group = OptionGroup(parser, "Others", "This option is a different part of the program and is incompatible with the options above.")
