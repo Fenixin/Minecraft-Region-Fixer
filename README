@@ -118,13 +118,18 @@ This options have an equivalent for wrong located chunks.
 
 Another problem that Region Fixer can fix is an entity problem. Some 
 maps (I think is related to maps with floating islands) stores lots and 
-lots of entities that are wrong entities (I've seen maps with 250.000 
-spiders in one chunk!). Using the option "--delete-entities" Region
-Fixer will delete all the entities in that chunk (i.e., signs will lose
-the text, chests the items, animals will disappear). Note that you still 
-need to lad the chunk in Region Fixer to fix it, and it may need lots of
-RAM and time. You can use this in combination with "--entity-limit" to
-set your limit (default 1000 entities).
+lots of entities (mobs and items dropped in the ground, etc...) that are
+wrong  entities (I've seen maps with 250.000 spiders in one chunk!).
+Using the option "--delete-entities" Region Fixer will delete all the
+entities in that chunk, it doesn't touch TileEntities (chests, 
+singposts, noteblocks, etc...), only deletes Entities. At the moment
+of writing this Entities are: 
+mobs, items on the ground (don't worry chests are safe), vehicles 
+(boats and minecarts) and dynamic tiles (falling sand and activated TNT).
+
+Note that you still need to load the chunk in Region Fixer to fix it, 
+and it may need GIGs of RAM and time. You can use this in combination
+with "--entity-limit" to set your limit (default 500 entities).
 
     $python region-fixer.py --delete-entities --entity-limit=100 /media/disk/corrupted-world/
     Welcome to Region Fixer!
@@ -146,7 +151,7 @@ For more info: “python region-fixer.py --help”
 Warning
 =======
 
-This program has been tested with a few world, but the bugs always
+This program has been tested with a lot of worlds, but the bugs always
 appear, so please, MAKE A BACKUP OF YOUR WORLD BEFORE RUNNING THIS,
 I'M NOT RESPONSIBLE OF WHAT HAPPENS TO YOUR WORLD. Think that you are
 playing with you precious saved games :P .
