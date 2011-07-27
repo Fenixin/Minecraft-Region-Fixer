@@ -29,6 +29,7 @@ import nbt.region as region
 import zlib
 import gzip
 import nbt.nbt as nbt
+import progressbar
 
 def parse_backup_list(world_backup_dirs):
     """ Generates a list with the input of backup dirs, also check if
@@ -420,7 +421,7 @@ def main():
             problems += check_player_file(player)
         
         if not problems:
-            print "All player files are redable."
+            print "All player files are readable."
 
 
         # check for corrupted chunks
@@ -432,9 +433,13 @@ def main():
         wrong_located_chunks = []
         total_regions = len(region_files)
         counter_region = 0
+        pbar = progressbar.ProgressBar(
+            widgets=['Scanning: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()],
+            maxval=total_regions).start()
         for region_path in region_files:
             counter_region += 1
-            print "Scanning {0}   ...  {1}/{2}".format(region_path, counter_region, total_regions)
+            #print "Scanning {0}   ...  {1}/{2}".format(region_path, counter_region, total_regions)
+            
             if getsize(region_path) != 0: # some region files are 0 bytes size! And minecraft seems to handle them without problem.
                 region_file = region.RegionFile(region_path)
             else:
@@ -445,6 +450,9 @@ def main():
             wrong_located_chunks.extend(wrong_list)
 
             total_chunks += chunks
+            pbar.update(counter_region)
+            
+        pbar.finish()
 
         print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(\
                                     len(corrupted_chunks), len(wrong_located_chunks),total_chunks)
