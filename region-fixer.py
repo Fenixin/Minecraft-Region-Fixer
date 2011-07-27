@@ -31,6 +31,13 @@ import gzip
 import nbt.nbt as nbt
 import progressbar
 
+class FractionWidget(progressbar.ProgressBarWidget):
+    def __init__(self, sep=' / '):
+        self.sep = sep
+        
+    def update(self, pbar):
+        return '%2d%s%2d' % (pbar.currval, self.sep, pbar.maxval)
+
 def parse_backup_list(world_backup_dirs):
     """ Generates a list with the input of backup dirs, also check if
     the backups dirs exists"""
@@ -434,7 +441,7 @@ def main():
         total_regions = len(region_files)
         counter_region = 0
         pbar = progressbar.ProgressBar(
-            widgets=['Scanning: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()],
+            widgets=['Scanning: ', FractionWidget(), ' ', progressbar.Percentage(), ' ', progressbar.Bar(left='[',right=']'), ' ', progressbar.ETA()],
             maxval=total_regions).start()
         for region_path in region_files:
             counter_region += 1
