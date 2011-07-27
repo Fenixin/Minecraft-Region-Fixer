@@ -30,6 +30,8 @@ import zlib
 import gzip
 import nbt.nbt as nbt
 import progressbar
+import multiprocessing
+import time
 
 class FractionWidget(progressbar.ProgressBarWidget):
     def __init__(self, sep=' / '):
@@ -116,6 +118,12 @@ def check_region_file(region_file, delete_entities = False, entity_limit = 500):
         
     return bad_chunks, wrong_located_chunks, total_chunks
 
+def _mp_check_region_file(region_file):
+    counter.value += 1
+    if getsize(region_file) is not 0:
+        return check_region_file(region.RegionFile(region_file),delete_entities,entity_limit)
+    else:
+        return None
 
 def check_chunk(region_file, x, z):
     """ Returns the chunk if exists, -1 if it's corrupted, -2 if it the
@@ -146,7 +154,7 @@ def check_level_file(level_file):
     warning if there are problems. """
     try:
         level_dat = nbt.NBTFile(filename = level_file)
-        print "\'level.dat\' is redable."
+        print "\'level.dat\' is readable."
         del level_dat
         
     except Exception, e:
@@ -318,7 +326,8 @@ def main():
                                             wrong located chunks', default = False)
                                             
     parser.add_option('--delete-entities', '--de', action = 'store_true', help = '[WARNING!] This option deletes! This deletes ALL the entities of chunks with more entities than --entity-limit (500 by default). In a Minecraft world entities are mobs and items dropped in the grond, items in chests and other stuff won\'t be touched. Read the README for more info. Region-Fixer will delete the entities when scanning so you can stop and resume the process', default = False, dest = 'delete_entities')
-    parser.add_option('--entity-limit', '--el', action = 'store', type = int, help = 'Specify the limit for the --delete-entities option (detaulft = 500).', dest = 'entity_limit', default = 500,)
+    parser.add_option('--entity-limit', '--el', action = 'store', type = int, help = 'Specify the limit for the --delete-entities option (default = 500).', dest = 'entity_limit', default = 500,)
+    parser.add_option('--processes', '-p', action = 'store', type = int, help = 'Set the number of workers to use for scanning region files. Default is to not use multiprocessing at all', default = 1)
     
     # Other options
     other_group = OptionGroup(parser, "Others", "This option is a different part of the program and is incompatible with the options above.")
@@ -442,27 +451,52 @@ def main():
         counter_region = 0
         pbar = progressbar.ProgressBar(
             widgets=['Scanning: ', FractionWidget(), ' ', progressbar.Percentage(), ' ', progressbar.Bar(left='[',right=']'), ' ', progressbar.ETA()],
-            maxval=total_regions).start()
-        for region_path in region_files:
-            counter_region += 1
-            #print "Scanning {0}   ...  {1}/{2}".format(region_path, counter_region, total_regions)
-            
-            if getsize(region_path) != 0: # some region files are 0 bytes size! And minecraft seems to handle them without problem.
-                region_file = region.RegionFile(region_path)
-            else:
-                continue
-            bad_list, wrong_list, chunks = check_region_file(region_file, options.delete_entities, options.entity_limit)
-
-            corrupted_chunks.extend(bad_list)
-            wrong_located_chunks.extend(wrong_list)
-
-            total_chunks += chunks
-            pbar.update(counter_region)
-            
-        pbar.finish()
-
-        print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(\
-                                    len(corrupted_chunks), len(wrong_located_chunks),total_chunks)
+            maxval=total_regions)
+        if abs(options.processes) > 1:
+            #there is probably a better way to pass these values but this works for now
+            counter_region = multiprocessing.Value('i', 0)
+            def _mp_pool_init(prog_counter,del_ents,ent_limit):
+                global delete_entities
+                delete_entities = del_ents
+                global entity_limit
+                entity_limit = ent_limit
+                global counter
+                counter = prog_counter
+            pool = multiprocessing.Pool(processes=options.processes, initializer=_mp_pool_init,
+                initargs=(counter_region,options.delete_entities,options.entity_limit))
+            pbar.start()
+            #the chunksize (arg #3) is pretty arbitrary, could probably be tweeked for better performance
+            result = pool.map_async(_mp_check_region_file, region_files, max(1,(total_regions//options.processes)//8))
+            while result.ready() is False:
+                #this loop should probably use result.wait(1) but i didn't want to take the time to figure out what wait() returns if it hits the timeout
+                time.sleep(1)
+                pbar.update(counter_region.value)
+            pbar.finish()
+            for r in result.get():
+                if r is not None:
+                    corrupted_chunks.extend(r[0])
+                    wrong_located_chunks.extend(r[1])
+                    total_chunks += r[2]
+        else:
+            pbar.start()
+            for region_path in region_files:
+                counter_region += 1
+                #print "Scanning {0}   ...  {1}/{2}".format(region_path, counter_region, total_regions)
+                
+                if getsize(region_path) != 0: # some region files are 0 bytes size! And minecraft seems to handle them without problem.
+                    region_file = region.RegionFile(region_path)
+                else:
+                    continue
+                bad_list, wrong_list, chunks = check_region_file(region_file, options.delete_entities, options.entity_limit)
+    
+                corrupted_chunks.extend(bad_list)
+                wrong_located_chunks.extend(wrong_list)
+    
+                total_chunks += chunks
+                pbar.update(counter_region)
+            pbar.finish()
+        print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(
+            len(corrupted_chunks), len(wrong_located_chunks),total_chunks)
 
 
         # Try to fix corrupted chunks with the backup copy
