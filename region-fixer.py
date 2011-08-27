@@ -314,7 +314,7 @@ def main():
                                             It uses NBT by twoolie the fork by MidnightLightning. \
                                             Written by Alejandro Aguilera (Fenixin). Sponsored by \
                                             NITRADO Servers (http://nitrado.net)',\
-                                            prog = 'region-fixer', version='0.0.1', usage=usage, epilog=epilog)
+                                            prog = 'region-fixer', version='0.0.5', usage=usage, epilog=epilog)
     parser.add_option('--backups', '-b', metavar = '<backups>', type = str, dest = 'backups', help = 'List of backup directories of the Minecraft \
                                         world to use to fix corrupted chunks and/or wrong located chunks. Warning! This script is not going \
                                         to check if it \'s the same world, so be careful! \
