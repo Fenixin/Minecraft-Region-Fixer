@@ -99,7 +99,7 @@ def scan_mcr_file(region_file, delete_entities = False, entity_limit = 500):
                         region_file.write_chunk(x, z, chunk)
                     
                     elif total_entities > entity_limit:
-                        print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,region_file,total_entities)
+                        print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,split(region_file.filename)[1],total_entities)
                         
                 elif chunk == -1:
                     total_chunks += 1
