@@ -74,7 +74,7 @@ def scan_mcr_file(region_file, delete_entities = False, entity_limit = 500):
      (region file, coord x, coord y) 
      and returns also the total number of chunks (including corrupted ones)
      """
-
+    #if region_file is TODO TODO TODO Where should be the "if regionfile size == 0 skip"?
     total_chunks = 0
     bad_chunks = []
     wrong_located_chunks = []
