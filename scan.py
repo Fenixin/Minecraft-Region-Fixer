@@ -121,7 +121,6 @@ def scan_mcr_file(region_file, delete_entities = False, entity_limit = 500):
     return filename,bad_chunks, wrong_located_chunks, total_chunks
 
 def _mp_scan_mcr_file(region_file):
-    counter.value += 1
     if getsize(region_file) is not 0:
         r = scan_mcr_file(region.RegionFile(region_file),delete_entities,entity_limit)
         _mp_scan_mcr_file.q.put(r)
@@ -162,27 +161,25 @@ def scan_all_mcr_files(world_obj, options):
     total_regions = len(w.all_mcr_files)
     counter_region = 0
 
+    # init progress bar
     if not options.verbose:
         pbar = progressbar.ProgressBar(
             widgets=['Scanning: ', FractionWidget(), ' ', progressbar.Percentage(), ' ', progressbar.Bar(left='[',right=']'), ' ', progressbar.ETA()],
             maxval=total_regions)
 
-    if abs(options.processes) > 1:
+    if abs(options.processes) >= 1:
         #there is probably a better way to pass these values but this works for now
         q = multiprocessing.Queue()
-        counter_region = multiprocessing.Value('d', 0) # TODO TODO Do we really need this?
 
-        def _mp_pool_init(prog_counter,del_ents,ent_limit,q):
+        def _mp_pool_init(del_ents,ent_limit,q):
             _mp_scan_mcr_file.q = q
             global delete_entities
             delete_entities = del_ents
             global entity_limit
             entity_limit = ent_limit
-            global counter
-            counter = prog_counter
 
         pool = multiprocessing.Pool(processes=options.processes, initializer=_mp_pool_init,
-            initargs=(counter_region,options.delete_entities,options.entity_limit,q))
+            initargs=(options.delete_entities,options.entity_limit,q))
 
         if not options.verbose:
             pbar.start()
@@ -196,25 +193,22 @@ def scan_all_mcr_files(world_obj, options):
             #this loop should probably use result.wait(1) but i didn't want to take the time to figure out what wait() returns if it hits the timeout
             # TODO TODO TODO is really necessary result.wait(1)??
             time.sleep(0.5)
-            if options.verbose:
-                if q.qsize() > 0:
-                    filename,corrupted, wrong, total = q.get()
-                    counter += 1
+            if q.qsize() > 0:
+                filename,corrupted, wrong, total = q.get()
+                corrupted_chunks.extend(corrupted)
+                wrong_located_chunks.extend(wrong)
+                total_chunks += total
+                counter += 1
+                if options.verbose:
                     stats = "(corrupted: {0}, wrong located: {1}, chunks: {2})".format( len(corrupted), len(wrong), total)
                     print "Scanned {0: <15} {1:.<60} {2}/{3}".format(filename, stats, counter, total_regions)
-            else:
-                pbar.update(counter)
+                else:
+                    pbar.update(counter)
         
         if not options.verbose: pbar.finish()
-        
-        # making the results redable for region-fixer
-        for r in result.get():
-            if r is not None:
-                corrupted_chunks.extend(r[1])
-                wrong_located_chunks.extend(r[2])
-                total_chunks += r[3]
 
-    else:
+
+    else: # single thread version, non used anymore
         counter = 0
         
         # init the progress bar
@@ -246,6 +240,7 @@ def scan_all_mcr_files(world_obj, options):
         
         if not options.verbose:    
             pbar.finish()
+
     print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(
         len(corrupted_chunks), len(wrong_located_chunks),total_chunks)
 
