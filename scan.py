@@ -101,6 +101,13 @@ def scan_mcr_file(region_file, delete_entities = False, entity_limit = 500):
                     elif total_entities > entity_limit:
                         print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,split(region_file.filename)[1],total_entities)
                         
+                        # This stores all the entities in a file,
+                        # sometimes comes handy.
+                        #~ pretty_tree = chunk['Level']['Entities'].pretty_tree()
+                        #~ name = "{2}.chunk.{0}.{1}.txt".format(x,z,split(region_file.filename)[1])
+                        #~ archivo = open(name,'w')
+                        #~ archivo.write(pretty_tree)
+                        
                 elif chunk == -1:
                     total_chunks += 1
                     bad_chunks.append((region_file.filename,x,z))

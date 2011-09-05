@@ -48,6 +48,7 @@ class World(object):
         # Constants
         self.CORRUPTED = 1
         self.WRONG_LOCATED = 2
+        self.TOO_MUCH_ENTITIES = 3
 
 def get_global_chunk_coords(region_filename, chunkX, chunkZ):
     """ Takes the region filename and the chunk local 
