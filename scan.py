@@ -123,9 +123,13 @@ def scan_mcr_file(region_file, delete_entities = False, entity_limit = 500):
         
     return filename,bad_chunks, wrong_located_chunks, total_chunks
 
+def _mp_pool_init(options,q):
+    _mp_scan_mcr_file.q = q
+    _mp_scan_mcr_file.options = options
+
 def _mp_scan_mcr_file(region_file):
     if getsize(region_file) is not 0:
-        r = scan_mcr_file(region.RegionFile(region_file),delete_entities,entity_limit)
+        r = scan_mcr_file(region.RegionFile(region_file),_mp_scan_mcr_file.options.delete_entities,_mp_scan_mcr_file.options.entity_limit)
         _mp_scan_mcr_file.q.put(r)
         return r
     else:
@@ -156,7 +160,8 @@ def scan_chunk(region_file, x, z):
     return chunk
 
 def scan_all_mcr_files(world_obj, options):
-
+    ##############################################################
+    # COMPROBAR QUE FUNCIONA CON REGIONES DE TAMANO CERO!
     w = world_obj
     total_chunks = 0
     corrupted_chunks = []
@@ -173,16 +178,7 @@ def scan_all_mcr_files(world_obj, options):
     if abs(options.processes) >= 1:
         #there is probably a better way to pass these values but this works for now
         q = multiprocessing.Queue()
-
-        def _mp_pool_init(del_ents,ent_limit,q):
-            _mp_scan_mcr_file.q = q
-            global delete_entities
-            delete_entities = del_ents
-            global entity_limit
-            entity_limit = ent_limit
-
-        pool = multiprocessing.Pool(processes=options.processes, initializer=_mp_pool_init,
-            initargs=(options.delete_entities,options.entity_limit,q))
+        pool = multiprocessing.Pool(processes=options.processes,initializer=_mp_pool_init,initargs=(options,q))
 
         if not options.verbose:
             pbar.start()
