@@ -89,12 +89,8 @@ def scan_mcr_file(region_file, delete_entities = False, entity_limit = 500):
                     # deleting entities is in here because to parse a chunk with thousands of wrong entities
                     # takes a long time, and once detected is better to fix it at once.
                     if delete_entities == True and total_entities > entity_limit:
-                        
-                        #~ print len(chunk['Level']['Entities'].tags)
                         empty_tag_list = nbt.TAG_List(nbt.TAG_Byte,'','Entities')
-
                         chunk['Level']['Entities'] = empty_tag_list
-                        #~ print len(chunk['Level']['Entities'].tags)
                         print "Deleted {0} entities in chunk ({1},{2}).".format(total_entities, x, z)
                         region_file.write_chunk(x, z, chunk)
                     
