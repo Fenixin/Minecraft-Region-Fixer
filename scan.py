@@ -86,7 +86,7 @@ def scan_mcr_file(region_file, delete_entities = False, entity_limit = 500):
                 if isinstance(chunk, nbt.TAG_Compound):
                     total_chunks += 1
                     total_entities = len(chunk['Level']['Entities'].tags)
-                    # deleting entities is here because to parse a chunk with thousands of wrong entities
+                    # deleting entities is in here because to parse a chunk with thousands of wrong entities
                     # takes a long time, and once detected is better to fix it at once.
                     if delete_entities == True and total_entities > entity_limit:
                         
@@ -189,11 +189,9 @@ def scan_all_mcr_files(world_obj, options):
 
         # printing status
         counter = 0
-        while not result.ready() or (q.qsize() > 0 and options.verbose):
-            #this loop should probably use result.wait(1) but i didn't want to take the time to figure out what wait() returns if it hits the timeout
-            # TODO TODO TODO is really necessary result.wait(1)??
+        while not result.ready() or (q.qsize() > 0):
             time.sleep(0.5)
-            if q.qsize() > 0:
+            if q.qsize() > 0: # important, it hangs waiting for results
                 filename,corrupted, wrong, total = q.get()
                 corrupted_chunks.extend(corrupted)
                 wrong_located_chunks.extend(wrong)
@@ -208,7 +206,7 @@ def scan_all_mcr_files(world_obj, options):
         if not options.verbose: pbar.finish()
 
 
-    else: # single thread version, non used anymore
+    else: # single thread version, non used anymore, left here because just-in-case
         counter = 0
         
         # init the progress bar
@@ -240,6 +238,8 @@ def scan_all_mcr_files(world_obj, options):
         
         if not options.verbose:    
             pbar.finish()
+
+
 
     print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(
         len(corrupted_chunks), len(wrong_located_chunks),total_chunks)
