@@ -129,7 +129,9 @@ def _mp_pool_init(options,q):
 
 def _mp_scan_mcr_file(region_file):
     if getsize(region_file) is not 0:
-        r = scan_mcr_file(region.RegionFile(region_file),_mp_scan_mcr_file.options.delete_entities,_mp_scan_mcr_file.options.entity_limit)
+        r = scan_mcr_file(region.RegionFile(region_file),
+            _mp_scan_mcr_file.options.delete_entities,
+            _mp_scan_mcr_file.options.entity_limit)
         _mp_scan_mcr_file.q.put(r)
         return r
     else:
