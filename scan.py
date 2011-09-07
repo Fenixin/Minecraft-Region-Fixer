@@ -96,6 +96,7 @@ def scan_mcr_file(region_file_path):
                         region_file.write_chunk(x, z, chunk)
                     
                     elif total_entities > entity_limit:
+                        
                         print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,split(region_file.filename)[1],total_entities)
                         
                         # This stores all the entities in a file,
@@ -125,9 +126,10 @@ def scan_mcr_file(region_file_path):
     scan_mcr_file.q.put((filename,bad_chunks, wrong_located_chunks, total_chunks))
     return filename,bad_chunks, wrong_located_chunks, total_chunks
 
-def _mp_pool_init(options,q):
+def _mp_pool_init(world_obj,options,q):
     scan_mcr_file.q = q
     scan_mcr_file.options = options
+    scan_mcr_file.w = world_obj
 
 def scan_chunk(region_file, x, z):
     """ Returns the chunk if exists, -1 if it's corrupted, -2 if it the
@@ -171,7 +173,8 @@ def scan_all_mcr_files(world_obj, options):
     #~ if False:
         #there is probably a better way to pass these values but this works for now
         q = multiprocessing.Queue()
-        pool = multiprocessing.Pool(processes=options.processes,initializer=_mp_pool_init,initargs=(options,q))
+        pool = multiprocessing.Pool(processes=options.processes,
+                initializer=_mp_pool_init,initargs=(w,options,q))
 
         if not options.verbose:
             pbar.start()
