@@ -67,6 +67,11 @@ def scan_all_players(world_obj):
     for player in world_obj.player_files:
         scan_player(world_obj, player)
 
+def _mp_pool_init(world_obj,options,q):
+    scan_mcr_file.q = q
+    scan_mcr_file.options = options
+    scan_mcr_file.w = world_obj
+
 def scan_mcr_file(region_file_path):
     """ Takes a RegionFile obj and returns a list of corrupted 
     chunks where each element represents a corrupted chunk and
@@ -78,16 +83,17 @@ def scan_mcr_file(region_file_path):
     entity_limit = scan_mcr_file.options.entity_limit
     region_file = region.RegionFile(region_file_path)
     w = scan_mcr_file.w
-    total_chunks = 0
-    bad_chunks = []
-    wrong_located_chunks = []
+    chunks = 0
+    corrupted = 0
+    wrong = 0
+    entities_prob = 0
     filename = split(region_file.filename)[1]
     try:
         for x in range(32):
             for z in range(32):
                 chunk = scan_chunk(region_file, x, z)
                 if isinstance(chunk, nbt.TAG_Compound):
-                    total_chunks += 1
+                    chunks += 1
                     total_entities = len(chunk['Level']['Entities'].tags)
                     # deleting entities is in here because to parse a chunk with thousands of wrong entities
                     # takes a long time, and once detected is better to fix it at once.
@@ -109,13 +115,13 @@ def scan_mcr_file(region_file_path):
                         #~ archivo.write(pretty_tree)
                         
                 elif chunk == -1:
-                    total_chunks += 1
+                    chunks += 1
                     add_problem(w, filename, (x,z), w.CORRUPTED)
-                    bad_chunks.append((region_file.filename,x,z))
+                    corrupted += 1
                 elif chunk == -2:
-                    total_chunks += 1
+                    chunks += 1
                     add_problem(w, filename, (x,z), w.WRONG_LOCATED)
-                    wrong_located_chunks.append((region_file.filename,x,z))
+                    corrupted += 1
                 # if None do nothing
                 del chunk # unload chunk from memory
 
@@ -125,8 +131,8 @@ def scan_mcr_file(region_file_path):
         print "\nInterrupted by user\n"
         sys.exit(1)
 
-    scan_mcr_file.q.put((filename,bad_chunks, wrong_located_chunks, total_chunks))
-    return filename,bad_chunks, wrong_located_chunks, total_chunks
+    scan_mcr_file.q.put((filename,corrupted, wrong, chunks))
+    return filename,corrupted, wrong, chunks
 
 def add_problem(world_obj, region_file, chunk, problem):
     w = world_obj
@@ -140,11 +146,6 @@ def add_problem(world_obj, region_file, chunk, problem):
         w.mcr_problems[region_file] = {}
         w.mcr_problems[region_file][chunk] = []
         w.mcr_problems[region_file][chunk].append(problem)
-
-def _mp_pool_init(world_obj,options,q):
-    scan_mcr_file.q = q
-    scan_mcr_file.options = options
-    scan_mcr_file.w = world_obj
 
 def scan_chunk(region_file, x, z):
     """ Returns the chunk if exists, -1 if it's corrupted, -2 if it the
@@ -172,11 +173,11 @@ def scan_chunk(region_file, x, z):
 
 def scan_all_mcr_files(world_obj, options):
     w = world_obj
-    total_chunks = 0
-    corrupted_chunks = []
-    wrong_located_chunks = []
     total_regions = len(w.all_mcr_files)
-    counter_region = 0
+    chunks = 0
+    corrupted_total = 0
+    wrong_total = 0
+    region_counter = 0
 
     # init progress bar
     if not options.verbose:
@@ -194,21 +195,22 @@ def scan_all_mcr_files(world_obj, options):
         if not options.verbose:
             pbar.start()
         
-        #the chunksize (arg #3) is pretty arbitrary, could probably be tweeked for better performance
-        result = pool.map_async(scan_mcr_file, w.all_mcr_files, max(1,(total_regions//options.processes)//8))
+        # start the pool
+        result = pool.map_async(scan_mcr_file, w.all_mcr_files, max(1,total_regions//options.processes))
 
         # printing status
         counter = 0
         while not result.ready() or (q.qsize() > 0):
             time.sleep(0.5)
             if q.qsize() > 0: # important, it hangs waiting for results
+                              # if size = 0
                 filename,corrupted, wrong, total = q.get()
-                corrupted_chunks.extend(corrupted)
-                wrong_located_chunks.extend(wrong)
-                total_chunks += total
+                corrupted_total += corrupted
+                wrong_total += wrong
+                chunks += total
                 counter += 1
                 if options.verbose:
-                    stats = "(c: {0}, w: {1}, c: {2})".format( len(corrupted), len(wrong), total)
+                    stats = "(c: {0}, w: {1}, c: {2})".format( corrupted, wrong, total)
                     print "Scanned {0: <15} {1:.<60} {2}/{3}".format(filename, stats, counter, total_regions)
                 else:
                     pbar.update(counter)
@@ -217,8 +219,8 @@ def scan_all_mcr_files(world_obj, options):
 
 
     else: # single thread version, non used anymore, left here because
-          # is easir to find bugs in it and algo because just-in-case
-    ################## not used ###################
+          # just-in-case
+    ################## not used >>>>>>>>>>>>>>>>>>>
         counter = 0
         
         # init the progress bar
@@ -238,16 +240,12 @@ def scan_all_mcr_files(world_obj, options):
             else:
                 pbar.update(counter)
 
-            corrupted_chunks.extend(corrupted)
-            wrong_located_chunks.extend(wrong)
-
             total_chunks += total
         
         if not options.verbose:    
             pbar.finish()
-
-
+    #<<<<<<<<<<<<<<<<< not used ###################
 
     print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(
-        len(corrupted_chunks), len(wrong_located_chunks),total_chunks)
+        corrupted_total, wrong_total,chunks)
 
