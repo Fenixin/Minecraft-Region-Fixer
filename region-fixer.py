@@ -216,7 +216,9 @@ def main():
         # Try to fix corrupted chunks with the backup copy
         corrupted = w.count_problems(w.CORRUPTED)
         wrong_located = w.count_problems(w.WRONG_LOCATED)
-        print "Corrupted chunks {0}, wrong located {1}".format(corrupted, wrong_located)
+        
+        print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(
+            corrupted, wrong_located,chunks)
         if use_backups and (corrupted or wrong_located):
             if options.fix_corrupted:
                 print "{0:#^60}".format(' Trying to fix corrupted chunks ')

@@ -259,6 +259,4 @@ def scan_all_mcr_files(world_obj, options):
             pbar.finish()
     #<<<<<<<<<<<<<<<<< not used ###################
 
-    print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(
-        corrupted_total, wrong_total,chunks)
 
