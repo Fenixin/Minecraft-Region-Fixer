@@ -119,14 +119,13 @@ def main():
     if not options.backups and (options.fix_corrupted or options.fix_wrong_located):
         parser.error("The options --fix-* need the --backups option")
 
+    if options.entity_limit <= 0:
+        parser.error("The entity limit must be at least 1!")
+
     print "Welcome to Region Fixer!"
 
 
     # do things with the option args
-    #~ level_dat_filename = join(world_path, "level.dat")
-    #~ player_files = glob(join(join(world_path, "players"), "*.dat"))
-
-    
     backups = options.backups
     use_backups = False
     if backups: # create a list of directories containing the backup of the region files
@@ -139,6 +138,8 @@ def main():
             use_backups = True
 
 
+
+    # scan the world dir
     print "Scanning directory..."
 
     w = world.World(world_path)
@@ -149,7 +150,7 @@ def main():
     if not w.nether_mcr_files:
         print "Info: No nether dimension in the world directory."
 
-    if not w.normal_mcr_files and not w.nether_mcr_files:
+    if not w.all_mcr_files:
         print "Error: No region files to scan!"
         sys.exit()
         
