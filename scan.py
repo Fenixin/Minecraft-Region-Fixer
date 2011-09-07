@@ -109,7 +109,7 @@ def scan_mcr_file(region_file_path):
                             print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,split(region_file.filename)[1],total_entities)
                             
                             # This stores all the entities in a file,
-                            # sometimes comes handy.
+                            # comes handy sometimes.
                             #~ pretty_tree = chunk['Level']['Entities'].pretty_tree()
                             #~ name = "{2}.chunk.{0}.{1}.txt".format(x,z,split(region_file.filename)[1])
                             #~ archivo = open(name,'w')
@@ -131,7 +131,7 @@ def scan_mcr_file(region_file_path):
     except KeyboardInterrupt:
         print "\nInterrupted by user\n"
         sys.exit(1)
-
+    print w.mcr_problems
     scan_mcr_file.q.put((filename,corrupted, wrong, chunks))
     return filename,corrupted, wrong, chunks
 

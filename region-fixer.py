@@ -214,7 +214,10 @@ def main():
         scan_all_mcr_files(w, options)
 
         # Try to fix corrupted chunks with the backup copy
-        if use_backups and (corrupted_chunks or wrong_located_chunks):
+        corrupted = w.count_region_problems(w.CORRUPTED)
+        wrong_located = w.count_region_problems(w.WRONG_LOCATED)
+        print "Corrupted chunks {0}, wrong located {1}".format(corrupted, wrong_located)
+        if use_backups and (corrupted or wrong_located):
             if options.fix_corrupted:
                 print "{0:#^60}".format(' Trying to fix corrupted chunks ')
                 unfixed_corrupted, counter = replace_chunk_list(corrupted_chunks, backup_dirs)
