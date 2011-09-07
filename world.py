@@ -51,18 +51,13 @@ class World(object):
         self.WRONG_LOCATED = 2
         self.TOO_MUCH_ENTITIES = 3
     
-    def count_region_problems(self, problem):
+    def count_problems(self, problem):
         counter = 0
-        print "in count"
-        print self.mcr_problems
         for region in self.mcr_problems:
-            print "in {0}".format(region)
             for chunk in self.mcr_problems[region]:
-                print "in {0}".format(chunk)
-                print self.mcr_problems[region][chunk]
-                if self.mcr_problems[region][chunk] == problem:
-                    
-                    counter += 1
+                for prob in self.mcr_problems[region][chunk]:
+                    if prob == problem:
+                        counter += 1
         return counter
 
 def get_global_chunk_coords(region_filename, chunkX, chunkZ):
