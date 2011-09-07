@@ -46,6 +46,7 @@ class World(object):
         self.world_problems = {}
         
         # Constants
+        self.OK = 0
         self.CORRUPTED = 1
         self.WRONG_LOCATED = 2
         self.TOO_MUCH_ENTITIES = 3

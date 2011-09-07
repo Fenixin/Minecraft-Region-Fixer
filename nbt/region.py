@@ -61,8 +61,17 @@ class RegionFile(object):
 		self.extents = None
 		if self.file:
 			self.size = getsize(self.filename)
-			self.parse_header()
-			self.parse_chunk_headers()
+			if self.size == 0:
+				# Some region files seems to have 0 bytes of size, and
+				# Minecraft handle them without problems. Take them 
+				# as empty region files.
+				for x in range(32):
+					for z in range(32):
+						self.header[x,z] = (0, 0, 0, self.STATUS_CHUNK_NOT_CREATED)
+				self.parse_chunk_headers()
+			else:
+				self.parse_header()
+				self.parse_chunk_headers()
 
 
 	def __del__(self):
@@ -86,7 +95,7 @@ class RegionFile(object):
 
 			elif offset < 2 and offset != 0:
 				status = self.STATUS_CHUNK_IN_HEADER
-			
+
 			# (don't forget!) offset and length comes in sectors of 4096 bytes
 			elif (offset + length)*4096 > self.size:
 				status = self.STATUS_CHUNK_OUT_OF_FILE
@@ -153,7 +162,7 @@ class RegionFile(object):
 			if offset:
 				x = (index/4) % 32
 				z = int(index/4)/32
-				chunks.append(Chunk(x,z,length))
+				chunks.append({'x':x,'z':z,'length':length})
 			index += 4
 		return chunks
 	

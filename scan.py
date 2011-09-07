@@ -52,36 +52,37 @@ def scan_level(world_obj):
 def scan_player(world_obj, player_file_path):
     """ At the moment only tries to read a .dat player file. it returns
     0 if it's ok and 1 if has some problem """
+    w = world_obj
     nick = split(player_file_path)[1].split(".")[0]
     try:
         player_dat = nbt.NBTFile(filename = player_file_path)
-        world_obj.players_status[nick] = "OK"
+        world_obj.players_status[nick] = w.OK
         del player_dat
 
     except Exception, e:
         w.players_problems[nick] = e
-        w.player_problems.append(nick)
-    
+
 def scan_all_players(world_obj):
     """ Scans all the players using the player function """
     for player in world_obj.player_files:
         scan_player(world_obj, player)
 
-def scan_mcr_file(region_file, delete_entities = False, entity_limit = 500):
+def scan_mcr_file(region_file_path):
     """ Takes a RegionFile obj and returns a list of corrupted 
     chunks where each element represents a corrupted chunk and
     contains a tuple:
      (region file, coord x, coord y) 
      and returns also the total number of chunks (including corrupted ones)
      """
-    #if region_file is TODO TODO TODO Where should be the "if regionfile size == 0 skip"?
+    delete_entities = scan_mcr_file.options.delete_entities
+    entity_limit = scan_mcr_file.options.entity_limit
+    region_file = region.RegionFile(region_file_path)
     total_chunks = 0
     bad_chunks = []
     wrong_located_chunks = []
     try:
         for x in range(32):
             for z in range(32):
-                #~ print "In chunk ({0},{1})".format(x,z)
                 chunk = scan_chunk(region_file, x, z)
                 if isinstance(chunk, nbt.TAG_Compound):
                     total_chunks += 1
@@ -120,22 +121,13 @@ def scan_mcr_file(region_file, delete_entities = False, entity_limit = 500):
     except KeyboardInterrupt:
         print "\nInterrupted by user\n"
         sys.exit(1)
-        
+
+    scan_mcr_file.q.put((filename,bad_chunks, wrong_located_chunks, total_chunks))
     return filename,bad_chunks, wrong_located_chunks, total_chunks
 
 def _mp_pool_init(options,q):
-    _mp_scan_mcr_file.q = q
-    _mp_scan_mcr_file.options = options
-
-def _mp_scan_mcr_file(region_file):
-    if getsize(region_file) is not 0:
-        r = scan_mcr_file(region.RegionFile(region_file),
-            _mp_scan_mcr_file.options.delete_entities,
-            _mp_scan_mcr_file.options.entity_limit)
-        _mp_scan_mcr_file.q.put(r)
-        return r
-    else:
-        return None
+    scan_mcr_file.q = q
+    scan_mcr_file.options = options
 
 def scan_chunk(region_file, x, z):
     """ Returns the chunk if exists, -1 if it's corrupted, -2 if it the
@@ -162,8 +154,6 @@ def scan_chunk(region_file, x, z):
     return chunk
 
 def scan_all_mcr_files(world_obj, options):
-    ##############################################################
-    # COMPROBAR QUE FUNCIONA CON REGIONES DE TAMANO CERO!
     w = world_obj
     total_chunks = 0
     corrupted_chunks = []
@@ -178,15 +168,16 @@ def scan_all_mcr_files(world_obj, options):
             maxval=total_regions)
 
     if abs(options.processes) >= 1:
+    #~ if False:
         #there is probably a better way to pass these values but this works for now
         q = multiprocessing.Queue()
         pool = multiprocessing.Pool(processes=options.processes,initializer=_mp_pool_init,initargs=(options,q))
 
         if not options.verbose:
             pbar.start()
-
+        
         #the chunksize (arg #3) is pretty arbitrary, could probably be tweeked for better performance
-        result = pool.map_async(_mp_scan_mcr_file, w.all_mcr_files, max(1,(total_regions//options.processes)//8))
+        result = pool.map_async(scan_mcr_file, w.all_mcr_files, max(1,(total_regions//options.processes)//8))
 
         # printing status
         counter = 0
@@ -199,7 +190,7 @@ def scan_all_mcr_files(world_obj, options):
                 total_chunks += total
                 counter += 1
                 if options.verbose:
-                    stats = "(corrupted: {0}, wrong located: {1}, chunks: {2})".format( len(corrupted), len(wrong), total)
+                    stats = "(c: {0}, w: {1}, c: {2})".format( len(corrupted), len(wrong), total)
                     print "Scanned {0: <15} {1:.<60} {2}/{3}".format(filename, stats, counter, total_regions)
                 else:
                     pbar.update(counter)
@@ -207,7 +198,9 @@ def scan_all_mcr_files(world_obj, options):
         if not options.verbose: pbar.finish()
 
 
-    else: # single thread version, non used anymore, left here because just-in-case
+    else: # single thread version, non used anymore, left here because
+          # is easir to find bugs in it and algo because just-in-case
+    ################## not used ###################
         counter = 0
         
         # init the progress bar
@@ -216,13 +209,8 @@ def scan_all_mcr_files(world_obj, options):
             
         for region_path in w.all_mcr_files:
             
-            if getsize(region_path) != 0: # some region files are 0 bytes size! And minecraft seems to handle them without problem.
-                region_file = region.RegionFile(region_path)
-            else:
-                continue
-            
             # scan for errors
-            filename, corrupted, wrong, total = scan_mcr_file(region_file, options.delete_entities, options.entity_limit)
+            filename, corrupted, wrong, total = scan_mcr_file(region_path, options.delete_entities, options.entity_limit)
             counter += 1
             
             # print status
