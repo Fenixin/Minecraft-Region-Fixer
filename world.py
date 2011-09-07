@@ -35,6 +35,7 @@ class World(object):
         self.normal_mcr_files = glob(join(self.world_path, "region/r.*.*.mcr"))
         self.nether_mcr_files = glob(join(self.world_path,"DIM-1/region/r.*.*.mcr"))
         self.all_mcr_files = self.normal_mcr_files + self.nether_mcr_files
+        self.num_chunks = None
         
         self.level_file = join(self.world_path, "level.dat")
         self.level_status = {}
@@ -44,6 +45,7 @@ class World(object):
         self.player_problems = []
         
         self.mcr_problems = {}
+        
         
         # Constants
         self.OK = 0

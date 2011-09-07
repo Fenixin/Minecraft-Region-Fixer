@@ -178,7 +178,7 @@ def _mp_pool_init(world_obj,options,q):
 def scan_all_mcr_files(world_obj, options):
     w = world_obj
     total_regions = len(w.all_mcr_files)
-    chunks = 0
+    total_chunks = 0
     corrupted_total = 0
     wrong_total = 0
     entities_total = 0
@@ -209,28 +209,28 @@ def scan_all_mcr_files(world_obj, options):
             time.sleep(0.5)
             if q.qsize() > 0: # important, it hangs waiting for results
                               # if size = 0
-                filename, corrupted, wrong, entities_prob, total = q.get()
+                filename, corrupted, wrong, entities_prob, num_chunks = q.get()
                 corrupted_total += corrupted
                 wrong_total += wrong
-                chunks += total
+                total_chunks += num_chunks
                 entities_total += entities_prob
                 counter += 1
                 if options.verbose:
-                    stats = "(c: {0}, w: {1}, c: {2})".format( corrupted, wrong, total)
+                    stats = "(c: {0}, w: {1}, c: {2})".format( corrupted, wrong, num_chunks)
                     print "Scanned {0: <15} {1:.<60} {2}/{3}".format(filename, stats, counter, total_regions)
                 else:
                     pbar.update(counter)
 
         if not options.verbose: pbar.finish()
-        
-        # extract results and fill in the world class
 
+        # extract results and fill in the world class
+        w.num_chunks = total_chunks
         for region_problems in result.get():
             for problem in region_problems:
                 filename, chunk, problem = problem
                 add_problem(w, filename, chunk, problem)
-            
-        
+
+
     else: # single thread version, non used anymore, left here because
           # just-in-case
     ################## not used >>>>>>>>>>>>>>>>>>>
