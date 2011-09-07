@@ -97,22 +97,23 @@ def scan_mcr_file(region_file_path):
                     total_entities = len(chunk['Level']['Entities'].tags)
                     # deleting entities is in here because to parse a chunk with thousands of wrong entities
                     # takes a long time, and once detected is better to fix it at once.
-                    if delete_entities == True and total_entities > entity_limit:
-                        empty_tag_list = nbt.TAG_List(nbt.TAG_Byte,'','Entities')
-                        chunk['Level']['Entities'] = empty_tag_list
-                        print "Deleted {0} entities in chunk ({1},{2}).".format(total_entities, x, z)
-                        region_file.write_chunk(x, z, chunk)
+                    if total_entities >= entity_limit:
+                        if delete_entities == True:
+                            empty_tag_list = nbt.TAG_List(nbt.TAG_Byte,'','Entities')
+                            chunk['Level']['Entities'] = empty_tag_list
+                            print "Deleted {0} entities in chunk ({1},{2}).".format(total_entities, x, z)
+                            region_file.write_chunk(x, z, chunk)
                     
-                    elif total_entities > entity_limit:
-                        add_problem(w, filename, (x,z), w.TOO_MUCH_ENTITIES)
-                        print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,split(region_file.filename)[1],total_entities)
-                        
-                        # This stores all the entities in a file,
-                        # sometimes comes handy.
-                        #~ pretty_tree = chunk['Level']['Entities'].pretty_tree()
-                        #~ name = "{2}.chunk.{0}.{1}.txt".format(x,z,split(region_file.filename)[1])
-                        #~ archivo = open(name,'w')
-                        #~ archivo.write(pretty_tree)
+                        else:
+                            add_problem(w, filename, (x,z), w.TOO_MUCH_ENTITIES)
+                            print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,split(region_file.filename)[1],total_entities)
+                            
+                            # This stores all the entities in a file,
+                            # sometimes comes handy.
+                            #~ pretty_tree = chunk['Level']['Entities'].pretty_tree()
+                            #~ name = "{2}.chunk.{0}.{1}.txt".format(x,z,split(region_file.filename)[1])
+                            #~ archivo = open(name,'w')
+                            #~ archivo.write(pretty_tree)
                         
                 elif chunk == -1:
                     chunks += 1
