@@ -77,9 +77,11 @@ def scan_mcr_file(region_file_path):
     delete_entities = scan_mcr_file.options.delete_entities
     entity_limit = scan_mcr_file.options.entity_limit
     region_file = region.RegionFile(region_file_path)
+    w = scan_mcr_file.w
     total_chunks = 0
     bad_chunks = []
     wrong_located_chunks = []
+    filename = split(region_file.filename)[1]
     try:
         for x in range(32):
             for z in range(32):
@@ -96,7 +98,7 @@ def scan_mcr_file(region_file_path):
                         region_file.write_chunk(x, z, chunk)
                     
                     elif total_entities > entity_limit:
-                        
+                        add_problem(w, filename, (x,z), w.TOO_MUCH_ENTITIES)
                         print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,split(region_file.filename)[1],total_entities)
                         
                         # This stores all the entities in a file,
@@ -108,14 +110,14 @@ def scan_mcr_file(region_file_path):
                         
                 elif chunk == -1:
                     total_chunks += 1
+                    add_problem(w, filename, (x,z), w.CORRUPTED)
                     bad_chunks.append((region_file.filename,x,z))
                 elif chunk == -2:
                     total_chunks += 1
+                    add_problem(w, filename, (x,z), w.WRONG_LOCATED)
                     wrong_located_chunks.append((region_file.filename,x,z))
                 # if None do nothing
                 del chunk # unload chunk from memory
-                
-        filename = split(region_file.filename)[1]
 
         del region_file
         
@@ -125,6 +127,19 @@ def scan_mcr_file(region_file_path):
 
     scan_mcr_file.q.put((filename,bad_chunks, wrong_located_chunks, total_chunks))
     return filename,bad_chunks, wrong_located_chunks, total_chunks
+
+def add_problem(world_obj, region_file, chunk, problem):
+    w = world_obj
+    if region_file in w.mcr_problems:
+        if chunk in w.mcr_problems[region_file]:
+            w.mcr_problems[region_file][chunk].append(problem)
+        else:
+            w.mcr_problems[region_file][chunk] = []
+            w.mcr_problems[region_file][chunk].append(problem)
+    else:
+        w.mcr_problems[region_file] = {}
+        w.mcr_problems[region_file][chunk] = []
+        w.mcr_problems[region_file][chunk].append(problem)
 
 def _mp_pool_init(world_obj,options,q):
     scan_mcr_file.q = q

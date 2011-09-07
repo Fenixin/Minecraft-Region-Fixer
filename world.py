@@ -43,7 +43,7 @@ class World(object):
         self.players_status = {}
         self.player_problems = []
         
-        self.world_problems = {}
+        self.mcr_problems = {}
         
         # Constants
         self.OK = 0
