@@ -89,6 +89,7 @@ def main():
     parser.add_option('--entity-limit', '--el', action = 'store', type = int, help = 'Specify the limit for the --delete-entities option (default = 500).', dest = 'entity_limit', default = 500,)
     parser.add_option('--processes', '-p', action = 'store', type = int, help = 'Set the number of workers to use for scanning region files. Default is to not use multiprocessing at all', default = 1)
     parser.add_option('--verbose', '-v',action='store_true',help='Don\'t use progress bar, print a line per scanned region file.')
+    parser.add_option('--summary', '-s',action='store_true',help='Prints a summary at the end with all the problems found', default = False)
     
     # Other options
     other_group = OptionGroup(parser, "Others", "This option is a different part of the program and is incompatible with the options above.")
@@ -254,6 +255,23 @@ def main():
             print "Done!"
             
             print "Deleted {0} wrong located chunks".format(counter)
+        
+        if options.summary:
+            print "\n{0:#^60}".format(' Summary of found problems ')
+            for mcr in w.mcr_problems:
+                print split(mcr)[1] + ":"
+                for chunk in w.mcr_problems[mcr]:
+                    print "    chunk ",chunk," :",
+                    for problem in w.mcr_problems[mcr][chunk]:
+                        if problem == w.CORRUPTED:
+                            print "Corrupted",
+                        elif problem == w.WRONG_LOCATED:
+                            print "Wrong located"
+                        elif problem == w.TOO_MUCH_ENTITIES:
+                            print "Too much entities"
+                    print
+                print
+                
 
 
 if __name__ == '__main__':
