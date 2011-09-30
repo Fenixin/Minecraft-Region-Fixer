@@ -26,11 +26,13 @@ import nbt.nbt as nbt
 from glob import glob
 from os.path import join, split, exists, getsize
 
+from scan import scan_chunk
+
 class World(object):
     """ Stores all the info needed of a world, and once scanned, stores
     all the problems found """
     
-    def __init__(self, world_path):
+    def __init__(self, world_path): # TODO TODO TODO add here all the checks to see if the dirs exists?
         self.world_path = world_path
         self.normal_mcr_files = glob(join(self.world_path, "region/r.*.*.mcr"))
         self.nether_mcr_files = glob(join(self.world_path,"DIM-1/region/r.*.*.mcr"))
@@ -38,6 +40,8 @@ class World(object):
         self.num_chunks = None
         
         self.level_file = join(self.world_path, "level.dat")
+        if not exists(self.level_file):
+            self.level_file = None
         self.level_status = {}
         
         self.player_files = glob(join(join(self.world_path, "players"), "*.dat"))
@@ -55,12 +59,133 @@ class World(object):
     
     def count_problems(self, problem):
         counter = 0
-        for region in self.mcr_problems:
-            for chunk in self.mcr_problems[region]:
-                for prob in self.mcr_problems[region][chunk]:
+        for mcr in self.mcr_problems:
+            for chunk in self.mcr_problems[mcr]:
+                for prob in self.mcr_problems[mcr][chunk]:
                     if prob == problem:
                         counter += 1
         return counter
+
+    def replace_problematic_chunks(self, backup_worlds, problem):
+        """ Takes a list of world objects and a problem constant and try
+            to replace every chunk with that problem with a chunk in the
+            given world object """
+        counter = 0
+        # this list is used to remove chunks from the problems
+        # dict once the iteration over it has finished
+        fixed_chunks = []
+        for mcr_path in self.mcr_problems:
+            for chunk in self.mcr_problems[mcr_path]:
+
+                if problem in self.mcr_problems[mcr_path][chunk]:
+                    print "\n{0:-^60}".format(' New chunk to fix! ')
+                    for backup in backup_worlds:
+                        Fixed = False
+
+                        # search for the region file
+                        region_name = split(mcr_path)[1]
+                        dimension = split(split(mcr_path)[0])[1]
+                        if dimension == "region":
+                            backup_mcr_path = join(backup.world_path, "region", region_name)
+                        else:
+                            backup_mcr_path = join(backup.world_path, dimension, region_name)
+                        
+                        #~ region_file = corrupted_chunk[0]
+                        
+                        if exists(backup_mcr_path):
+                            print "Backup region file found in: {0} \nfixing...".format(backup_mcr_path)
+
+                            # get the chunk
+                            backup_region_file = region.RegionFile(backup_mcr_path)
+                            working_chunk = scan_chunk(backup_region_file, chunk[0], chunk[1])
+                            del backup_region_file
+                            
+                            ####### TODO TODO TODO
+                            # would be cool to check here for entities problem?
+                            
+                            if isinstance(working_chunk, nbt.TAG_Compound):
+                                # the chunk exists and is non-corrupted, fix it!
+                                tofix_region_file = region.RegionFile(mcr_path)
+                                tofix_region_file.write_chunk(chunk[0], chunk[1],working_chunk)
+                                del tofix_region_file
+                                Fixed = True
+                                counter += 1
+                                fixed_chunks.append((mcr_path, chunk, problem))
+                                print "Chunk fixed using backup dir: {0}".format(backup.world_path)
+                                break
+                                
+                            elif working_chunk == None:
+                                print "The chunk doesn't exists in this backup directory: {0}".format(backup.world_path)
+                                # The chunk doesn't exists in the region file
+                                continue
+                                
+                            elif working_chunk == -1:
+                                # The chunk is corrupted
+                                print "The chunk is corrupted in this backup directory: {0}".format(backup.world_path)
+                                continue
+                                
+                            elif working_chunk == -2:
+                                # The chunk is wrong located
+                                print "The chunk is wrong located in this backup directory: {0}".format(backup.world_path)
+                                continue
+
+        for mcr, chunk, problem in fixed_chunks:
+            self.remove_problem(mcr, chunk, problem)
+
+        return counter
+
+    def remove_problematic_chunks(self, problem):
+        """ Removes all the chunks with the given problem, it also
+        removes the entry in the dictionary mcr_problems """
+
+        deleted = []
+        for reg in self.mcr_problems:
+            for chunk in self.mcr_problems[reg]:
+                for p in self.mcr_problems[reg][chunk]:
+                    if p == problem:
+                        region_file = region.RegionFile(reg)
+                        region_file.unlink_chunk(chunk[0], chunk[1])
+                        deleted.append((reg, chunk, "all"))
+                        del region_file
+
+        for d in deleted:
+            reg, chunk, prob = d
+            self.remove_problem(reg, chunk, prob)
+            
+
+    def remove_problem(self, region, chunk, problem):
+        ## we have to remove the problems from the dict,
+        # but because we are iterating it, is it a good idea to remove
+        # them after finishing the iteration. Store the replaced chunks
+        # and then call this future function
+        if problem == "all":
+            del self.mcr_problems[region][chunk]
+            if self.mcr_problems[region] == {}:
+                del self.mcr_problems[region]
+        else:
+            self.mcr_problems[region][chunk].remove(problem)
+            if self.mcr_problems[region][chunk] == []:
+                del self.mcr_problems[region][chunk]
+                if self.mcr_problems[region] == {}:
+                    del self.mcr_problems[region]
+
+
+def delete_chunk_list(l):
+    """ Takes a list generated by check_region_file and deletes
+    all the chunks on it and returns the number of deleted chunks"""
+
+    counter = 0
+    for chunk in l:
+        x = chunk[1]
+        z = chunk[2]
+    
+    region_path = chunk[0]
+    region_file = region.RegionFile(region_path)
+    region_file.unlink_chunk(x, z)
+    counter += 1
+    region_file.__del__
+    
+    return counter
 
 def get_global_chunk_coords(region_filename, chunkX, chunkZ):
     """ Takes the region filename and the chunk local 
@@ -108,79 +233,3 @@ def get_chunk_data_coords(nbt_file):
     
     return coordX, coordZ
 
-def delete_chunk_list(list):
-    """ Takes a list generated by check_region_file and deletes
-    all the chunks on it and returns the number of deleted chunks"""
-    
-    region_file = region_path = None # variable inizializations
-    
-    counter = 0
-    for chunk in list:
-        x = chunk[1]
-        z = chunk[2]
-        
-        region_path = chunk[0]
-        region_file = region.RegionFile(region_path)
-        region_file.unlink_chunk(x, z)
-        counter += 1
-        region_file.__del__
-    
-    return counter
-
-def replace_chunk_list(list, backup_list):
-
-    unfixed_list = []
-    unfixed_list.extend(list)
-
-    counter = 0
-
-    for corrupted_chunk in list:
-        x = corrupted_chunk[1]
-        z = corrupted_chunk[2]
-
-        print "\n{0:-^60}".format(' New chunk to fix! ')
-
-        for backup in backup_list:
-            Fixed = False
-            region_file = split(corrupted_chunk[0])[1]
-
-            # search for the region file
-            backup_region_path = glob(join(backup, region_file))[0]
-            region_file = corrupted_chunk[0]
-            if backup_region_path:
-                print "Backup region file found in: {0} \nfixing...".format(backup_region_path)
-
-                # get the chunk
-                backup_region_file = region.RegionFile(backup_region_path)
-                working_chunk = check_chunk(backup_region_file, x, z)
-                backup_region_file.__del__()
-                
-                if isinstance(working_chunk, nbt.TAG_Compound):
-                    # the chunk exists and is non-corrupted, fix it!
-                    tofix_region_file = region.RegionFile(region_file)
-                    #~ print corrupted_chunk[1],corrupted_chunk[2],working_chunk
-                    #~ print type(corrupted_chunk[1]),type(corrupted_chunk[2]),type(working_chunk)
-                    tofix_region_file.write_chunk(corrupted_chunk[1], corrupted_chunk[2],working_chunk)
-                    tofix_region_file.__del__
-                    Fixed = True
-                    counter += 1
-                    unfixed_list.remove(corrupted_chunk)
-                    print "Chunk fixed using backup dir: {0}".format(backup)
-                    break
-                    
-                elif working_chunk == None:
-                    print "The chunk doesn't exists in this backup directory: {0}".format(backup)
-                    # The chunk doesn't exists in the region file
-                    continue
-                    
-                elif working_chunk == -1:
-                    # The chunk is corrupted
-                    print "The chunk is corrupted in this backup directory: {0}".format(backup)
-                    continue
-                    
-                elif working_chunk == -2:
-                    # The chunk is corrupted
-                    print "The chunk is wrong located in this backup directory: {0}".format(backup)
-                    continue
-    
-    return unfixed_list, counter

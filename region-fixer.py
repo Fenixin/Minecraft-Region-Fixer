@@ -33,25 +33,31 @@ import nbt.nbt as nbt
 import world
 from scan import scan_all_players, scan_level, scan_level, scan_all_mcr_files
 
+
 def parse_backup_list(world_backup_dirs):
-    """ Generates a list with the input of backup dirs, also check if
-    the backups dirs exists"""
-    region_backup_dirs = []
+    """ Generates a list with the input of backup dirs containing the 
+    world objects of valid world directories."""
+
+    backup_worlds = []
     directories = world_backup_dirs.split(',')
-    for dir in directories:
-        region_dir = join(dir,"region")
-        if exists(region_dir):
-            region_backup_dirs.append(region_dir)
+    for world_dir in directories:
+        if exists(world_dir):
+            w = world.World(world_dir)
+            if not w.all_mcr_files and not w.level_file:
+                print "[ATTENTION] The directory \"{0}\" doesn't look like a minecraft world folder.".format(world_dir)
+            else:
+                backup_worlds.append(w)
         else:
-            print "[ATTENTION] The directory \"{0}\" is not a minecraft world directory".format(dir)
-    return region_backup_dirs
+            print "[ATTENTION] The directory \"{0}\" doesn't exist".format(world_dir)
+    return backup_worlds
+
 
 def parse_chunk_list(chunk_list, region_dir):
     """ Fenerate a list of chunk as done by check_region_file
         but using a list of global chunk coords tuples as input"""
     parsed_list = []
     for chunk in chunk_list:
-        region_name = get_chunk_region(chunk[0], chunk[1])
+        region_name = w.get_chunk_region(chunk[0], chunk[1])
         fullpath = join(region_dir, region_name)
         parsed_list.append((fullpath, chunk[0], chunk[1]))
 
@@ -127,23 +133,20 @@ def main():
 
 
     # do things with the option args
-    backups = options.backups
-    use_backups = False
-    if backups: # create a list of directories containing the backup of the region files
-        backup_dirs = parse_backup_list(backups)
-        if not backup_dirs:
+    if options.backups: # create a list of worlds containing the backup of the region files
+        backup_worlds = parse_backup_list(options.backups)
+        if not backup_worlds:
             print "[WARNING] No valid backup directories found, won't fix any chunk."
-            fix_corrupted = fix_wrong_located = False
-
-        else:
-            use_backups = True
-
-
+    else:
+        backup_worlds = []
 
     # scan the world dir
     print "Scanning directory..."
 
     w = world.World(world_path)
+
+    if not w.level_file:
+        print "Warning: No \'level.dat\' file found!"
 
     if not w.normal_mcr_files:
         print "Warning: No region files found in the \"region\" directory!"
@@ -151,7 +154,7 @@ def main():
     if not w.nether_mcr_files:
         print "Info: No nether dimension in the world directory."
 
-    if not w.all_mcr_files:
+    if not w.all_mcr_files and not w.level_file:
         print "Error: No region files to scan!"
         sys.exit()
         
@@ -214,44 +217,45 @@ def main():
 
         scan_all_mcr_files(w, options)
 
-        # Try to fix corrupted chunks with the backup copy
         corrupted = w.count_problems(w.CORRUPTED)
         wrong_located = w.count_problems(w.WRONG_LOCATED)
         
         print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(
             corrupted, wrong_located, w.num_chunks)
-        if use_backups and (corrupted or wrong_located):
+
+        # Try to fix corrupted chunks with the backup copy
+        if backup_worlds:
             if options.fix_corrupted:
                 print "{0:#^60}".format(' Trying to fix corrupted chunks ')
-                unfixed_corrupted, counter = replace_chunk_list(corrupted_chunks, backup_dirs)
-                print "\n{0} fixed chunks of a total of {1} corrupted chunks".format(counter, len(corrupted_chunks))
-                corrupted_chunks = unfixed_corrupted # prepare the list for the deleting part
+                fixed = w.replace_problematic_chunks(backup_worlds, w.CORRUPTED)
+                print "\n{0} fixed chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
             
             if options.fix_wrong_located:
                 print "{0:#^60}".format(' Trying to fix wrong located chunks ')
-                unfixed_wrong_located, counter = replace_chunk_list(wrong_located_chunks, backup_dirs)
-                print "\n{0} fixed chunks of a total of {1} wrong located chunks".format(counter, len(wrong_located_chunks))
-                wrong_located_chunks = unfixed_wrong_located # prepare the list for the deleting part
+                fixed = w.replace_problematic_chunks(backup_worlds, w.WRONG_LOCATED)
+                print "\n{0} fixed chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
 
+        corrupted = w.count_problems(w.CORRUPTED)
+        wrong_located = w.count_problems(w.WRONG_LOCATED)
 
         # delete bad chunks! (if asked for)
-        if options.delete_corrupted and corrupted_chunks:
+        if options.delete_corrupted and corrupted:
             
             print "{0:#^60}".format(' Deleting  corrupted chunks ')
 
             print "... ",
-            counter = delete_chunk_list(corrupted_chunks)
+            counter = w.remove_problematic_chunks(w.CORRUPTED)
             print "Done!"
             
             print "Deleted {0} corrupted chunks".format(counter)
         
         
-        if options.delete_wrong_located and wrong_located_chunks:
+        if options.delete_wrong_located and wrong_located:
             
             print "{0:#^60}".format(' Deleting wrong located chunks ')
             
             print "... ",
-            counter = delete_chunk_list(wrong_located_chunks)
+            counter = w.remove_problematic_chunks(w.WRONG_LOCATED)
             print "Done!"
             
             print "Deleted {0} wrong located chunks".format(counter)
