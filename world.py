@@ -151,7 +151,8 @@ class World(object):
         for d in deleted:
             reg, chunk, prob = d
             self.remove_problem(reg, chunk, prob)
-            
+        
+        return len(deleted)
 
     def remove_problem(self, region, chunk, problem):
         ## we have to remove the problems from the dict,
