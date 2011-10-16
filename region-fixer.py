@@ -52,14 +52,22 @@ def parse_backup_list(world_backup_dirs):
     return backup_worlds
 
 
-def parse_chunk_list(chunk_list, region_dir):
-    """ Fenerate a list of chunk as done by check_region_file
+def parse_chunk_list(chunk_list, world_obj):
+    """ Generate a list of chunks as done by check_region_file
         but using a list of global chunk coords tuples as input"""
     parsed_list = []
-    for chunk in chunk_list:
-        region_name = w.get_chunk_region(chunk[0], chunk[1])
-        fullpath = join(region_dir, region_name)
-        parsed_list.append((fullpath, chunk[0], chunk[1]))
+    for line in chunk_list:
+        try:
+            chunk = eval(line)
+        except:
+            print "The chunk {0} is not valid.".format(line)
+            continue
+        region_name = world.get_chunk_region(chunk[0], chunk[1])
+        fullpath = join(world_obj.world_path, "region", region_name)
+        if fullpath in world_obj.all_mcr_files:
+            parsed_list.append((fullpath, chunk[0], chunk[1]))
+        else:
+            print "The chunk {0} should be in the region file {1} and this region files doesn't extist!".format(chunk, fullpath)
 
     return parsed_list
 
@@ -100,8 +108,8 @@ def main():
     # Other options
     other_group = OptionGroup(parser, "Others", "This option is a different part of the program and is incompatible with the options above.")
     
-    other_group.add_option('--delete-list', metavar = '<delete_list>', type = str, help = 'This is a list of chunks to delete, the list must be a python list: \
-                                            [(1,1), (-10,32)]. [INFO] if you use this option the world won\'t be scanned. Protect the parthesis from bash!', default = None)
+    other_group.add_option('--delete-list', metavar = 'delete_list', type = str, help = 'Takes a file with a chunk list inside and deletes the chunks in that list. The list is formed by one chunk\
+                                                                                        per line with the format (x,z). [INFO] if you use this option the world won\'t be scanned.', default = None)
     parser.add_option_group(other_group)
     (options, args) = parser.parse_args()
 
@@ -168,18 +176,16 @@ def main():
     # The program starts
     if options.delete_list: # Delete the given list of chunks
         try:
-            delete_list = eval(options.delete_list)
+            list_file = file(options.delete_list)
         except:
-            print 'Error: Wrong chunklist!'
+            print 'List file not found!'
             sys.exit()
 
-        delete_list = parse_chunk_list(delete_list, world_region_dir)
+        delete_list = parse_chunk_list(list_file, w)
         
         print "{0:#^60}".format(' Deleting the chunks on the list ')
         
-        print "... ",
-        
-        counter = delete_chunk_list(delete_list)
+        counter = w.delete_chunk_list(delete_list)
         print "Done!"
         
         print "Deleted {0} chunks".format(counter)
