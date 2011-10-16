@@ -206,7 +206,7 @@ def scan_all_mcr_files(world_obj, options):
         # printing status
         counter = 0
         while not result.ready() or (q.qsize() > 0):
-            time.sleep(0.5)
+            time.sleep(0.01)
             if q.qsize() > 0: # important, it hangs waiting for results
                               # if size = 0
                 filename, corrupted, wrong, entities_prob, num_chunks = q.get()
