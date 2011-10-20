@@ -274,12 +274,11 @@ def main():
                     print "    chunk ",chunk," :",
                     for problem in w.mcr_problems[mcr][chunk]:
                         if problem == w.CORRUPTED:
-                            print "Corrupted",
+                            print "Corrupted"
                         elif problem == w.WRONG_LOCATED:
                             print "Wrong located"
                         elif problem == w.TOO_MUCH_ENTITIES:
                             print "Too much entities"
-                    print
                 print
                 
 
