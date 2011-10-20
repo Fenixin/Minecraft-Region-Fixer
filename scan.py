@@ -101,7 +101,7 @@ def scan_mcr_file(region_file_path):
                             region_file.write_chunk(x, z, chunk)
                     
                         else:
-                            problems.append((region_file.filename,x,z,w.TOO_MUCH_ENTITIES))
+                            problems.append((region_file.filename,(x,z),w.TOO_MUCH_ENTITIES))
                             entities_prob += 1
                             print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,split(region_file.filename)[1],total_entities)
                             
@@ -226,8 +226,8 @@ def scan_all_mcr_files(world_obj, options):
         # extract results and fill in the world class
         w.num_chunks = total_chunks
         for region_problems in result.get():
-            for problem in region_problems:
-                filename, chunk, problem = problem
+            for prob in region_problems:
+                filename, chunk, problem = prob
                 add_problem(w, filename, chunk, problem)
 
 
