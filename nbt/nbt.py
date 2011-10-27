@@ -33,7 +33,7 @@ class TAG(object):
 	def _parse_buffer(self, buffer):
 		raise NotImplementedError(self.__class__.__name__)
 
-	def _render_buffer(self, buffer, offset=None):
+	def _render_buffer(self, buffer):
 		raise NotImplementedError(self.__class__.__name__)
 
 	#Printing and Formatting of tree
@@ -53,10 +53,10 @@ class _TAG_Numeric(TAG):
 			self._parse_buffer(buffer)
 
 	#Parsers and Generators
-	def _parse_buffer(self, buffer, offset=None):
+	def _parse_buffer(self, buffer):
 		self.value = unpack(self.fmt, buffer.read(self.size))[0]
 
-	def _render_buffer(self, buffer, offset=None):
+	def _render_buffer(self, buffer):
 		buffer.write(pack(self.fmt, self.value))
 
 	#Printing and Formatting of tree
@@ -92,18 +92,17 @@ class TAG_Byte_Array(TAG):
 	id = TAG_BYTE_ARRAY
 	def __init__(self, name=None, buffer=None):
 		super(TAG_Byte_Array, self).__init__(name=name)
-		self.value = ''
 		if buffer:
 			self._parse_buffer(buffer)
 
 	#Parsers and Generators
-	def _parse_buffer(self, buffer, offset=None):
+	def _parse_buffer(self, buffer):
 		length = TAG_Int(buffer=buffer)
 		self.value = buffer.read(length.value)
 
-	def _render_buffer(self, buffer, offset=None):
+	def _render_buffer(self, buffer):
 		length = TAG_Int(len(self.value))
-		length._render_buffer(buffer, offset)
+		length._render_buffer(buffer)
 		buffer.write(self.value)
 
 	#Printing and Formatting of tree
@@ -118,17 +117,17 @@ class TAG_String(TAG):
 			self._parse_buffer(buffer)
 
 	#Parsers and Generators
-	def _parse_buffer(self, buffer, offset=None):
+	def _parse_buffer(self, buffer):
 		length = TAG_Short(buffer=buffer)
 		read = buffer.read(length.value)
 		if len(read) != length.value:
 			raise StructError()
 		self.value = unicode(read, "utf-8")
 
-	def _render_buffer(self, buffer, offset=None):
+	def _render_buffer(self, buffer):
 		save_val = self.value.encode("utf-8")
 		length = TAG_Short(len(save_val))
-		length._render_buffer(buffer, offset)
+		length._render_buffer(buffer)
 		buffer.write(save_val)
 
 	#Printing and Formatting of tree
@@ -150,22 +149,22 @@ class TAG_List(TAG):
 			raise ValueError("No type specified for list")
 
 	#Parsers and Generators
-	def _parse_buffer(self, buffer, offset=None):
+	def _parse_buffer(self, buffer):
 		self.tagID = TAG_Byte(buffer=buffer).value
 		self.tags = []
 		length = TAG_Int(buffer=buffer)
 		for x in range(length.value):
 			self.tags.append(TAGLIST[self.tagID](buffer=buffer))
 
-	def _render_buffer(self, buffer, offset=None):
-		TAG_Byte(self.tagID)._render_buffer(buffer, offset)
+	def _render_buffer(self, buffer):
+		TAG_Byte(self.tagID)._render_buffer(buffer)
 		length = TAG_Int(len(self.tags))
-		length._render_buffer(buffer, offset)
+		length._render_buffer(buffer)
 		for i, tag in enumerate(self.tags):
 			if tag.id != self.tagID:
 				raise ValueError("List element %d(%s) has type %d != container type %d" %
 						 (i, tag, tag.id, self.tagID))
-			tag._render_buffer(buffer, offset)
+			tag._render_buffer(buffer)
 
 	#Printing and Formatting of tree
 	def __repr__(self):
@@ -189,7 +188,7 @@ class TAG_Compound(TAG, DictMixin):
 			self._parse_buffer(buffer)
 
 	#Parsers and Generators
-	def _parse_buffer(self, buffer, offset=None):
+	def _parse_buffer(self, buffer):
 		while True:
 			type = TAG_Byte(buffer=buffer)
 			if type.value == TAG_END:
@@ -205,11 +204,11 @@ class TAG_Compound(TAG, DictMixin):
 				except KeyError:
 					raise ValueError("Unrecognised tag type")
 
-	def _render_buffer(self, buffer, offset=None):
+	def _render_buffer(self, buffer):
 		for tag in self.tags:
-			TAG_Byte(tag.id)._render_buffer(buffer, offset)
-			TAG_String(tag.name)._render_buffer(buffer, offset)
-			tag._render_buffer(buffer,offset)
+			TAG_Byte(tag.id)._render_buffer(buffer)
+			TAG_String(tag.name)._render_buffer(buffer)
+			tag._render_buffer(buffer)
 		buffer.write('\x00') #write TAG_END
 
 	# Dict compatibility.
@@ -274,14 +273,14 @@ TAGLIST = {TAG_BYTE:TAG_Byte, TAG_SHORT:TAG_Short, TAG_INT:TAG_Int, TAG_LONG:TAG
 class NBTFile(TAG_Compound):
 	"""Represents an NBT file object"""
 
-	def __init__(self, filename=None, mode=None, buffer=None, fileobj=None):
+	def __init__(self, filename=None, buffer=None, fileobj=None):
 		super(NBTFile,self).__init__()
 		self.__class__.__name__ = "TAG_Compound"
 		self.filename = filename
 		self.type = TAG_Byte(self.id)
 		#make a file object
 		if filename:
-			self.file = GzipFile(filename, mode)
+			self.file = GzipFile(filename, 'rb')
 		elif buffer:
 			self.file = buffer
 		elif fileobj:
@@ -291,7 +290,7 @@ class NBTFile(TAG_Compound):
 		#parse the file given intitially
 		if self.file:
 			self.parse_file()
-			if filename and 'close' in dir(self.file):
+			if self.filename and 'close' in dir(self.file):
 				self.file.close()
 			self.file = None
 
@@ -317,13 +316,14 @@ class NBTFile(TAG_Compound):
 		else: ValueError("need a file!")
 
 	def write_file(self, filename=None, buffer=None, fileobj=None):
-		self.filename = None
 		if buffer:
+			self.filename = None
 			self.file = buffer
 		elif filename:
 			self.filename = filename
 			self.file = GzipFile(filename, "wb")
 		elif fileobj:
+			self.filename = None
 			self.file = GzipFile(fileobj=fileobj, mode="wb")
 		elif self.filename:
 			self.file = GzipFile(self.filename, "wb")
@@ -336,5 +336,5 @@ class NBTFile(TAG_Compound):
 		#make sure the file is complete
 		if 'flush' in dir(self.file): 
 			self.file.flush()
-		if self.filename and 'close' in dir(self.file): 
+		if self.filename and 'close' in dir(self.file):
 			self.file.close()

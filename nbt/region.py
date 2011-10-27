@@ -43,12 +43,14 @@ class RegionFile(object):
 		# Some variables and constants
 		#
 		# Status is a number representing:
+		# -4 = Error, the region header length and the chunk length are incompatible
 		# -3 = Error, chunk header has a 0 length
 		# -2 = Error, chunk inside the header of the region file
 		# -1 = Error, chunk partially/completely outside of file
 		#  0 = Ok
 		#  1 = Chunk non-existant yet
 
+		self.STATUS_CHUNK_MISMATCHED_LENGTHS = -4
 		self.STATUS_CHUNK_ZERO_LENGTH = -3
 		self.STATUS_CHUNK_IN_HEADER = -2
 		self.STATUS_CHUNK_OUT_OF_FILE = -1
@@ -121,10 +123,12 @@ class RegionFile(object):
 					length = length[0] # unpack always returns a tuple, even unpacking one element
 					compression = unpack(">B",self.file.read(1))
 					compression = compression[0]
-					# TODO TODO TODO check if the region_file_length and the chunk header length are compatible
 					if length == 0: # chunk can't be zero length
 						chunk_status = self.STATUS_CHUNK_ZERO_LENGTH
-					
+					elif length > region_header_length*4096:
+						# the lengths stored in region header and chunk
+						# header are not compatible
+						chunk_status = self.STATUS_CHUNK_MISMATCHED_LENGTHS
 					else:
 						chunk_status = self.STATUS_CHUNK_OK
 
