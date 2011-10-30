@@ -53,8 +53,15 @@ def parse_backup_list(world_backup_dirs):
 
 
 def parse_chunk_list(chunk_list, world_obj):
-    """ Generate a list of chunks as done by check_region_file
-        but using a list of global chunk coords tuples as input"""
+    """ Generate a list of chunks to use with world.delete_chunk_list.
+    
+    It takes a list of global chunk coordinates and generates a list of
+    tuples containing:
+
+    (region fullpath, chunk X, chunk Z)
+
+    """
+
     parsed_list = []
     for line in chunk_list:
         try:
