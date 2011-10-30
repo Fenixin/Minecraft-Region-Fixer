@@ -23,35 +23,40 @@
 
 import nbt.region as region
 import nbt.nbt as nbt
-#~ from optparse import OptionParser
 from os.path import split, getsize
 import progressbar
 import multiprocessing
 import world
 import time
 
+
 class FractionWidget(progressbar.ProgressBarWidget):
+    """ Convenience class to use the progressbar.py """
     def __init__(self, sep=' / '):
         self.sep = sep
         
     def update(self, pbar):
         return '%2d%s%2d' % (pbar.currval, self.sep, pbar.maxval)
 
+
 def scan_level(world_obj):
     """ At the moment only tries to read a level.dat file and print a
     warning if there are problems. """
+
     w = world_obj
-    
+
     try:
         level_dat = nbt.NBTFile(filename = w.level_file)
         del level_dat
-        
+
     except Exception, e:
         w.level_problems["file"] = e
 
+
 def scan_player(world_obj, player_file_path):
-    """ At the moment only tries to read a .dat player file. it returns
+    """ At the moment only tries to read a .dat player file. It returns
     0 if it's ok and 1 if has some problem """
+
     w = world_obj
     nick = split(player_file_path)[1].split(".")[0]
     try:
@@ -62,18 +67,27 @@ def scan_player(world_obj, player_file_path):
     except Exception, e:
         w.players_problems[nick] = e
 
+
 def scan_all_players(world_obj):
-    """ Scans all the players using the player function """
+    """ Scans all the players using the scan_player function. """
+
     for player in world_obj.player_files:
         scan_player(world_obj, player)
 
+
 def scan_mcr_file(region_file_path):
-    """ Takes a RegionFile obj and returns a list of corrupted 
+    """ Scans a region file reporting problems.
+    
+    Takes a RegionFile obj and returns a list of corrupted 
     chunks where each element represents a corrupted chunk and
-    contains a tuple:
-     (region file, coord x, coord y) 
-     and returns also the total number of chunks (including corrupted ones)
-     """
+    is a tuple containing:
+
+    (region file, (coord x, coord y), problem) 
+
+    This function is used from scan_all_mcr_files and uses a
+    multiprocessing queue to return in real time info about the process.
+    """
+
     delete_entities = scan_mcr_file.options.delete_entities
     entity_limit = scan_mcr_file.options.entity_limit
     region_file = region.RegionFile(region_file_path)
@@ -99,19 +113,19 @@ def scan_mcr_file(region_file_path):
                             chunk['Level']['Entities'] = empty_tag_list
                             print "Deleted {0} entities in chunk ({1},{2}).".format(total_entities, x, z)
                             region_file.write_chunk(x, z, chunk)
-                    
+
                         else:
                             problems.append((region_file.filename,(x,z),w.TOO_MUCH_ENTITIES))
                             entities_prob += 1
                             print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,split(region_file.filename)[1],total_entities)
-                            
+
                             # This stores all the entities in a file,
                             # comes handy sometimes.
                             #~ pretty_tree = chunk['Level']['Entities'].pretty_tree()
                             #~ name = "{2}.chunk.{0}.{1}.txt".format(x,z,split(region_file.filename)[1])
                             #~ archivo = open(name,'w')
                             #~ archivo.write(pretty_tree)
-                        
+
                 elif chunk == -1:
                     chunks += 1
                     problems.append((region_file.filename,(x,z),w.CORRUPTED))
@@ -125,15 +139,19 @@ def scan_mcr_file(region_file_path):
                 del chunk # unload chunk from memory
 
         del region_file
-        
+
     except KeyboardInterrupt:
         print "\nInterrupted by user\n"
         sys.exit(1)
 
     scan_mcr_file.q.put((filename, corrupted, wrong, entities_prob, chunks))
+
     return problems
 
+
 def add_problem(world_obj, region_file, chunk, problem):
+    """ This function adds a problem to the mcr_problems dict. """
+
     w = world_obj
     if region_file in w.mcr_problems:
         if chunk in w.mcr_problems[region_file]:
@@ -146,11 +164,13 @@ def add_problem(world_obj, region_file, chunk, problem):
         w.mcr_problems[region_file][chunk] = []
         w.mcr_problems[region_file][chunk].append(problem)
 
+
+
 def scan_chunk(region_file, x, z):
-    """ Returns the chunk if exists, -1 if it's corrupted, -2 if it the
-    header coords doesn't match the coords storedn inside the chunk
-     and None if it doesn't exist.
-    """
+    """ Returns the chunk if exists and it's OK, -1 if it's corrupted,
+     -2 if it the header coords doesn't match the coords storedn inside
+     the chunk and None if it doesn't exist. """
+
     try:
         chunk = region_file.get_chunk(x,z)
         if chunk:
@@ -170,12 +190,26 @@ def scan_chunk(region_file, x, z):
 		
     return chunk
 
+
 def _mp_pool_init(world_obj,options,q):
+    """ Function to initialize the multiprocessing in scan_all_mcr_files.
+    Is used to pass values to the child process. """
+
     scan_mcr_file.q = q
     scan_mcr_file.options = options
     scan_mcr_file.w = world_obj
 
+
 def scan_all_mcr_files(world_obj, options):
+    """ This function scans all te region files from a world_object
+    printing status info in the process.
+    
+    Takes a world object and the options object from region-fixer.py and
+    fills up the mcr_problems dict. 
+    
+    The process always uses a multiprocessing pool but the single thread
+    code is still stored just in case is needed. """
+
     w = world_obj
     total_regions = len(w.all_mcr_files)
     total_chunks = 0
