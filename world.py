@@ -29,35 +29,48 @@ from os.path import join, split, exists, getsize
 from scan import scan_chunk
 
 class World(object):
-    """ Stores all the info needed of a world, and once scanned, stores
-    all the problems found """
+    """ This class stores all the info needed of a world, and once
+    scanned, stores all the problems found. It also has all the tools
+    needed to modify the world."""
     
-    def __init__(self, world_path): # TODO TODO TODO add here all the checks to see if the dirs exists?
+    def __init__(self, world_path):
         self.world_path = world_path
+        
+        # variables for region files
         self.normal_mcr_files = glob(join(self.world_path, "region/r.*.*.mcr"))
         self.nether_mcr_files = glob(join(self.world_path,"DIM-1/region/r.*.*.mcr"))
         self.all_mcr_files = self.normal_mcr_files + self.nether_mcr_files
-        self.num_chunks = None
+        self.num_chunks = None # not used right now
+        # dict storing all the problems found in the region files
+        self.mcr_problems = {}
         
+        # for level.dat
         self.level_file = join(self.world_path, "level.dat")
         if not exists(self.level_file):
             self.level_file = None
+        # dictionary used to store all the problems found in level.dat file
         self.level_status = {}
         
+        # for player files
+        # not sure yet how to store this properly because I'm not sure
+        # on what to scan about players.
         self.player_files = glob(join(join(self.world_path, "players"), "*.dat"))
         self.players_status = {}
         self.player_problems = []
-        
-        self.mcr_problems = {}
-        
-        
-        # Constants
+
+        # Constants. Used to mark the status of a problematic chunk,
+        # player, etc.
         self.OK = 0
         self.CORRUPTED = 1
         self.WRONG_LOCATED = 2
         self.TOO_MUCH_ENTITIES = 3
-    
+
+
     def count_problems(self, problem):
+        """ Counts problems from the 'mcr_problem' dictionary. Takes
+            problem value (see __init__) and returns the number of
+            said problems stored in the dictionary. """
+
         counter = 0
         for mcr in self.mcr_problems:
             for chunk in self.mcr_problems[mcr]:
@@ -66,14 +79,19 @@ class World(object):
                         counter += 1
         return counter
 
+
     def replace_problematic_chunks(self, backup_worlds, problem):
-        """ Takes a list of world objects and a problem constant and try
-            to replace every chunk with that problem with a chunk in the
-            given world object """
+        """ Takes a list of world objects and a problem value and try
+            to replace every chunk with that problem using a working
+            chunk from the list of world objects. It uses the world
+            objects in left to riht order. """
+
         counter = 0
         # this list is used to remove chunks from the problems
-        # dict once the iteration over it has finished
+        # dict once the iteration over it has finished, doing it at the 
+        # same time is not a good idea
         fixed_chunks = []
+
         for mcr_path in self.mcr_problems:
             for chunk in self.mcr_problems[mcr_path]:
 
@@ -89,9 +107,7 @@ class World(object):
                             backup_mcr_path = join(backup.world_path, "region", region_name)
                         else:
                             backup_mcr_path = join(backup.world_path, dimension, region_name)
-                        
-                        #~ region_file = corrupted_chunk[0]
-                        
+
                         if exists(backup_mcr_path):
                             print "Backup region file found in: {0} \nfixing...".format(backup_mcr_path)
 
@@ -99,10 +115,10 @@ class World(object):
                             backup_region_file = region.RegionFile(backup_mcr_path)
                             working_chunk = scan_chunk(backup_region_file, chunk[0], chunk[1])
                             del backup_region_file
-                            
+
                             ####### TODO TODO TODO
                             # would be cool to check here for entities problem?
-                            
+
                             if isinstance(working_chunk, nbt.TAG_Compound):
                                 # the chunk exists and is non-corrupted, fix it!
                                 tofix_region_file = region.RegionFile(mcr_path)
@@ -113,17 +129,17 @@ class World(object):
                                 fixed_chunks.append((mcr_path, chunk, problem))
                                 print "Chunk fixed using backup dir: {0}".format(backup.world_path)
                                 break
-                                
+
                             elif working_chunk == None:
                                 print "The chunk doesn't exists in this backup directory: {0}".format(backup.world_path)
                                 # The chunk doesn't exists in the region file
                                 continue
-                                
+
                             elif working_chunk == -1:
                                 # The chunk is corrupted
                                 print "The chunk is corrupted in this backup directory: {0}".format(backup.world_path)
                                 continue
-                                
+
                             elif working_chunk == -2:
                                 # The chunk is wrong located
                                 print "The chunk is wrong located in this backup directory: {0}".format(backup.world_path)
@@ -133,6 +149,7 @@ class World(object):
             self.remove_problem(mcr, chunk, problem)
 
         return counter
+
 
     def remove_problematic_chunks(self, problem):
         """ Removes all the chunks with the given problem, it also
@@ -151,14 +168,15 @@ class World(object):
         for d in deleted:
             reg, chunk, prob = d
             self.remove_problem(reg, chunk, prob)
-        
+
         return len(deleted)
 
+
     def remove_problem(self, rgn, chunk, problem):
-        ## we have to remove the problems from the dict,
-        # but because we are iterating it, is it a good idea to remove
-        # them after finishing the iteration. Store the replaced chunks
-        # and then call this future function
+        """ Removes a problem from the mcr_problems dict for the given
+            chunk. You can pass all to remove all the problem, useful
+            in case the chunk has been deleted"""
+
         if problem == "all":
             del self.mcr_problems[rgn][chunk]
             if self.mcr_problems[rgn] == {}:
@@ -170,26 +188,34 @@ class World(object):
                 if self.mcr_problems[rgn] == {}:
                     del self.mcr_problems[rgn]
 
+
     def delete_chunk_list(self,l):
+        """ Deletes the given chunk list from the world. 
+            Takes a list of tuples storing:
+            (full_mcr_path, chunk_x, chunk_z)
+            
+            And returns the amount of deleted chunks.
+            
+            It pritns info in the process."""
 
         counter = 0
         for region_path, x, z in l:
 
             region_file = region.RegionFile(region_path)
-            
+
             if region_file.header[(x,z)][3] == region_file.STATUS_CHUNK_OK:
                 region_file.unlink_chunk(x, z)
                 counter += 1
             else:
                 print "The chunk ({0},{1}) in the region file {2} doesn't exist.".format(x, z, region_path)
             del region_file
-        
+
         return counter
 
 
 def get_global_chunk_coords(region_filename, chunkX, chunkZ):
     """ Takes the region filename and the chunk local 
-    coords and returns the global chunkcoords as integerss """
+        coords and returns the global chunkcoords as integerss """
     
     regionX, regionZ = get_region_coords(region_filename)
     chunkX += regionX*32
@@ -198,7 +224,8 @@ def get_global_chunk_coords(region_filename, chunkX, chunkZ):
     return chunkX, chunkZ
 
 def get_chunk_region(chunkX, chunkZ):
-    """ Returns the name of the region file given global chunk coords """
+    """ Returns the name of the region file given global chunk
+        coords """
     
     regionX = chunkX / 32
     regionZ = chunkZ / 32
@@ -210,26 +237,26 @@ def get_chunk_region(chunkX, chunkZ):
 
 def get_region_coords(region_filename):
     """ Splits the region filename (full pathname or just filename)
-        and returns his region coordinates.
-        Return X and Z coords as integers. """
-    
+        and returns his region X and Z coordinates as integers. """
+
     splited = split(region_filename)
     filename = splited[1]
     list = filename.split('.')
     coordX = list[1]
     coordZ = list[2]
-    
+
     return int(coordX), int(coordZ)
-    
+
+
 def get_chunk_data_coords(nbt_file):
     """ Gets the coords stored in the NBT structure of the chunk.
+
         Takes an nbt obj and returns the coords as integers.
         Don't confuse with get_global_chunk_coords! """
-    
+
     level = nbt_file.__getitem__('Level')
-            
+
     coordX = level.__getitem__('xPos').value
     coordZ = level.__getitem__('zPos').value
-    
-    return coordX, coordZ
 
+    return coordX, coordZ
