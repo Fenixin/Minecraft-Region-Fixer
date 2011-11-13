@@ -86,26 +86,24 @@ def main():
     https://github.com/Fenixin/Minecraft-Region-Fixer                                        \
     This program comes with ABSOLUTELY NO WARRANTY; for details see COPYING.txt. This is free software, and you are welcome to redistribute it under certain conditions; see COPYING.txt for details.'
 
-    parser = OptionParser(description='Script to check the integrity of a region file, \
-                                            and to fix it, when posible, using with a backup of the map. \
-                                            It uses NBT by twoolie the fork by MidnightLightning. \
-                                            Written by Alejandro Aguilera (Fenixin). Sponsored by \
+    parser = OptionParser(description='Script to check the integrity of Minecraft worlds and fix them if \
+                                            when possible. It uses NBT by twoolie. \
+                                            Author Alejandro Aguilera (Fenixin). Sponsored by \
                                             NITRADO Servers (http://nitrado.net)',\
-                                            prog = 'region-fixer', version='0.0.5', usage=usage, epilog=epilog)
+    prog = 'region-fixer', version='0.0.5', usage=usage, epilog=epilog)
+
     parser.add_option('--backups', '-b', metavar = '<backups>', type = str, dest = 'backups', help = 'List of backup directories of the Minecraft \
                                         world to use to fix corrupted chunks and/or wrong located chunks. Warning! This script is not going \
                                         to check if it \'s the same world, so be careful! \
                                         This argument can be a comma separated list (but never with spaces between elements!).', default = None)
-    parser.add_option('--fix-corrupted','--fc', dest = 'fix_corrupted', action='store_true', \
-                                            help = 'Tries to fix the corrupted chunks using the backups directories', default = False)
-    parser.add_option('--fix-wrong-located','--fw', dest = 'fix_wrong_located', action='store_true', \
-                                            help = 'Tries to fix the wrong located chunks using the backups directories', default = False)
+    parser.add_option('--replace-corrupted','--fc', dest = 'fix_corrupted', action='store_true', \
+                                            help = 'Tries to replace the corrupted chunks using the backups directories', default = False)
+    parser.add_option('--replace-wrong-located','--fw', dest = 'fix_wrong_located', action='store_true', \
+                                            help = 'Tries to replace the wrong located chunks using the backups directories', default = False)
     parser.add_option('--delete-corrupted', '--dc', action = 'store_true', help = '[WARNING!] This option deletes! And deleting can make you lose data, so be careful! :P \
-                                            This option will delete all the corrupted chunks. Used with --fix-corrupted or --fix-wrong-located it will delete all the non-fixed chunks. \
-                                            Minecraft will regenerate the chunk.', default = False)
+                                            This option will delete all the corrupted chunks. Used with --replace-corrupted or --replace-wrong-located it will delete all the non-replaced chunks.', default = False)
     parser.add_option('--delete-wrong-located', '--dw', action = 'store_true', help = '[WARNING!] This option deletes! The same as --delete-corrupted but for \
                                             wrong located chunks', default = False)
-                                            
     parser.add_option('--delete-entities', '--de', action = 'store_true', help = '[WARNING!] This option deletes! This deletes ALL the entities of chunks with more entities than --entity-limit (500 by default). In a Minecraft world entities are mobs and items dropped in the grond, items in chests and other stuff won\'t be touched. Read the README for more info. Region-Fixer will delete the entities when scanning so you can stop and resume the process', default = False, dest = 'delete_entities')
     parser.add_option('--entity-limit', '--el', action = 'store', type = int, help = 'Specify the limit for the --delete-entities option (default = 500).', dest = 'entity_limit', default = 500,)
     parser.add_option('--processes', '-p', action = 'store', type = int, help = 'Set the number of workers to use for scanning region files. Default is to not use multiprocessing at all', default = 1)
@@ -113,7 +111,7 @@ def main():
     parser.add_option('--summary', '-s',action='store_true',help='Prints a summary at the end with all the problems found', default = False)
     
     # Other options
-    other_group = OptionGroup(parser, "Others", "This option is a different part of the program and is incompatible with the options above.")
+    other_group = OptionGroup(parser, "Others", "This option is a different part of the program and is incompatible with the options above. You can't mix int he same line this options with above ones.")
     
     other_group.add_option('--delete-list', metavar = 'delete_list', type = str, help = 'Takes a file with a chunk list inside and deletes the chunks in that list. The list is formed by one chunk\
                                                                                         per line with the format (x,z). [INFO] if you use this option the world won\'t be scanned.', default = None)
@@ -123,7 +121,7 @@ def main():
     # Only the world directory goes to args
 
     if not args:
-        parser.error("No world path specified!")
+        parser.error("No world path specified! Use --help for a complete list of options.")
         sys.exit()
     elif len(args) > 1:
         parser.error("Only one world dirctory needed!")
