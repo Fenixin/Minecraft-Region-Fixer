@@ -86,19 +86,18 @@ def main():
     https://github.com/Fenixin/Minecraft-Region-Fixer                                        \
     This program comes with ABSOLUTELY NO WARRANTY; for details see COPYING.txt. This is free software, and you are welcome to redistribute it under certain conditions; see COPYING.txt for details.'
 
-    parser = OptionParser(description='Script to check the integrity of Minecraft worlds and fix them if \
-                                            when possible. It uses NBT by twoolie. \
-                                            Author Alejandro Aguilera (Fenixin). Sponsored by \
-                                            NITRADO Servers (http://nitrado.net)',\
+    parser = OptionParser(description='Script to check the integrity of Minecraft worlds and fix them when possible. It uses NBT by twoolie. \
+                                            Author: Alejandro Aguilera (Fenixin). \
+                                            Sponsored by: NITRADO Servers (http://nitrado.net)',\
     prog = 'region-fixer', version='0.0.5', usage=usage, epilog=epilog)
 
     parser.add_option('--backups', '-b', metavar = '<backups>', type = str, dest = 'backups', help = 'List of backup directories of the Minecraft \
                                         world to use to fix corrupted chunks and/or wrong located chunks. Warning! This script is not going \
                                         to check if it \'s the same world, so be careful! \
                                         This argument can be a comma separated list (but never with spaces between elements!).', default = None)
-    parser.add_option('--replace-corrupted','--fc', dest = 'fix_corrupted', action='store_true', \
+    parser.add_option('--replace-corrupted','--rc', dest = 'fix_corrupted', action='store_true', \
                                             help = 'Tries to replace the corrupted chunks using the backups directories', default = False)
-    parser.add_option('--replace-wrong-located','--fw', dest = 'fix_wrong_located', action='store_true', \
+    parser.add_option('--replace-wrong-located','--rw', dest = 'fix_wrong_located', action='store_true', \
                                             help = 'Tries to replace the wrong located chunks using the backups directories', default = False)
     parser.add_option('--delete-corrupted', '--dc', action = 'store_true', help = '[WARNING!] This option deletes! And deleting can make you lose data, so be careful! :P \
                                             This option will delete all the corrupted chunks. Used with --replace-corrupted or --replace-wrong-located it will delete all the non-replaced chunks.', default = False)
@@ -108,7 +107,7 @@ def main():
     parser.add_option('--entity-limit', '--el', action = 'store', type = int, help = 'Specify the limit for the --delete-entities option (default = 500).', dest = 'entity_limit', default = 500,)
     parser.add_option('--processes', '-p', action = 'store', type = int, help = 'Set the number of workers to use for scanning region files. Default is to not use multiprocessing at all', default = 1)
     parser.add_option('--verbose', '-v',action='store_true',help='Don\'t use progress bar, print a line per scanned region file. The letters mean c: corrupted, w: wrong located, t: total of chunks')
-    parser.add_option('--summary', '-s',action='store_true',help='Prints a summary at the end with all the problems found', default = False)
+    parser.add_option('--summary', '-s',action='store_true',help='Prints a summary with all the found problems in region files.', default = False)
     
     # Other options
     other_group = OptionGroup(parser, "Others", "This option is a different part of the program and is incompatible with the options above. You can't mix int he same line this options with above ones.")
