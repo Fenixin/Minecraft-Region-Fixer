@@ -33,7 +33,7 @@ You can read the program help running: “python region-fixer.py --help”
 
 Here are some examples:
 
-This will scan your world and report any problems.
+This will scan your world and report any problems::
 
     $ python region-fixer.py /media/disk/corrupted-world/
     Welcome to Region Fixer!
@@ -52,7 +52,7 @@ This will scan your world and report any problems.
     Found 0 corrupted and 0 wrong located chunks of a total of 3368
 
 
-You can use --verbose or -v option if you want more info:
+You can use --verbose or -v option if you want more info::
 
     $ python region-fixer.py --verbose /media/disk/corrupted-world/
     Welcome to Region Fixer!
@@ -79,8 +79,7 @@ You can use --verbose or -v option if you want more info:
 
     Found 0 corrupted and 0 wrong located chunks of a total of 3368
 
-
-If we use the option "--delete-corrupted" or "--dc":
+If we use the option "--delete-corrupted" or "--dc"::
 
     $ python region-fixer.py --delete-corrupted /media/disk/corrupted-world/
     Welcome to Region Fixer!
@@ -102,7 +101,7 @@ If we use the option "--delete-corrupted" or "--dc":
 
 If we make a backup every day of our world we can use them to fix 
 the corrupted chunks, this method can spam a lot of output text, because
-writes a log for every chunk that is trying to fix:
+writes a log for every chunk that is trying to fix::
 
     $ python region-fixer.py --fix-corrupted --backups=/media/backups/2012-12-12/,/media/backups/2012-12-11/ /media/disk/corrupted-world/
     Welcome to Region Fixer!
@@ -170,7 +169,7 @@ writing this Entities are:
 Note that you still need to load the chunk in Region Fixer to fix it, 
 and it may need GIGs of RAM and lot of time. You can use this in
 combination with "--entity-limit" to set your limit (default 500
-entities).
+entities)::
 
     $python region-fixer.py --delete-entities --entity-limit=100 /media/disk/corrupted-world/
     Welcome to Region Fixer!
@@ -186,6 +185,7 @@ entities).
     Scanning /media/disk/corrupted-world/region/r.0.-1.mcr   ...  4/4
 
     Found 2 corrupted and 0 wrong located chunks of a total of 466
+
 
 For more info: “python region-fixer.py --help”
 
