@@ -31,7 +31,7 @@ import gzip
 import nbt.nbt as nbt
 
 import world
-from scan import scan_all_players, scan_level, scan_level, scan_all_mcr_files
+from scan import scan_all_players, scan_level, scan_all_mcr_files
 
 
 def parse_backup_list(world_backup_dirs):
