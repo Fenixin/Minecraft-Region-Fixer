@@ -200,13 +200,15 @@ def main():
         print "\n{0:#^60}".format(' Scanning level.dat ')
 
         if not w.level_file:
+
             print "[WARNING!] \'level.dat\' doesn't exist!"
         else:
             scan_level(w)
-            if len(w.level_status) == 0:
+            if len(w.level_problems) == 0:
                 print "\'level.dat'\ is redable"
             else:
-                print "Warning: \'level.dat\' is corrupted, error: {0}".format(w.level_problems["file"])
+                print "[WARNING!]: \'level.dat\' is corrupted with the following error/s:"
+                for e in w.level_problems: print e,
 
 
         print "\n{0:#^60}".format(' Scanning player files ')

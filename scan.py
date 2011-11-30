@@ -50,7 +50,7 @@ def scan_level(world_obj):
         del level_dat
 
     except Exception, e:
-        w.level_problems["file"] = e
+        w.level_problems.append(e)
 
 
 def scan_player(world_obj, player_file_path):

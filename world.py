@@ -49,7 +49,7 @@ class World(object):
         if not exists(self.level_file):
             self.level_file = None
         # dictionary used to store all the problems found in level.dat file
-        self.level_status = {}
+        self.level_problems = []
         
         # for player files
         # not sure yet how to store this properly because I'm not sure
