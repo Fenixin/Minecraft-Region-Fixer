@@ -61,11 +61,12 @@ def scan_player(world_obj, player_file_path):
     nick = split(player_file_path)[1].split(".")[0]
     try:
         player_dat = nbt.NBTFile(filename = player_file_path)
-        world_obj.players_status[nick] = w.OK
+        world_obj.player_status[nick] = w.OK
         del player_dat
 
     except Exception, e:
-        w.players_problems[nick] = e
+        w.player_status[nick] = e
+        w.player_with_problems.append(nick)
 
 
 def scan_all_players(world_obj):

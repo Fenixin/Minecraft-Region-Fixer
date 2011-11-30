@@ -218,11 +218,11 @@ def main():
         else:
             scan_all_players(w)
         
-            if not w.player_problems:
+            if not w.player_with_problems:
                 print "All player files are readable."
             else:
-                for player in w.player_problems:
-                    print "Warning: Player file \"{0}.dat\" has problems: {1}".format(player, w.player_problems[player])
+                for player in w.player_with_problems:
+                    print "Warning: Player file \"{0}.dat\" has problems: {1}".format(player, w.player_status[player])
 
         # check for corrupted chunks
         print "\n{0:#^60}".format(' Scanning region files ')

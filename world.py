@@ -55,8 +55,8 @@ class World(object):
         # not sure yet how to store this properly because I'm not sure
         # on what to scan about players.
         self.player_files = glob(join(join(self.world_path, "players"), "*.dat"))
-        self.players_status = {}
-        self.player_problems = []
+        self.player_with_problems = []
+        self.player_status = {}
 
         # Constants. Used to mark the status of a problematic chunk,
         # player, etc.
