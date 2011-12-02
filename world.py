@@ -49,14 +49,14 @@ class World(object):
         if not exists(self.level_file):
             self.level_file = None
         # dictionary used to store all the problems found in level.dat file
-        self.level_status = {}
+        self.level_problems = []
         
         # for player files
         # not sure yet how to store this properly because I'm not sure
         # on what to scan about players.
         self.player_files = glob(join(join(self.world_path, "players"), "*.dat"))
-        self.players_status = {}
-        self.player_problems = []
+        self.player_with_problems = []
+        self.player_status = {}
 
         # Constants. Used to mark the status of a problematic chunk,
         # player, etc.

@@ -50,7 +50,7 @@ def scan_level(world_obj):
         del level_dat
 
     except Exception, e:
-        w.level_problems["file"] = e
+        w.level_problems.append(e)
 
 
 def scan_player(world_obj, player_file_path):
@@ -61,11 +61,12 @@ def scan_player(world_obj, player_file_path):
     nick = split(player_file_path)[1].split(".")[0]
     try:
         player_dat = nbt.NBTFile(filename = player_file_path)
-        world_obj.players_status[nick] = w.OK
+        world_obj.player_status[nick] = w.OK
         del player_dat
 
     except Exception, e:
-        w.players_problems[nick] = e
+        w.player_status[nick] = e
+        w.player_with_problems.append(nick)
 
 
 def scan_all_players(world_obj):
@@ -101,8 +102,8 @@ def scan_mcr_file(region_file_path):
     try:
         for x in range(32):
             for z in range(32):
-                chunk = scan_chunk(region_file, x, z)
-                if isinstance(chunk, nbt.TAG_Compound):
+                chunk, status, error_msg = scan_chunk(region_file, x, z)
+                if status == 0:
                     chunks += 1
                     total_entities = len(chunk['Level']['Entities'].tags)
                     # deleting entities is in here because to parse a chunk with thousands of wrong entities
@@ -126,11 +127,11 @@ def scan_mcr_file(region_file_path):
                             #~ archivo = open(name,'w')
                             #~ archivo.write(pretty_tree)
 
-                elif chunk == -1:
+                elif status == -1:
                     chunks += 1
                     problems.append((region_file.filename,(x,z),w.CORRUPTED))
                     corrupted += 1
-                elif chunk == -2:
+                elif status == -2:
                     chunks += 1
                     problems.append((region_file.filename,(x,z),w.WRONG_LOCATED))
                     wrong += 1
@@ -167,9 +168,12 @@ def add_problem(world_obj, region_file, chunk, problem):
 
 
 def scan_chunk(region_file, x, z):
-    """ Returns the chunk if exists and it's OK, -1 if it's corrupted,
-     -2 if it the header coords doesn't match the coords storedn inside
-     the chunk and None if it doesn't exist. """
+    """ Returns a tuple with (chunk, status_integer, error_text).
+     Status integers are: 0 if exists and it's OK, -1 if it's corrupted,
+     -2 if it the header coords doesn't match the coords stored in the
+     chunk data (wrong located chunk) and 1 if it doesn't exist.
+
+     The variable chunk can be None if there's no chunk to return."""
 
     try:
         chunk = region_file.get_chunk(x,z)
@@ -177,18 +181,24 @@ def scan_chunk(region_file, x, z):
             data_coords = world.get_chunk_data_coords(chunk)
             header_coords = world.get_global_chunk_coords(region_file.filename, x, z)
             if data_coords != header_coords:
-                return -2
+                return (chunk, -2, "Mismatched coordinates.")
 
-    except region.RegionHeaderError:
-        return -1
+    except region.RegionHeaderError as e:
+        error = "Region header error: " + e.msg
+        return (None, -1, error)
 		
-    except region.ChunkDataError:
-        return -1
+    except region.ChunkDataError as e:
+        error = "Chunk data error: " + e.msg
+        return (None, -1, error)
 
-    except region.ChunkHeaderError:
-        return -1
-		
-    return chunk
+    except region.ChunkHeaderError as e:
+        error = "Chunk herader error: " + e.msg
+        return (None, -1, error)
+
+    if chunk != None:
+        return (chunk, 0, "OK")
+
+    return (None, 1, "The chunk doesn't exist")
 
 
 def _mp_pool_init(world_obj,options,q):
