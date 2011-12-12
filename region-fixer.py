@@ -226,14 +226,16 @@ def main():
 
         # check for corrupted chunks
         print "\n{0:#^60}".format(' Scanning region files ')
+        if len(w.all_mcr_files) != 0:
+            scan_all_mcr_files(w, options)
 
-        scan_all_mcr_files(w, options)
-
-        corrupted = w.count_problems(w.CORRUPTED)
-        wrong_located = w.count_problems(w.WRONG_LOCATED)
-        
-        print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(
-            corrupted, wrong_located, w.num_chunks)
+            corrupted = w.count_problems(w.CORRUPTED)
+            wrong_located = w.count_problems(w.WRONG_LOCATED)
+            
+            print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(
+                corrupted, wrong_located, w.num_chunks)
+        else:
+            print "No region files to scan!"
 
         # Try to fix corrupted chunks with the backup copy
         if backup_worlds:
