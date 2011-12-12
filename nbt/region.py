@@ -194,6 +194,8 @@ class RegionFile(object):
 			length, compression, chunk_header_status = self.chunk_headers[x, z]
 			if chunk_header_status == self.STATUS_CHUNK_ZERO_LENGTH:
 				raise ChunkHeaderError('The length of the chunk is 0')
+			elif chunk_header_status == self.STATUS_CHUNK_MISMATCHED_LENGTHS:
+				raise ChunkHeaderError('The length in region header and the length in the chunk header are incompatible')
 
 			self.file.seek(offset*4*1024 + 5) # offset comes in sectors of 4096 bytes + length bytes + compression byte
 			chunk = self.file.read(length-1)
