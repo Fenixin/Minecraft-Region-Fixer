@@ -90,7 +90,7 @@ def main():
     parser = OptionParser(description='Script to check the integrity of Minecraft worlds and fix them when possible. It uses NBT by twoolie. \
                                             Author: Alejandro Aguilera (Fenixin). \
                                             Sponsored by: NITRADO Servers (http://nitrado.net)',\
-    prog = 'region-fixer', version='0.0.5', usage=usage, epilog=epilog)
+    prog = 'region-fixer', version='0.0.6', usage=usage, epilog=epilog)
 
     parser.add_option('--backups', '-b', metavar = '<backups>', type = str, dest = 'backups', help = 'List of backup directories of the Minecraft \
                                         world to use to fix corrupted chunks and/or wrong located chunks. Warning! This script is not going \
