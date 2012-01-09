@@ -21,6 +21,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from multiprocessing import freeze_support
 from optparse import OptionParser, OptionGroup
 from glob import glob
 from os.path import join, split, exists, getsize
@@ -292,4 +293,5 @@ def main():
 
 
 if __name__ == '__main__':
+    freeze_support()
     main()
