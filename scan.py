@@ -261,7 +261,7 @@ def scan_all_mcr_files(world_obj, options):
                 counter += 1
                 if options.verbose:
                     stats = "(c: {0}, w: {1}, t: {2})".format( corrupted, wrong, num_chunks)
-                    print "Scanned {0: <15} {1:.<60} {2}/{3}".format(filename, stats, counter, total_regions)
+                    print "Scanned {0: <15} {1:.<40} {2}/{3}".format(filename, stats, counter, total_regions)
                 else:
                     pbar.update(counter)
 
