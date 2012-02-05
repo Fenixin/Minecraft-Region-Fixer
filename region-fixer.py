@@ -252,28 +252,31 @@ def main():
 
         corrupted = w.count_problems(w.CORRUPTED)
         wrong_located = w.count_problems(w.WRONG_LOCATED)
-
+        
         # delete bad chunks! (if asked for)
-        if options.delete_corrupted and corrupted:
-            
-            print "{0:#^60}".format(' Deleting  corrupted chunks ')
+        if options.delete_corrupted:
+            if corrupted:
+                print "{0:#^60}".format(' Deleting  corrupted chunks ')
 
-            print "... ",
-            counter = w.remove_problematic_chunks(w.CORRUPTED)
-            print "Done!"
-            
-            print "Deleted {0} corrupted chunks".format(counter)
+                print "... ",
+                counter = w.remove_problematic_chunks(w.CORRUPTED)
+                print "Done!"
+                
+                print "Deleted {0} corrupted chunks".format(counter)
+            else:
+                print "No corrupted chunks to delete!"
         
-        
-        if options.delete_wrong_located and wrong_located:
-            
-            print "{0:#^60}".format(' Deleting wrong located chunks ')
-            
-            print "... ",
-            counter = w.remove_problematic_chunks(w.WRONG_LOCATED)
-            print "Done!"
-            
-            print "Deleted {0} wrong located chunks".format(counter)
+        if options.delete_wrong_located:
+            if wrong_located:
+                print "{0:#^60}".format(' Deleting wrong located chunks ')
+                
+                print "... ",
+                counter = w.remove_problematic_chunks(w.WRONG_LOCATED)
+                print "Done!"
+                
+                print "Deleted {0} wrong located chunks".format(counter)
+            else:
+                print "No wrong located chunks to delete!"
         
         if options.summary:
             print "\n{0:#^60}".format(' Summary of found problems ')
