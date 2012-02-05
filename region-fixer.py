@@ -122,15 +122,15 @@ def main():
 
     if not args:
         parser.error("No world path specified! Use --help for a complete list of options.")
-        sys.exit()
+        sys.exit(1)
     elif len(args) > 1:
         parser.error("Only one world dirctory needed!")
-        sys.exit()
+        sys.exit(1)
 
     world_path = args[0]
     if not exists(world_path):
         parser.error("The world path doesn't exists!")
-        sys.exit()
+        sys.exit(1)
 
     # Check basic options incompatibilities
     if options.backups and not (options.fix_corrupted or options.fix_wrong_located):
@@ -169,7 +169,7 @@ def main():
 
     if not w.all_mcr_files and not w.level_file:
         print "Error: No region files to scan!"
-        sys.exit()
+        sys.exit(1)
         
     if w.player_files:
         print "There are {0} region files and {1} player files in the world directory.".format(len(w.normal_mcr_files) + len(w.nether_mcr_files), len(w.player_files))
@@ -184,7 +184,7 @@ def main():
             list_file = file(options.delete_list)
         except:
             print 'List file not found!'
-            sys.exit()
+            sys.exit(1)
 
         delete_list = parse_chunk_list(list_file, w)
         
