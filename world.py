@@ -46,8 +46,11 @@ class World(object):
         
         # for level.dat
         self.level_file = join(self.world_path, "level.dat")
-        if not exists(self.level_file):
+        if exists(self.level_file):
+            self.level_data = nbt.NBTFile(self.level_file)["Data"]
+        else:
             self.level_file = None
+            self.level_data = None
         # dictionary used to store all the problems found in level.dat file
         self.level_problems = []
         
