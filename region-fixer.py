@@ -108,6 +108,7 @@ def main():
     parser.add_option('--entity-limit', '--el', action = 'store', type = int, help = 'Specify the limit for the --delete-entities option (default = 500).', dest = 'entity_limit', default = 500,)
     parser.add_option('--processes', '-p', action = 'store', type = int, help = 'Set the number of workers to use for scanning region files. Default is to not use multiprocessing at all', default = 1)
     parser.add_option('--verbose', '-v',action='store_true',help='Don\'t use progress bar, print a line per scanned region file. The letters mean c: corrupted, w: wrong located, t: total of chunks')
+    parser.add_option('--interactive', '-i',action='store_true',help='Scans the world and then enter in interactive mode, where you can write commands an do things',dest = 'interactive',default = False)
     parser.add_option('--summary', '-s',action='store_true',help='Prints a summary with all the found problems in region files.', default = False)
     
     # Other options
@@ -237,63 +238,129 @@ def main():
                 corrupted, wrong_located, w.num_chunks)
         else:
             print "No region files to scan!"
+        
+        # Go to interactive mode?
+        if options.interactive:
+            import readline # interactive prompt with history
+            interactive_loop(w)
+        
+        else:
+            # Try to fix corrupted chunks with the backup copy
+            if backup_worlds:
+                if options.fix_corrupted:
+                    print "{0:#^60}".format(' Trying to fix corrupted chunks ')
+                    fixed = w.replace_problematic_chunks(backup_worlds, w.CORRUPTED)
+                    print "\n{0} fixed chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
+                
+                if options.fix_wrong_located:
+                    print "{0:#^60}".format(' Trying to fix wrong located chunks ')
+                    fixed = w.replace_problematic_chunks(backup_worlds, w.WRONG_LOCATED)
+                    print "\n{0} fixed chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
 
-        # Try to fix corrupted chunks with the backup copy
-        if backup_worlds:
-            if options.fix_corrupted:
-                print "{0:#^60}".format(' Trying to fix corrupted chunks ')
-                fixed = w.replace_problematic_chunks(backup_worlds, w.CORRUPTED)
-                print "\n{0} fixed chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
+            corrupted = w.count_problems(w.CORRUPTED)
+            wrong_located = w.count_problems(w.WRONG_LOCATED)
             
-            if options.fix_wrong_located:
-                print "{0:#^60}".format(' Trying to fix wrong located chunks ')
-                fixed = w.replace_problematic_chunks(backup_worlds, w.WRONG_LOCATED)
-                print "\n{0} fixed chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
+            # delete bad chunks! (if asked for)
+            if options.delete_corrupted:
+                if corrupted:
+                    print "{0:#^60}".format(' Deleting  corrupted chunks ')
 
-        corrupted = w.count_problems(w.CORRUPTED)
-        wrong_located = w.count_problems(w.WRONG_LOCATED)
+                    print "... ",
+                    counter = w.remove_problematic_chunks(w.CORRUPTED)
+                    print "Done!"
+                    
+                    print "Deleted {0} corrupted chunks".format(counter)
+                else:
+                    print "No corrupted chunks to delete!"
+            
+            if options.delete_wrong_located:
+                if wrong_located:
+                    print "{0:#^60}".format(' Deleting wrong located chunks ')
+                    
+                    print "... ",
+                    counter = w.remove_problematic_chunks(w.WRONG_LOCATED)
+                    print "Done!"
+                    
+                    print "Deleted {0} wrong located chunks".format(counter)
+                else:
+                    print "No wrong located chunks to delete!"
+            
+            if options.summary:
+                print "\n{0:#^60}".format(' Summary of found problems ')
+                text = summary(w, [w.CORRUPTED, w.WRONG_LOCATED, w.TOO_MUCH_ENTITIES])
+                print text
+
+def summary(world, problems):
+    w = world
+    text = ''
+    for mcr in w.mcr_problems:
+        write = False
+        chunk_problems = []
+        for chunk in w.mcr_problems[mcr]:
+            for p in w.mcr_problems[mcr][chunk]:
+                # first check if we need to print this
+                if p in problems:
+                    write = True
+                    chunk_problems.append((chunk, p))
         
-        # delete bad chunks! (if asked for)
-        if options.delete_corrupted:
-            if corrupted:
-                print "{0:#^60}".format(' Deleting  corrupted chunks ')
+        if write == True:
+            # now print text for the region file
+            text += split(mcr)[1] + ":\n"
+            for c in chunk_problems:
+                chunk = c[0]
+                problem = c[1]
+                text += "\tchunk " + str(c) + " :"
+                if problem in problems:
+                    if problem == w.CORRUPTED:
+                        text += " corrupted\n"
+                    elif problem == w.WRONG_LOCATED:
+                        text += " wrong located\n"
+                    elif problem == w.TOO_MUCH_ENTITIES:
+                        text += " too much entities\n"
+        if len(text) == 0:
+            text = "No chunks with this problem."
+    return text
 
-                print "... ",
-                counter = w.remove_problematic_chunks(w.CORRUPTED)
-                print "Done!"
-                
-                print "Deleted {0} corrupted chunks".format(counter)
+def interactive_loop(world):
+    w = world
+    print "Entering in interactive mode."
+    while True:
+        line = raw_input(">").split()
+        if line[0] == "help":
+            if len(line) > 2:
+                print "Error: too many parameters. Try \'help\'."
+            elif len(line) > 1:
+                if line[1] == "help":
+                    print "Pritns this help."
+                elif line[1] == "quit":
+                    print "Quits interactive mode."
+                elif line[1] == "list":
+                    print "Prints a list of chunks with that problem, exmaple: \'list corrupted\' or \'list c\'. \nProblems are: corrupted, wrong, entities. You can aslo use the first letter."
             else:
-                print "No corrupted chunks to delete!"
+                print "Avaliable commands are: help, quit, list"
+                print "Write \'help <command>\' to get specific help"
         
-        if options.delete_wrong_located:
-            if wrong_located:
-                print "{0:#^60}".format(' Deleting wrong located chunks ')
-                
-                print "... ",
-                counter = w.remove_problematic_chunks(w.WRONG_LOCATED)
-                print "Done!"
-                
-                print "Deleted {0} wrong located chunks".format(counter)
+        elif line[0] == "list":
+            if len(line) > 2:
+                print "Error: too many parameters."
+            elif len(line) > 1:
+                if line[1] == "corrupted" or line[1] == "c":
+                    print summary(world, [w.CORRUPTED])
+                elif line[1] == "wrong" or line[1] == "w" :
+                    print summary(world, [w.WRONG_LOCATED])
+                elif line[1] == "entities" or line[1] == "e":
+                    print summary(world, [w.TOO_MUCH_ENTITIES])
+                else:
+                    print "Unknown list."
             else:
-                print "No wrong located chunks to delete!"
-        
-        if options.summary:
-            print "\n{0:#^60}".format(' Summary of found problems ')
-            for mcr in w.mcr_problems:
-                print split(mcr)[1] + ":"
-                for chunk in w.mcr_problems[mcr]:
-                    print "    chunk ",chunk," :",
-                    for problem in w.mcr_problems[mcr][chunk]:
-                        if problem == w.CORRUPTED:
-                            print "Corrupted"
-                        elif problem == w.WRONG_LOCATED:
-                            print "Wrong located"
-                        elif problem == w.TOO_MUCH_ENTITIES:
-                            print "Too much entities"
-                print
-                
+                print "Use \'list <list_name>\'. Possible names are: corrupted or c, wrong or w, entities or e."
 
+        elif line[0] == "quit":
+            print "Quiting"
+            break
+        
+        else:
+            print "Uknown command. Write \'help\' to see a list of commands"
 
 if __name__ == '__main__':
     freeze_support()
