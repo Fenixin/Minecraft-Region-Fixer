@@ -26,9 +26,6 @@ from optparse import OptionParser, OptionGroup
 from glob import glob
 from os.path import join, split, exists, getsize
 import sys
-import nbt.region as region
-import zlib
-import gzip
 from cmd import Cmd
 
 import nbt.nbt as nbt
@@ -359,8 +356,14 @@ class interactive_loop(Cmd):
     def do_quit(self, arg):
         print "Quitting."
         return True
-    def help_quit(arg):
+    def help_quit(self):
         print "Quits interactive mode."
+    
+    def do_EOF(self, arg):
+        print "Quitting."
+        return True
+    def help_EOF(self):
+        print "Same as quit."
         
     def help_help(self):
         print "Prints help help."
