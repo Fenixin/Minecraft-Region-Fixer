@@ -23,12 +23,10 @@
 
 from multiprocessing import freeze_support
 from optparse import OptionParser, OptionGroup
-from glob import glob
-from os.path import join, split, exists, getsize
+from os.path import join, split, exists
 import sys
 from cmd import Cmd
 
-import nbt.nbt as nbt
 import world
 from scan import scan_all_players, scan_level, scan_all_mcr_files
 
@@ -175,8 +173,6 @@ def main():
     else:
         print "There are {0} region files in the world directory.".format(len(w.normal_mcr_files) + len(w.nether_mcr_files))
 
-    region_files = w.all_mcr_files
-
     # The program starts
     if options.delete_list: # Delete the given list of chunks
         try:
@@ -239,7 +235,7 @@ def main():
         
         # Go to interactive mode?
         if options.interactive:
-            import readline # interactive prompt with history 
+            #~ import readline # interactive prompt with history 
             # WARNING NEEDS CHANGES FOR WINDOWS
             c = interactive_loop(w)
             c.cmdloop()
@@ -303,7 +299,7 @@ def summary(world, problems):
                     write = True
                     chunk_problems.append((chunk, p))
         
-        if write == True:
+        if write:
             # now print text for the region file
             text += split(mcr)[1] + ":\n"
             for c in chunk_problems:

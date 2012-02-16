@@ -23,11 +23,12 @@
 
 import nbt.region as region
 import nbt.nbt as nbt
-from os.path import split, getsize
+from os.path import split
 import progressbar
 import multiprocessing
 import world
 import time
+import sys
 
 
 class FractionWidget(progressbar.ProgressBarWidget):
@@ -109,7 +110,7 @@ def scan_mcr_file(region_file_path):
                     # deleting entities is in here because to parse a chunk with thousands of wrong entities
                     # takes a long time, and once detected is better to fix it at once.
                     if total_entities >= entity_limit:
-                        if delete_entities == True:
+                        if delete_entities:
                             empty_tag_list = nbt.TAG_List(nbt.TAG_Byte,'','Entities')
                             chunk['Level']['Entities'] = empty_tag_list
                             print "Deleted {0} entities in chunk ({1},{2}).".format(total_entities, x, z)
@@ -226,7 +227,6 @@ def scan_all_mcr_files(world_obj, options):
     corrupted_total = 0
     wrong_total = 0
     entities_total = 0
-    region_counter = 0
 
     # init progress bar
     if not options.verbose:

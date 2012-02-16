@@ -24,9 +24,9 @@
 import nbt.region as region
 import nbt.nbt as nbt
 from glob import glob
-from os.path import join, split, exists, getsize
+from os.path import join, split, exists
 
-from scan import scan_chunk
+
 
 class World(object):
     """ This class stores all the info needed of a world, and once
@@ -101,7 +101,6 @@ class World(object):
                 if problem in self.mcr_problems[mcr_path][chunk]:
                     print "\n{0:-^60}".format(' New chunk to fix! ')
                     for backup in backup_worlds:
-                        Fixed = False
 
                         # search for the region file
                         region_name = split(mcr_path)[1]
@@ -115,6 +114,7 @@ class World(object):
                             print "Backup region file found in: {0} \nfixing...".format(backup_mcr_path)
 
                             # get the chunk
+                            from scan import scan_chunk
                             backup_region_file = region.RegionFile(backup_mcr_path)
                             working_chunk = scan_chunk(backup_region_file, chunk[0], chunk[1])
                             del backup_region_file
@@ -127,7 +127,6 @@ class World(object):
                                 tofix_region_file = region.RegionFile(mcr_path)
                                 tofix_region_file.write_chunk(chunk[0], chunk[1],working_chunk)
                                 del tofix_region_file
-                                Fixed = True
                                 counter += 1
                                 fixed_chunks.append((mcr_path, chunk, problem))
                                 print "Chunk fixed using backup dir: {0}".format(backup.world_path)
@@ -244,9 +243,9 @@ def get_region_coords(region_filename):
 
     splited = split(region_filename)
     filename = splited[1]
-    list = filename.split('.')
-    coordX = list[1]
-    coordZ = list[2]
+    l = filename.split('.')
+    coordX = l[1]
+    coordZ = l[2]
 
     return int(coordX), int(coordZ)
 
