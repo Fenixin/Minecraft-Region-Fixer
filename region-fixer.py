@@ -29,8 +29,9 @@ import sys
 import nbt.region as region
 import zlib
 import gzip
-import nbt.nbt as nbt
+from cmd import Cmd
 
+import nbt.nbt as nbt
 import world
 from scan import scan_all_players, scan_level, scan_all_mcr_files
 
@@ -241,8 +242,10 @@ def main():
         
         # Go to interactive mode?
         if options.interactive:
-            import readline # interactive prompt with history
-            interactive_loop(w)
+            import readline # interactive prompt with history 
+            # WARNING NEEDS CHANGES FOR WINDOWS
+            c = interactive_loop(w)
+            c.cmdloop()
         
         else:
             # Try to fix corrupted chunks with the backup copy
@@ -321,46 +324,47 @@ def summary(world, problems):
             text = "No chunks with this problem."
     return text
 
-def interactive_loop(world):
-    w = world
-    print "Entering in interactive mode."
-    while True:
-        line = raw_input(">").split()
-        if line[0] == "help":
-            if len(line) > 2:
-                print "Error: too many parameters. Try \'help\'."
-            elif len(line) > 1:
-                if line[1] == "help":
-                    print "Pritns this help."
-                elif line[1] == "quit":
-                    print "Quits interactive mode."
-                elif line[1] == "list":
-                    print "Prints a list of chunks with that problem, exmaple: \'list corrupted\' or \'list c\'. \nProblems are: corrupted, wrong, entities. You can aslo use the first letter."
-            else:
-                print "Avaliable commands are: help, quit, list"
-                print "Write \'help <command>\' to get specific help"
-        
-        elif line[0] == "list":
-            if len(line) > 2:
-                print "Error: too many parameters."
-            elif len(line) > 1:
-                if line[1] == "corrupted" or line[1] == "c":
-                    print summary(world, [w.CORRUPTED])
-                elif line[1] == "wrong" or line[1] == "w" :
-                    print summary(world, [w.WRONG_LOCATED])
-                elif line[1] == "entities" or line[1] == "e":
-                    print summary(world, [w.TOO_MUCH_ENTITIES])
-                else:
-                    print "Unknown list."
-            else:
-                print "Use \'list <list_name>\'. Possible names are: corrupted or c, wrong or w, entities or e."
+class interactive_loop(Cmd):
+    
+    def __init__(self, world):
+        Cmd.__init__(self)
+        self.w = world
+        self.prompt = "-> "
+        self.intro = "Minecraft Region-Fixer interactive mode."
 
-        elif line[0] == "quit":
-            print "Quiting"
-            break
-        
+    def do_list(self, arg):
+        if len(arg.split()) > 1:
+            print "Error: too many parameters."
         else:
-            print "Uknown command. Write \'help\' to see a list of commands"
+            if arg == "corrupted" or arg == "c":
+                print summary(self.w, [self.w.CORRUPTED])
+            elif arg == "wrong" or arg == "w" :
+                print summary(self.w, [self.w.WRONG_LOCATED])
+            elif arg == "entities" or arg == "e":
+                print summary(self.w, [self.w.TOO_MUCH_ENTITIES])
+            else:
+                print "Unknown list."
+    def complete_list(self, text, line, begidx, endidx):
+        if text == '':
+            return ["corrupted", "wrong", "entities"]
+        elif text[0] == "c":
+            return ["corrupted"]
+        elif text[0] == "w":
+            return ["wrong"]
+        elif text[0] == "e":
+            return ["entities"]
+    def help_list(self):
+        print "Prints a list of chunks with that problem, exmaple: \'list corrupted\' or \'list c\'. \nProblems are: corrupted, wrong, entities. You can aslo use the first letter."
+    
+    def do_quit(self, arg):
+        print "Quitting."
+        return True
+    def help_quit(arg):
+        print "Quits interactive mode."
+        
+    def help_help(self):
+        print "Prints help help."
+
 
 if __name__ == '__main__':
     freeze_support()
