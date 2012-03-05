@@ -37,9 +37,10 @@ class World(object):
         self.world_path = world_path
         
         # variables for region files
-        self.normal_mcr_files = glob(join(self.world_path, "region/r.*.*.mcr"))
-        self.nether_mcr_files = glob(join(self.world_path,"DIM-1/region/r.*.*.mcr"))
-        self.all_mcr_files = self.normal_mcr_files + self.nether_mcr_files
+        self.normal_mca_files = glob(join(self.world_path, "region/r.*.*.mca"))
+        self.nether_mca_files = glob(join(self.world_path,"DIM-1/region/r.*.*.mca"))
+        self.aether_mca_files = glob(join(self.world_path,"DIM1/region/r.*.*.mca"))
+        self.all_mca_files = self.normal_mca_files + self.nether_mca_files + self.aether_mca_files
         self.num_chunks = None # not used right now
         # dict storing all the problems found in the region files
         self.mcr_problems = {}

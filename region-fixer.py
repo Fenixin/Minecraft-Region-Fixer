@@ -28,7 +28,7 @@ import sys
 from cmd import Cmd
 
 import world
-from scan import scan_all_players, scan_level, scan_all_mcr_files
+from scan import scan_all_players, scan_level, scan_all_mca_files
 
 
 def parse_backup_list(world_backup_dirs):
@@ -40,7 +40,7 @@ def parse_backup_list(world_backup_dirs):
     for world_dir in directories:
         if exists(world_dir):
             w = world.World(world_dir)
-            if not w.all_mcr_files and not w.level_file:
+            if not w.all_mca_files and not w.level_file:
                 print "[ATTENTION] The directory \"{0}\" doesn't look like a minecraft world folder.".format(world_dir)
             else:
                 backup_worlds.append(w)
@@ -68,7 +68,7 @@ def parse_chunk_list(chunk_list, world_obj):
             continue
         region_name = world.get_chunk_region(chunk[0], chunk[1])
         fullpath = join(world_obj.world_path, "region", region_name)
-        if fullpath in world_obj.all_mcr_files:
+        if fullpath in world_obj.all_mca_files:
             parsed_list.append((fullpath, chunk[0], chunk[1]))
         else:
             print "The chunk {0} should be in the region file {1} and this region files doesn't extist!".format(chunk, fullpath)
@@ -158,20 +158,23 @@ def main():
     if not w.level_file:
         print "Warning: No \'level.dat\' file found!"
 
-    if not w.normal_mcr_files:
+    if not w.normal_mca_files:
         print "Warning: No region files found in the \"region\" directory!"
 
-    if not w.nether_mcr_files:
+    if not w.nether_mca_files:
         print "Info: No nether dimension in the world directory."
 
-    if not w.all_mcr_files and not w.level_file:
+    if not w.aether_mca_files:
+        print "Info: No aether dimension in the world directory."
+
+    if not w.all_mca_files and not w.level_file:
         print "Error: No region files to scan!"
         sys.exit(1)
         
     if w.player_files:
-        print "There are {0} region files and {1} player files in the world directory.".format(len(w.normal_mcr_files) + len(w.nether_mcr_files), len(w.player_files))
+        print "There are {0} region files and {1} player files in the world directory.".format(len(w.all_mca_files), len(w.player_files))
     else:
-        print "There are {0} region files in the world directory.".format(len(w.normal_mcr_files) + len(w.nether_mcr_files))
+        print "There are {0} region files in the world directory.".format(len(w.all_mca_files))
 
     # The program starts
     if options.delete_list: # Delete the given list of chunks
@@ -222,8 +225,8 @@ def main():
 
         # check for corrupted chunks
         print "\n{0:#^60}".format(' Scanning region files ')
-        if len(w.all_mcr_files) != 0:
-            scan_all_mcr_files(w, options)
+        if len(w.all_mca_files) != 0:
+            scan_all_mca_files(w, options)
 
             corrupted = w.count_problems(w.CORRUPTED)
             wrong_located = w.count_problems(w.WRONG_LOCATED)

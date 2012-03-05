@@ -86,7 +86,7 @@ def scan_mcr_file(region_file_path):
 
     (region file, (coord x, coord y), problem) 
 
-    This function is used from scan_all_mcr_files and uses a
+    This function is used from scan_all_mca_files and uses a
     multiprocessing queue to return in real time info about the process.
     """
 
@@ -203,7 +203,7 @@ def scan_chunk(region_file, x, z):
 
 
 def _mp_pool_init(world_obj,options,q):
-    """ Function to initialize the multiprocessing in scan_all_mcr_files.
+    """ Function to initialize the multiprocessing in scan_all_mca_files.
     Is used to pass values to the child process. """
 
     scan_mcr_file.q = q
@@ -211,7 +211,7 @@ def _mp_pool_init(world_obj,options,q):
     scan_mcr_file.w = world_obj
 
 
-def scan_all_mcr_files(world_obj, options):
+def scan_all_mca_files(world_obj, options):
     """ This function scans all te region files from a world_object
     printing status info in the process.
     
@@ -222,7 +222,7 @@ def scan_all_mcr_files(world_obj, options):
     code is still stored just in case is needed. """
 
     w = world_obj
-    total_regions = len(w.all_mcr_files)
+    total_regions = len(w.all_mca_files)
     total_chunks = 0
     corrupted_total = 0
     wrong_total = 0
@@ -245,7 +245,7 @@ def scan_all_mcr_files(world_obj, options):
             pbar.start()
         
         # start the pool
-        result = pool.map_async(scan_mcr_file, w.all_mcr_files, max(1,total_regions//options.processes))
+        result = pool.map_async(scan_mcr_file, w.all_mca_files, max(1,total_regions//options.processes))
 
         # printing status
         counter = 0
@@ -284,7 +284,7 @@ def scan_all_mcr_files(world_obj, options):
         if not options.verbose:
             pbar.start()
             
-        for region_path in w.all_mcr_files:
+        for region_path in w.all_mca_files:
             
             # scan for errors
             filename, corrupted, wrong, total = scan_mcr_file(region_path, options.delete_entities, options.entity_limit)
