@@ -1,4 +1,5 @@
-from nbt import *
+__all__ = ["chunk", "region", "nbt"]
+from . import *
 
 VERSION = (1, 1)
 

@@ -15,6 +15,7 @@ TAG_BYTE_ARRAY = 7
 TAG_STRING = 8
 TAG_LIST = 9
 TAG_COMPOUND = 10
+TAG_INT_ARRAY = 11
 
 class MalformedFileError(Exception):
 	"""Exception raised on parse error."""
@@ -39,7 +40,7 @@ class TAG(object):
 	#Printing and Formatting of tree
 	def tag_info(self):
 		return self.__class__.__name__ + \
-               ('("%s")'%self.name if self.name else "") + \
+               ('("%s")' % self.name if self.name else "") + \
                ": " + self.__repr__()
 
 	def pretty_tree(self, indent=0):
@@ -109,6 +110,38 @@ class TAG_Byte_Array(TAG):
 	def __repr__(self):
 		return "[%i bytes]" % len(self.value)
 
+class TAG_Int_Array(TAG):
+	id = TAG_INT_ARRAY
+	def __init__(self, name=None, buffer=None):
+		super(TAG_Int_Array, self).__init__(name=name)
+		if buffer:
+			self._parse_buffer(buffer)
+
+	def update_fmt(self, length):
+		""" Adjust struct format description to length given """
+		self.fmt = ">" + "i"*length
+		self.size = calcsize(self.fmt)
+
+	#Parsers and Generators
+	def _parse_buffer(self, buffer):
+		length = TAG_Int(buffer=buffer).value
+		self.update_fmt(length)
+		self.value = list(unpack(self.fmt, buffer.read(self.size)))
+
+	def _render_buffer(self, buffer):
+		length = len(self.value)
+		self.update_fmt(length)
+		TAG_Int(length)._render_buffer(buffer)
+		buffer.write(pack(self.fmt, self.value))
+
+	#Printing and Formatting of tree
+	def __repr__(self):
+		return "[%i ints]"%len(self.value)
+
+	def pretty_tree(self, indent=0):
+		return super(TAG_Int_Array, self).pretty_tree(indent) + repr(self.value)
+
+
 class TAG_String(TAG):
 	id = TAG_STRING
 	def __init__(self, value=None, name=None, buffer=None):
@@ -170,11 +203,17 @@ class TAG_List(TAG):
 	def __repr__(self):
 		return "%i entries of type %s" % (len(self.tags), TAGLIST[self.tagID].__name__)
 
+	def __iter__(self):
+		return iter(self.tags)
+
+	def __len__(self):
+		return len(self.tags)
+
 	def pretty_tree(self, indent=0):
-		output = [super(TAG_List,self).pretty_tree(indent)]
+		output = [super(TAG_List, self).pretty_tree(indent)]
 		if len(self.tags):
 			output.append(("\t"*indent) + "{")
-			output.extend([tag.pretty_tree(indent+1) for tag in self.tags])
+			output.extend([tag.pretty_tree(indent + 1) for tag in self.tags])
 			output.append(("\t"*indent) + "}")
 		return '\n'.join(output)
 
@@ -216,7 +255,7 @@ class TAG_Compound(TAG, DictMixin):
 	# __setitem__, __delitem__, and keys.
 
 	def __getitem__(self, key):
-		if isinstance(key,int):
+		if isinstance(key, int):
 			return self.tags[key]
 		elif isinstance(key, str):
 			for tag in self.tags:
@@ -260,21 +299,21 @@ class TAG_Compound(TAG, DictMixin):
 		return '%i Entries' % len(self.tags)
 
 	def pretty_tree(self, indent=0):
-		output = [super(TAG_Compound,self).pretty_tree(indent)]
+		output = [super(TAG_Compound, self).pretty_tree(indent)]
 		if len(self.tags):
 			output.append(("\t"*indent) + "{")
-			output.extend([tag.pretty_tree(indent+1) for tag in self.tags])
+			output.extend([tag.pretty_tree(indent + 1) for tag in self.tags])
 			output.append(("\t"*indent) + "}")
 		return '\n'.join(output)
 
 
-TAGLIST = {TAG_BYTE:TAG_Byte, TAG_SHORT:TAG_Short, TAG_INT:TAG_Int, TAG_LONG:TAG_Long, TAG_FLOAT:TAG_Float, TAG_DOUBLE:TAG_Double, TAG_BYTE_ARRAY:TAG_Byte_Array, TAG_STRING:TAG_String, TAG_LIST:TAG_List, TAG_COMPOUND:TAG_Compound}
+TAGLIST = {TAG_BYTE:TAG_Byte, TAG_SHORT:TAG_Short, TAG_INT:TAG_Int, TAG_LONG:TAG_Long, TAG_FLOAT:TAG_Float, TAG_DOUBLE:TAG_Double, TAG_BYTE_ARRAY:TAG_Byte_Array, TAG_STRING:TAG_String, TAG_LIST:TAG_List, TAG_COMPOUND:TAG_Compound, TAG_INT_ARRAY:TAG_Int_Array}
 
 class NBTFile(TAG_Compound):
 	"""Represents an NBT file object"""
 
 	def __init__(self, filename=None, buffer=None, fileobj=None):
-		super(NBTFile,self).__init__()
+		super(NBTFile, self).__init__()
 		self.__class__.__name__ = "TAG_Compound"
 		self.filename = filename
 		self.type = TAG_Byte(self.id)
@@ -334,7 +373,7 @@ class NBTFile(TAG_Compound):
 		TAG_String(self.name)._render_buffer(self.file)
 		self._render_buffer(self.file)
 		#make sure the file is complete
-		if 'flush' in dir(self.file): 
+		if 'flush' in dir(self.file):
 			self.file.flush()
 		if self.filename and 'close' in dir(self.file):
 			self.file.close()

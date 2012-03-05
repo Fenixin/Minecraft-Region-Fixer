@@ -111,6 +111,9 @@ class Chunk(object):
 		im = Image.fromstring('RGB', (16,16), pixels)
 		return im
 
+	def get_coords(self):
+		return (self.coords[0].value,self.coords[1].value)
+
 	def __repr__(self):
 		return "Chunk("+str(self.coords[0])+","+str(self.coords[1])+")"
 
@@ -135,9 +138,16 @@ class BlockArray(object):
 	def get_all_data(self):
 		bits = []
 		for b in self.dataList:
-			bits.append((b >> 4) & 15) # Big end of the byte
+			# The first byte of the Blocks arrays correspond 
+			# to the LEAST significant bits of the first byte of the Data. 
+			# NOT to the MOST significant bits, as you might expected.
 			bits.append(b & 15) # Little end of the byte
+			bits.append((b >> 4) & 15) # Big end of the byte
 		return bits
+
+	# Get all block entries and data entries as tuples
+	def get_all_blocks_and_data(self):
+		return zip(self.get_all_blocks(), self.get_all_data())
 
 	def get_blocks_struct(self):
 		cur_x = 0
@@ -212,9 +222,19 @@ class BlockArray(object):
 			return False
 		return True
 
-	def set_block(self, x,y,z, id):
+	def set_block(self, x,y,z, id, data=0):
 		offset = y + z*128 + x*128*16
 		self.blocksList[offset] = id
+		if (offset % 2 == 1):
+			# offset is odd
+			index = (offset-1)/2
+			b = self.dataList[index]
+			self.dataList[index] = (b & 240) + (data & 15) # modify lower bits, leaving higher bits in place
+		else:
+			# offset is even
+			index = offset/2
+			b = self.dataList[index]
+			self.dataList[index] = (b & 15) + (data << 4 & 240) # modify ligher bits, leaving lower bits in place
 
 	# Get a given X,Y,Z or a tuple of three coordinates
 	def get_block(self, x,y,z, coord=False):
@@ -235,16 +255,22 @@ class BlockArray(object):
 	# Get a given X,Y,Z or a tuple of three coordinates
 	def get_data(self, x,y,z, coord=False):
 		offset = y + z*128 + x*128*16 if (coord == False) else coord[1] + coord[2]*128 + coord[0]*128*16
+		# The first byte of the Blocks arrays correspond 
+		# to the LEAST significant bits of the first byte of the Data. 
+		# NOT to the MOST significant bits, as you might expected.
 		if (offset % 2 == 1):
 			# offset is odd
 			index = (offset-1)/2
 			b = self.dataList[index]
-			return (b >>15) & 15 # Get big end of byte
+			return b & 15 # Get little (last 4 bits) end of byte
 		else:
 			# offset is even
 			index = offset/2
 			b = self.dataList[index]
-			return b & 15
+			return (b >> 4) & 15 # Get big end (first 4 bits) of byte
+
+	def get_block_and_data(self, x,y,z, coord=False):
+		return (self.get_block(x,y,z,coord),self.get_data(x,y,z,coord))
 
 ## Color functions for map generation ##
 
