@@ -132,7 +132,7 @@ class TAG_Int_Array(TAG):
 		length = len(self.value)
 		self.update_fmt(length)
 		TAG_Int(length)._render_buffer(buffer)
-		buffer.write(pack(self.fmt, self.value))
+		buffer.write(pack(self.fmt, *self.value))
 
 	#Printing and Formatting of tree
 	def __repr__(self):
