@@ -1,10 +1,10 @@
+"""Handle a region file, containing 32x32 chunks"""
 #
 # For more info of the region file format look:
 # http://www.minecraftwiki.net/wiki/Beta_Level_Format
 # 
 
 from nbt import NBTFile
-from chunk import Chunk
 from struct import pack, unpack
 from gzip import GzipFile
 import zlib
@@ -57,9 +57,9 @@ class RegionFile(object):
 		self.STATUS_CHUNK_OK = 0
 		self.STATUS_CHUNK_NOT_CREATED = 1
 		
-		self.chunks = []
 		self.header = {}
 		self.chunk_headers = {}
+		self.chunk_count = 0 # only sane chunks are counted, sane as seen by chunk headers
 		self.extents = None
 		if self.file:
 			self.size = getsize(self.filename)
@@ -131,6 +131,7 @@ class RegionFile(object):
 						chunk_status = self.STATUS_CHUNK_MISMATCHED_LENGTHS
 					else:
 						chunk_status = self.STATUS_CHUNK_OK
+						self.chunk_count += 1
 
 				elif status == self.STATUS_CHUNK_OUT_OF_FILE:
 					if offset*4096 + 5 < self.size: # if possible read it, just in case it's useful
@@ -158,6 +159,14 @@ class RegionFile(object):
 		pass
 	
 	def get_chunks(self):
+		"""Return coordinates and length of all chunks.
+		
+		Warning: despite the name, this function does not actually return the chunk, but merely it's metadata.
+		Use get_chunk(x,z) to get the NBTFile, and than Chunk() to get the actual chunk."""
+		return self.get_chunk_coords()
+	
+	def get_chunk_coords(self):
+		"""Return coordinates and length of all chunks."""
 		index = 0
 		self.file.seek(index)
 		chunks = []
@@ -170,32 +179,42 @@ class RegionFile(object):
 			index += 4
 		return chunks
 	
-	@classmethod
-	def getchunk(path, x, z):
-		pass
-		
+	def iter_chunks(self):
+		"""Return an iterater over all chunks present in the region.
+		Warning: this function returns a NBTFile() object, use Chunk(nbtfile) to get a
+		Chunk instance."""
+		for cc in self.get_chunk_coords():
+			yield self.get_chunk(cc['x'],cc['z'])
+	
 	def get_timestamp(self, x, z):
 		self.file.seek(4096+4*(x+z*32))
 		timestamp = unpack(">I",self.file.read(4))
-
+	
+	def chunk_count(self):
+		return len(self.get_chunk_coords())
+	
+	def get_nbt(self, x, z):
+		return self.get_chunk(x, z)
+	
 	def get_chunk(self, x, z):
+		"""Return a NBTFile"""
 		#read metadata block
 		offset, length, timestamp, region_header_status = self.header[x, z]
 		if region_header_status == self.STATUS_CHUNK_NOT_CREATED:
 			return None
 			
 		elif region_header_status == self.STATUS_CHUNK_IN_HEADER:
-			raise RegionHeaderError('The chunk is in the region header')
+			raise RegionHeaderError('Chunk %d,%d is in the region header' % (x,z))
 
 		elif region_header_status == self.STATUS_CHUNK_OUT_OF_FILE:
-			raise RegionHeaderError('The chunk is partially/completely outside the file')
+			raise RegionHeaderError('Chunk %d,%d is partially/completely outside the file' % (x,z))
 
 		elif region_header_status == self.STATUS_CHUNK_OK:
 			length, compression, chunk_header_status = self.chunk_headers[x, z]
 			if chunk_header_status == self.STATUS_CHUNK_ZERO_LENGTH:
-				raise ChunkHeaderError('The length of the chunk is 0')
+				raise ChunkHeaderError('The length of chunk %d,%d is 0' % (x,z))
 			elif chunk_header_status == self.STATUS_CHUNK_MISMATCHED_LENGTHS:
-				raise ChunkHeaderError('The length in region header and the length in the chunk header are incompatible')
+				raise ChunkHeaderError('The length in region header and the length in the header of chunk %d,%d are incompatible' % (x,z))
 
 			self.file.seek(offset*4*1024 + 5) # offset comes in sectors of 4096 bytes + length bytes + compression byte
 			chunk = self.file.read(length-1)
