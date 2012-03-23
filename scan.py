@@ -249,21 +249,21 @@ def scan_all_mca_files(world_obj, options):
 
         # printing status
         counter = 0
-        while not result.ready() or (q.qsize() > 0):
-            time.sleep(0.01)
-            if q.qsize() > 0: # important, it hangs waiting for results
-                              # if size = 0
-                filename, corrupted, wrong, entities_prob, num_chunks = q.get()
-                corrupted_total += corrupted
-                wrong_total += wrong
-                total_chunks += num_chunks
-                entities_total += entities_prob
-                counter += 1
-                if options.verbose:
-                    stats = "(c: {0}, w: {1}, t: {2})".format( corrupted, wrong, num_chunks)
-                    print "Scanned {0: <15} {1:.<40} {2}/{3}".format(filename, stats, counter, total_regions)
-                else:
-                    pbar.update(counter)
+        try:
+          while not result.ready():
+            filename, corrupted, wrong, entities_prob, num_chunks = q.get(0.01)
+            corrupted_total += corrupted
+            wrong_total += wrong
+            total_chunks += num_chunks
+            entities_total += entities_prob
+            counter += 1
+            if options.verbose:
+                stats = "(c: {0}, w: {1}, t: {2})".format( corrupted, wrong, num_chunks)
+                print "Scanned {0: <15} {1:.<40} {2}/{3}".format(filename, stats, counter, total_regions)
+            else:
+                pbar.update(counter)
+        except multiprocessing.TimeoutError:
+          pass
 
         if not options.verbose: pbar.finish()
 
