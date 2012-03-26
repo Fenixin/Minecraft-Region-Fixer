@@ -26,6 +26,7 @@ import nbt.nbt as nbt
 from os.path import split
 import progressbar
 import multiprocessing
+from multiprocessing import queues
 import world
 import time
 import sys
@@ -187,7 +188,7 @@ def scan_chunk(region_file, x, z):
     except region.RegionHeaderError as e:
         error = "Region header error: " + e.msg
         return (None, -1, error)
-		
+
     except region.ChunkDataError as e:
         error = "Chunk data error: " + e.msg
         return (None, -1, error)
@@ -237,7 +238,7 @@ def scan_all_mca_files(world_obj, options):
     if True:
     #~ if abs(options.processes) >= 1:
         # queue used by processes to pass finished stuff
-        q = multiprocessing.Queue()
+        q = queues.SimpleQueue()
         pool = multiprocessing.Pool(processes=options.processes,
                 initializer=_mp_pool_init,initargs=(w,options,q))
 
@@ -249,21 +250,21 @@ def scan_all_mca_files(world_obj, options):
 
         # printing status
         counter = 0
-        try:
-          while not result.ready():
-            filename, corrupted, wrong, entities_prob, num_chunks = q.get(0.01)
-            corrupted_total += corrupted
-            wrong_total += wrong
-            total_chunks += num_chunks
-            entities_total += entities_prob
-            counter += 1
-            if options.verbose:
-                stats = "(c: {0}, w: {1}, t: {2})".format( corrupted, wrong, num_chunks)
-                print "Scanned {0: <15} {1:.<40} {2}/{3}".format(filename, stats, counter, total_regions)
-            else:
-                pbar.update(counter)
-        except multiprocessing.TimeoutError:
-          pass
+
+        while not result.ready() or not q.empty():
+            time.sleep(0.01)
+            if not q.empty():
+                filename, corrupted, wrong, entities_prob, num_chunks = q.get()
+                corrupted_total += corrupted
+                wrong_total += wrong
+                total_chunks += num_chunks
+                entities_total += entities_prob
+                counter += 1
+                if options.verbose:
+                    stats = "(c: {0}, w: {1}, t: {2})".format( corrupted, wrong, num_chunks)
+                    print "Scanned {0: <15} {1:.<40} {2}/{3}".format(filename, stats, counter, total_regions)
+                else:
+                    pbar.update(counter)
 
         if not options.verbose: pbar.finish()
 
