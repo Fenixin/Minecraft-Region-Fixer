@@ -31,6 +31,16 @@ import world
 import time
 import sys
 
+class ScannedRegionFile():
+    """ Stores all the info for a scanned region file """
+    def __init__(self, filename, corrupted, wrong, entities_prob, chunks, time):
+        self.filename = filename
+        self.corrupted_chunks = corrupted
+        self.wronglocated_chunks = wrong
+        self.entities_prob = entities_prob
+        self.chunks = chunks
+        # time when the scan finished
+        self.scan_time = time 
 
 class FractionWidget(progressbar.ProgressBarWidget):
     """ Convenience class to use the progressbar.py """
