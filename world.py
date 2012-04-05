@@ -37,13 +37,13 @@ class World(object):
         self.world_path = world_path
         
         # variables for region files
-        self.normal_mca_files = glob(join(self.world_path, "region/r.*.*.mca"))
-        self.nether_mca_files = glob(join(self.world_path,"DIM-1/region/r.*.*.mca"))
-        self.aether_mca_files = glob(join(self.world_path,"DIM1/region/r.*.*.mca"))
-        self.all_mca_files = self.normal_mca_files + self.nether_mca_files + self.aether_mca_files
+        self.normal_region_files = glob(join(self.world_path, "region/r.*.*.mca"))
+        self.nether_region_files = glob(join(self.world_path,"DIM-1/region/r.*.*.mca"))
+        self.aether_region_files = glob(join(self.world_path,"DIM1/region/r.*.*.mca"))
+        self.all_region_files = self.normal_region_files + self.nether_region_files + self.aether_region_files
         self.num_chunks = None # not used right now
         # dict storing all the problems found in the region files
-        self.mcr_problems = {}
+        self.region_problems = {}
         
         # for level.dat
         self.level_file = join(self.world_path, "level.dat")
@@ -61,6 +61,12 @@ class World(object):
         self.player_files = glob(join(join(self.world_path, "players"), "*.dat"))
         self.player_with_problems = []
         self.player_status = {}
+
+        # does it look like a world folder?
+        if self.all_region_files or self.level_file or self.player_files:
+            self.isworld = True
+        else:
+            self.isworld = False
 
         # Constants. Used to mark the status of a problematic chunk,
         # player, etc.
