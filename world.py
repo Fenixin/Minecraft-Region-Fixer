@@ -27,6 +27,13 @@ from glob import glob
 from os.path import join, split, exists
 
 
+# Constants. Used to mark the status of a problematic chunk,
+# player, etc.
+OK = 0
+CORRUPTED = 1
+WRONG_LOCATED = 2
+TOO_MUCH_ENTITIES = 3
+
 
 class World(object):
     """ This class stores all the info needed of a world, and once
@@ -68,23 +75,15 @@ class World(object):
         else:
             self.isworld = False
 
-        # Constants. Used to mark the status of a problematic chunk,
-        # player, etc.
-        self.OK = 0
-        self.CORRUPTED = 1
-        self.WRONG_LOCATED = 2
-        self.TOO_MUCH_ENTITIES = 3
-
-
     def count_problems(self, problem):
         """ Counts problems from the 'mcr_problem' dictionary. Takes
             problem value (see __init__) and returns the number of
             said problems stored in the dictionary. """
 
         counter = 0
-        for mcr in self.mcr_problems:
-            for chunk in self.mcr_problems[mcr]:
-                for prob in self.mcr_problems[mcr][chunk]:
+        for mcr in self.region_problems:
+            for chunk in self.region_problems[mcr]:
+                for prob in self.region_problems[mcr][chunk]:
                     if prob == problem:
                         counter += 1
         return counter
@@ -113,12 +112,12 @@ class World(object):
                         region_name = split(mcr_path)[1]
                         dimension = split(split(mcr_path)[0])[1]
                         if dimension == "region":
-                            backup_mcr_path = join(backup.world_path, "region", region_name)
+                            backup_region_path = join(backup.world_path, "region", region_name)
                         else:
-                            backup_mcr_path = join(backup.world_path, dimension, region_name)
+                            backup_region_path = join(backup.world_path, dimension, region_name)
 
-                        if exists(backup_mcr_path):
-                            print "Backup region file found in: {0} \nfixing...".format(backup_mcr_path)
+                        if exists(backup_region_path):
+                            print "Backup region file found in: {0} \nfixing...".format(backup_region_path)
 
                             # get the chunk
                             from scan import scan_chunk
@@ -201,7 +200,7 @@ class World(object):
     def delete_chunk_list(self,l):
         """ Deletes the given chunk list from the world. 
             Takes a list of tuples storing:
-            (full_mcr_path, chunk_x, chunk_z)
+            (full_region_path, chunk_x, chunk_z)
             
             And returns the amount of deleted chunks.
             
@@ -220,7 +219,6 @@ class World(object):
             del region_file
 
         return counter
-
 
 def get_global_chunk_coords(region_filename, chunkX, chunkZ):
     """ Takes the region filename and the chunk local 
