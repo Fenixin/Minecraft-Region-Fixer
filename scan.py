@@ -31,7 +31,7 @@ import world
 import time
 import sys
 
-class ScannedRegionFile():
+class ScannedRegionFile(object):
     """ Stores all the info for a scanned region file """
     def __init__(self, filename, corrupted, wrong, entities_prob, chunks, time):
         self.filename = filename
@@ -49,6 +49,76 @@ class FractionWidget(progressbar.ProgressBarWidget):
         
     def update(self, pbar):
         return '%2d%s%2d' % (pbar.currval, self.sep, pbar.maxval)
+
+def scan_world(world, options):
+
+    w = world
+    # scan the world dir
+    print "Scanning directory..."
+
+    if not w.level_file:
+        print "Warning: No \'level.dat\' file found!"
+
+    if not w.normal_region_files:
+        print "Warning: No region files found in the \"region\" directory!"
+
+    if not w.nether_region_files:
+        print "Info: No nether dimension in the world directory."
+
+    if not w.aether_region_files:
+        print "Info: No aether dimension in the world directory."
+
+    if not w.all_region_files and not w.level_file:
+        print "Error: No region files to scan!"
+        sys.exit(1)
+        
+    if w.player_files:
+        print "There are {0} region files and {1} player files in the world directory.".format(len(w.all_region_files), len(w.player_files))
+    else:
+        print "There are {0} region files in the world directory.".format(len(w.all_region_files))
+
+    # check the level.dat file and the *.dat files in players directory
+
+    print "\n{0:#^60}".format(' Scanning level.dat ')
+
+    if not w.level_file:
+
+        print "[WARNING!] \'level.dat\' doesn't exist!"
+    else:
+        scan_level(w)
+        if len(w.level_problems) == 0:
+            print "\'level.dat'\ is redable"
+        else:
+            print "[WARNING!]: \'level.dat\' is corrupted with the following error/s:"
+            for e in w.level_problems: print e,
+
+
+    print "\n{0:#^60}".format(' Scanning player files ')
+    
+    if not w.player_files:
+        print "Info: No player files to scan."
+    else:
+        scan_all_players(w)
+    
+        if not w.player_with_problems:
+            print "All player files are readable."
+        else:
+            for player in w.player_with_problems:
+                print "Warning: Player file \"{0}.dat\" has problems: {1}".format(player, w.player_status[player])
+
+    # check for corrupted chunks
+    print "\n{0:#^60}".format(' Scanning region files ')
+    if len(w.all_region_files) != 0:
+        scan_all_region_files(w, options)
+
+        corrupted = w.count_problems(w.CORRUPTED)
+        wrong_located = w.count_problems(w.WRONG_LOCATED)
+        
+        print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(
+            corrupted, wrong_located, w.num_chunks)
+    else:
+        print "No region files to scan!"
+        
 
 
 def scan_level(world_obj):
@@ -88,7 +158,7 @@ def scan_all_players(world_obj):
         scan_player(world_obj, player)
 
 
-def scan_mcr_file(region_file_path):
+def scan_region_file(region_file_path):
     """ Scans a region file reporting problems.
     
     Takes a RegionFile obj and returns a list of corrupted 
@@ -101,10 +171,10 @@ def scan_mcr_file(region_file_path):
     multiprocessing queue to return in real time info about the process.
     """
 
-    delete_entities = scan_mcr_file.options.delete_entities
-    entity_limit = scan_mcr_file.options.entity_limit
+    delete_entities = scan_region_file.options.delete_entities
+    entity_limit = scan_region_file.options.entity_limit
     region_file = region.RegionFile(region_file_path)
-    w = scan_mcr_file.w
+    w = scan_region_file.w
     chunks = 0
     problems = []
     corrupted = 0
@@ -157,7 +227,7 @@ def scan_mcr_file(region_file_path):
         print "\nInterrupted by user\n"
         sys.exit(1)
 
-    scan_mcr_file.q.put((filename, corrupted, wrong, entities_prob, chunks))
+    scan_region_file.q.put((filename, corrupted, wrong, entities_prob, chunks))
 
     return problems
 
@@ -217,12 +287,12 @@ def _mp_pool_init(world_obj,options,q):
     """ Function to initialize the multiprocessing in scan_all_mca_files.
     Is used to pass values to the child process. """
 
-    scan_mcr_file.q = q
-    scan_mcr_file.options = options
-    scan_mcr_file.w = world_obj
+    scan_region_file.q = q
+    scan_region_file.options = options
+    scan_region_file.w = world_obj
 
 
-def scan_all_mca_files(world_obj, options):
+def scan_all_region_files(world_obj, options):
     """ This function scans all te region files from a world_object
     printing status info in the process.
     
@@ -233,7 +303,7 @@ def scan_all_mca_files(world_obj, options):
     code is still stored just in case is needed. """
 
     w = world_obj
-    total_regions = len(w.all_mca_files)
+    total_regions = len(w.all_region_files)
     total_chunks = 0
     corrupted_total = 0
     wrong_total = 0
@@ -256,7 +326,7 @@ def scan_all_mca_files(world_obj, options):
             pbar.start()
         
         # start the pool
-        result = pool.map_async(scan_mcr_file, w.all_mca_files, max(1,total_regions//options.processes))
+        result = pool.map_async(scan_region_file, w.all_region_files, max(1,total_regions//options.processes))
 
         # printing status
         counter = 0
@@ -298,7 +368,7 @@ def scan_all_mca_files(world_obj, options):
         for region_path in w.all_mca_files:
             
             # scan for errors
-            filename, corrupted, wrong, total = scan_mcr_file(region_path, options.delete_entities, options.entity_limit)
+            filename, corrupted, wrong, total = scan_region_file(region_path, options.delete_entities, options.entity_limit)
             counter += 1
             
             # print status
