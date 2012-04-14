@@ -131,10 +131,10 @@ def main():
 
     # Check basic options incompatibilities
     if options.backups and not (options.fix_corrupted or options.fix_wrong_located):
-        parser.error("The option --backups needs one of the --fix-* options")
+        parser.error("The option --backups needs one of the --replace-* options")
     
     if not options.backups and (options.fix_corrupted or options.fix_wrong_located):
-        parser.error("The options --fix-* need the --backups option")
+        parser.error("The options --replace-* need the --backups option")
 
     if options.entity_limit <= 0:
         parser.error("The entity limit must be at least 1!")
@@ -204,7 +204,7 @@ def main():
         else:
             scan_level(w)
             if len(w.level_problems) == 0:
-                print "\'level.dat'\ is redable"
+                print "\'level.dat'\ is readable"
             else:
                 print "[WARNING!]: \'level.dat\' is corrupted with the following error/s:"
                 for e in w.level_problems: print e,
