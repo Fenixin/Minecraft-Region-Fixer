@@ -117,7 +117,7 @@ class World(object):
                             # get the chunk
                             from scan import scan_chunk
                             backup_region_file = region.RegionFile(backup_mcr_path)
-                            working_chunk = scan_chunk(backup_region_file, chunk[0], chunk[1])
+                            working_chunk, status, errmsg = scan_chunk(backup_region_file, chunk[0], chunk[1])
                             del backup_region_file
 
                             ####### TODO TODO TODO
@@ -138,12 +138,12 @@ class World(object):
                                 # The chunk doesn't exists in the region file
                                 continue
 
-                            elif working_chunk == -1:
+                            elif status == -1:
                                 # The chunk is corrupted
                                 print "The chunk is corrupted in this backup directory: {0}".format(backup.world_path)
                                 continue
 
-                            elif working_chunk == -2:
+                            elif status == -2:
                                 # The chunk is wrong located
                                 print "The chunk is wrong located in this backup directory: {0}".format(backup.world_path)
                                 continue

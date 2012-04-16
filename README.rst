@@ -103,7 +103,7 @@ If we make a backup every day of our world we can use them to fix
 the corrupted chunks, this method can spam a lot of output text, because
 writes a log for every chunk that is trying to fix::
 
-    $ python region-fixer.py --fix-corrupted --backups=/media/backups/2012-12-12/,/media/backups/2012-12-11/ /media/disk/corrupted-world/
+    $ python region-fixer.py --replace-corrupted --backups=/media/backups/2012-12-12/,/media/backups/2012-12-11/ /media/disk/corrupted-world/
     Welcome to Region Fixer!
     Scanning directory...
     There are 4 region files found on the world directory.
