@@ -270,30 +270,37 @@ def scan_chunk(region_file, scanned_chunk_obj, options):
             if c.d_coords != c.g_coords:
                 c.status = world.CHUNK_WRONG_LOCATED
                 c.status_text = "Mismatched coordinates (wrong located chunk)."
+                c.scan_time = time.time()
             elif c.num_entities >= options.entity_limit:
                 c.status = world.CHUNK_TOO_MUCH_ENTITIES
                 c.status_text = "The chunks has too much entities (it has {0}, and it's more than the limit {1})".format(c.num_entities, options.entity_limit)
+                c.scan_time = time.time()
             else:
                 c.status = world.CHUNK_OK
                 c.status_text = "OK"
+                c.scan_time = time.time()
         else:
             c.status = world.CHUNK_NOT_CREATED
             c.status_text = "The chunk doesn't exist"
+            c.scan_time = time.time()
 
     except region.RegionHeaderError as e:
         error = "Region header error: " + e.msg
         c.status = world.CHUNK_CORRUPTED
         c.status_text = error
+        c.scan_time = time.time()
 
     except region.ChunkDataError as e:
         error = "Chunk data error: " + e.msg
         c.status = world.CHUNK_CORRUPTED
         c.status_text = error
+        c.scan_time = time.time()
 
     except region.ChunkHeaderError as e:
         error = "Chunk herader error: " + e.msg
         c.status = world.CHUNK_CORRUPTED
         c.status_text = error
+        c.scan_time = time.time()
 
 
 def _mp_pool_init(regionset,options,q):
