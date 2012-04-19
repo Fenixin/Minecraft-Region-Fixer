@@ -23,29 +23,63 @@
 
 from multiprocessing import freeze_support
 from optparse import OptionParser, OptionGroup
-from os.path import join, split, exists
+from os.path import join, split, exists, isfile
 import sys
 from cmd import Cmd
 
 import world
-from scan import scan_all_players, scan_level, scan_all_mca_files
+from scan import scan_all_players, scan_level, scan_regionset, scan_world
+
+def parse_paths(args):
+    # parese the list of region files and worlds paths
+    world_list = []
+    region_list = []
+    for arg in args:
+        if arg[-4:] == ".mca":
+            region_list.append(arg)
+        else:
+            world_list.append(arg)
+
+    # check if they exist
+    region_list_tmp = []
+    for f in region_list:
+        if exists(f):
+            if isfile(f):
+                region_list_tmp.append(f)
+            else:
+                print "Warning: \"{0}\" is not a file. Skipping it and scanning the rest.".format(f)
+        else:
+            print "Warning: The region file {0} doesn't exists. Skipping it and scanning the rest.".format(f)
+    region_list = region_list_tmp
+    
+    # check for the world folders
+    world_list = parse_world_list(world_list)
+
+    return world_list, world.RegionSet(region_list)
 
 
+def parse_world_list(world_path_list):
+    """ Parses a world list checking if they exists and are a minecraft
+        world folders """
+    tmp = []
+    for d in world_path_list:
+        if exists(d):
+            w = world.World(d)
+            if w.isworld:
+                tmp.append(w)
+            else:
+                print "Warning: The folder {0} doesn't look like a minecraft world. I'll skip it.".format(d)
+        else:
+            print "Warning: The folder {0} doesn't exist. I'll skip it.".format(d)
+    return tmp
+
+    
 def parse_backup_list(world_backup_dirs):
     """ Generates a list with the input of backup dirs containing the 
     world objects of valid world directories."""
 
-    backup_worlds = []
     directories = world_backup_dirs.split(',')
-    for world_dir in directories:
-        if exists(world_dir):
-            w = world.World(world_dir)
-            if not w.all_mca_files and not w.level_file:
-                print "[ATTENTION] The directory \"{0}\" doesn't look like a minecraft world folder.".format(world_dir)
-            else:
-                backup_worlds.append(w)
-        else:
-            print "[ATTENTION] The directory \"{0}\" doesn't exist".format(world_dir)
+    backup_worlds = parse_world_list(directories)
     return backup_worlds
 
 
@@ -78,7 +112,7 @@ def parse_chunk_list(chunk_list, world_obj):
 
 def main():
     
-    usage = 'usage: %prog [options] <world-path>'
+    usage = 'usage: %prog [options] <world-path> <region-files>'
     epilog = 'Copyright (C) 2011  Alejandro Aguilera (Fenixin) \
     https://github.com/Fenixin/Minecraft-Region-Fixer                                        \
     This program comes with ABSOLUTELY NO WARRANTY; for details see COPYING.txt. This is free software, and you are welcome to redistribute it under certain conditions; see COPYING.txt for details.'
@@ -92,9 +126,9 @@ def main():
                                         world to use to fix corrupted chunks and/or wrong located chunks. Warning! This script is not going \
                                         to check if it \'s the same world, so be careful! \
                                         This argument can be a comma separated list (but never with spaces between elements!).', default = None)
-    parser.add_option('--replace-corrupted','--rc', dest = 'fix_corrupted', action='store_true', \
+    parser.add_option('--replace-corrupted','--rc', dest = 'replace_corrupted', action='store_true', \
                                             help = 'Tries to replace the corrupted chunks using the backups directories', default = False)
-    parser.add_option('--replace-wrong-located','--rw', dest = 'fix_wrong_located', action='store_true', \
+    parser.add_option('--replace-wrong-located','--rw', dest = 'replace_wrong_located', action='store_true', \
                                             help = 'Tries to replace the wrong located chunks using the backups directories', default = False)
     parser.add_option('--delete-corrupted', '--dc', action = 'store_true', help = '[WARNING!] This option deletes! And deleting can make you lose data, so be careful! :P \
                                             This option will delete all the corrupted chunks. Used with --replace-corrupted or --replace-wrong-located it will delete all the non-replaced chunks.', default = False)
@@ -115,69 +149,48 @@ def main():
     parser.add_option_group(other_group)
     (options, args) = parser.parse_args()
 
-    # Only the world directory goes to args
-
+    # Args are world_paths and region files
     if not args:
-        parser.error("No world path specified! Use --help for a complete list of options.")
-        sys.exit(1)
-    elif len(args) > 1:
-        parser.error("Only one world dirctory needed!")
-        sys.exit(1)
+        parser.error("No world paths or region files specified! Use --help for a complete list of options.")
 
-    world_path = args[0]
-    if not exists(world_path):
-        parser.error("The world path doesn't exists!")
+    world_list, region_list = parse_paths(args)
+    
+    if not (world_list or region_list):
+        print ("Error: No worlds or region files to scan!")
         sys.exit(1)
 
     # Check basic options incompatibilities
-    if options.backups and not (options.fix_corrupted or options.fix_wrong_located):
-        parser.error("The option --backups needs one of the --replace-* options")
+    if options.interactive and (options.replace_corrupted or options.replace_wrong_located or options.delete_corrupted or options.delete_wrong_located):
+        parser.error("The can't use the options --replace-* or --delete-* while entering in interactive mode.")
     
-    if not options.backups and (options.fix_corrupted or options.fix_wrong_located):
-        parser.error("The options --replace-* need the --backups option")
+    else:
+        if options.backups and not (options.replace_corrupted or options.replace_wrong_located):
+            parser.error("The option --backups needs one of the --replace-* options")
+        
+        if not options.backups and (options.replace_corrupted or options.replace_wrong_located):
+            parser.error("The options --replace-* need the --backups option")
 
-    if options.entity_limit <= 0:
-        parser.error("The entity limit must be at least 1!")
+        if options.entity_limit <= 0:
+            parser.error("The entity limit must be at least 1!")
 
     print "Welcome to Region Fixer!"
 
-
-    # do things with the option args
-    if options.backups: # create a list of worlds containing the backup of the region files
+    # do things with the option options args
+    if options.backups: # create a list of worlds containing the backups of the region files
         backup_worlds = parse_backup_list(options.backups)
         if not backup_worlds:
             print "[WARNING] No valid backup directories found, won't fix any chunk."
-    else:
-        backup_worlds = []
 
-    # scan the world dir
-    print "Scanning directory..."
-
-    w = world.World(world_path)
-
-    if not w.level_file:
-        print "Warning: No \'level.dat\' file found!"
-
-    if not w.normal_mca_files:
-        print "Warning: No region files found in the \"region\" directory!"
-
-    if not w.nether_mca_files:
-        print "Info: No nether dimension in the world directory."
-
-    if not w.aether_mca_files:
-        print "Info: No aether dimension in the world directory."
-
-    if not w.all_mca_files and not w.level_file:
-        print "Error: No region files to scan!"
-        sys.exit(1)
-        
-    if w.player_files:
-        print "There are {0} region files and {1} player files in the world directory.".format(len(w.all_mca_files), len(w.player_files))
-    else:
-        print "There are {0} region files in the world directory.".format(len(w.all_mca_files))
+# TODO hay que hacer una funcion
+# que sea scan_region_set, o similar. Estaria bien tb mejorar todo lo de
+# imprimir texto.
 
     # The program starts
     if options.delete_list: # Delete the given list of chunks
+        # TODO esta función debería ctualizarse, una vez que cambiemos
+        # a regionset y a multiworlds no tendrá sentido borrar una lista
+        # de chunk con coordenadas globales... eliminar por completo la
+        # opción?
         try:
             list_file = file(options.delete_list)
         except:
@@ -194,78 +207,42 @@ def main():
         print "Deleted {0} chunks".format(counter)
         
     else:
-        # check the level.dat file and the *.dat files in players directory
-
-        print "\n{0:#^60}".format(' Scanning level.dat ')
-
-        if not w.level_file:
-
-            print "[WARNING!] \'level.dat\' doesn't exist!"
-        else:
-            scan_level(w)
-            if len(w.level_problems) == 0:
-                print "\'level.dat'\ is readable"
-            else:
-                print "[WARNING!]: \'level.dat\' is corrupted with the following error/s:"
-                for e in w.level_problems: print e,
-
-
-        print "\n{0:#^60}".format(' Scanning player files ')
-        
-        if not w.player_files:
-            print "Info: No player files to scan."
-        else:
-            scan_all_players(w)
-        
-            if not w.player_with_problems:
-                print "All player files are readable."
-            else:
-                for player in w.player_with_problems:
-                    print "Warning: Player file \"{0}.dat\" has problems: {1}".format(player, w.player_status[player])
-
-        # check for corrupted chunks
-        print "\n{0:#^60}".format(' Scanning region files ')
-        if len(w.all_mca_files) != 0:
-            scan_all_mca_files(w, options)
-
-            corrupted = w.count_problems(w.CORRUPTED)
-            wrong_located = w.count_problems(w.WRONG_LOCATED)
+        for world_obj in world_list:
+            # TODO hay que sustituir el nombre world por world_obj,
+            # dejando world para referencias al módulo world.py
             
-            print "\nFound {0} corrupted and {1} wrong located chunks of a total of {2}\n".format(
-                corrupted, wrong_located, w.num_chunks)
-        else:
-            print "No region files to scan!"
-        
-        # Go to interactive mode?
-        if options.interactive:
-            #~ import readline # interactive prompt with history 
-            # WARNING NEEDS CHANGES FOR WINDOWS
-            c = interactive_loop(w)
-            c.cmdloop()
-        
-        else:
+            print "\n"
+            print "{0:#^60}".format('')
+            if world_obj.name:
+                print "{0:#^60}".format(' Scanning world: {0} '.format(world_obj.name))
+            else:
+                print "{0:#^60}".format(' Scanning world: {0} '.format(world_obj.world_path))
+            print "{0:#^60}".format('')
+            
+            scan_world(world_obj, options)
+
+            corrupted = world_obj.count_problems(world.CHUNK_CORRUPTED)
+            wrong_located = world_obj.count_problems(world.CHUNK_WRONG_LOCATED)
+
             # Try to fix corrupted chunks with the backup copy
-            if backup_worlds:
-                if options.fix_corrupted:
+            if options.replace_corrupted or options.replace_wrong_located:
+                if options.replace_corrupted:
                     print "{0:#^60}".format(' Trying to fix corrupted chunks ')
-                    fixed = w.replace_problematic_chunks(backup_worlds, w.CORRUPTED)
+                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CORRUPTED)
                     print "\n{0} fixed chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
                 
-                if options.fix_wrong_located:
+                if options.replace_wrong_located:
                     print "{0:#^60}".format(' Trying to fix wrong located chunks ')
-                    fixed = w.replace_problematic_chunks(backup_worlds, w.WRONG_LOCATED)
+                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world.WRONG_LOCATED)
                     print "\n{0} fixed chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
 
-            corrupted = w.count_problems(w.CORRUPTED)
-            wrong_located = w.count_problems(w.WRONG_LOCATED)
-            
             # delete bad chunks! (if asked for)
             if options.delete_corrupted:
                 if corrupted:
                     print "{0:#^60}".format(' Deleting  corrupted chunks ')
 
                     print "... ",
-                    counter = w.remove_problematic_chunks(w.CORRUPTED)
+                    counter = world_obj.remove_problematic_chunks(world.CORRUPTED)
                     print "Done!"
                     
                     print "Deleted {0} corrupted chunks".format(counter)
@@ -277,19 +254,30 @@ def main():
                     print "{0:#^60}".format(' Deleting wrong located chunks ')
                     
                     print "... ",
-                    counter = w.remove_problematic_chunks(w.WRONG_LOCATED)
+                    counter = world_obj.remove_problematic_chunks(world.WRONG_LOCATED)
                     print "Done!"
                     
                     print "Deleted {0} wrong located chunks".format(counter)
                 else:
                     print "No wrong located chunks to delete!"
-            
-            if options.summary:
-                print "\n{0:#^60}".format(' Summary of found problems ')
-                text = summary(w, [w.CORRUPTED, w.WRONG_LOCATED, w.TOO_MUCH_ENTITIES])
-                print text
+
+        if options.summary:
+            print "\n{0:#^60}".format(' Summary of found problems ')
+            text = summary(world_list[0], [world_list[0].CORRUPTED, world_list[0].WRONG_LOCATED, world_list[0].TOO_MUCH_ENTITIES])
+            print text
+
+        # Go to interactive mode?
+        if options.interactive:
+            # TODO make interactive mode incompatible with noraml mode
+            ########################################################
+            #~ import readline # interactive prompt with history 
+            # WARNING NEEDS CHANGES FOR WINDOWS
+            c = interactive_loop(w)
+            c.cmdloop()
+
 
 def summary(world, problems):
+    # add a summary to file, and multiworld or multi regionset support
     w = world
     text = ''
     for mcr in w.mcr_problems:
@@ -321,7 +309,9 @@ def summary(world, problems):
     return text
 
 class interactive_loop(Cmd):
-    
+
+# some TODO ideas:
+# worlds are now stored in a list, add a "scan" command.
     def __init__(self, world):
         Cmd.__init__(self)
         self.w = world

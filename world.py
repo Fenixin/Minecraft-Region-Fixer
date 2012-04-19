@@ -26,14 +26,141 @@ import nbt.nbt as nbt
 from glob import glob
 from os.path import join, split, exists
 
+import time
 
-# Constants. Used to mark the status of a problematic chunk,
-# player, etc.
-OK = 0
-CORRUPTED = 1
-WRONG_LOCATED = 2
-TOO_MUCH_ENTITIES = 3
+# Constants. Used to mark the status of a chunks:
+CHUNK_NOT_CREATED = -1
+CHUNK_OK = 0
+CHUNK_CORRUPTED = 1
+CHUNK_WRONG_LOCATED = 2
+CHUNK_TOO_MUCH_ENTITIES = 3
 
+
+class ScannedChunk(object):
+    def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None):
+        # no sé si debería poner más información en este obj
+        self.h_coords = header_coords
+        self.g_coords = global_coords
+        self.d_coords = data_coords
+        self.status = status
+        self.status_text = None
+        self.num_entities = num_entities
+        self.scan_time = scan_time
+    def __repr__(self):
+        # TODO esto corresponde a __str__ !
+        text = "Chunk with header coordinates:" + str(self.h_coords) + "\n"
+        text += "\tData coordinates:" + str(self.d_coords) + "\n"
+        text +="\tGlobal coordinates:" + str(self.g_coords) + "\n"
+        text += "\tStatus:" + str(self.status_text) + "\n"
+        text += "\tNumber of entities:" + str(self.num_entities) + "\n"
+        text += "\tScan time:" + time.ctime(self.scan_time) + "\n"
+        return text
+
+class ScannedRegionFile(object):
+    """ Stores all the info for a scanned region file """
+    def __init__(self, filename, corrupted = None, wrong = None, entities_prob = None, chunks = None, time = None):
+        self.path = filename
+        self.filename = split(filename)[1]
+        self.folder = split(filename)[0]
+        self.x, self.z = get_region_coords(filename)
+        self.coords = (self.x, self.z)
+
+        # en el caso de wrong located podría almacenar la dirección real
+        # donde se encuentra y donde dice que está los datos almacenados
+        self.chunks = {}
+        
+        # quizás estos deberían ser contadores
+        self.corrupted_chunks = corrupted
+        self.wrong_located_chunks = wrong
+        self.entities_prob = entities_prob
+        self.chunk_count = chunks
+        
+        # time when the scan finished
+        self.last_scan_time = time
+
+    def count_problems(self, problem):
+        counter = 0
+        for chunk in self.chunks.keys():
+            if self.chunks[chunk].status == problem:
+                counter += 1
+        return counter
+
+    def count_chunks(self):
+        counter = 0
+        for chunk in self.chunks.keys():
+            if self.chunks[chunk].status != CHUNK_NOT_CREATED:
+                counter += 1
+        return counter
+
+class RegionSet(object):
+    """Stores an arbitrary number of region files and the scan results
+    Inits with a list of region files and the regions dict is filled
+    while scanning with ScannedRegionFiles and ScannedChunks."""
+    def __init__(self, region_list):
+        self.regions = {}
+        for path in region_list:
+            r = ScannedRegionFile(path)
+            self.regions[(r.x, r.z)] = r
+        
+        self.corrupted_chunks = 0
+        self.wrong_located_chunks = 0
+        self.entities_problems = 0
+        self.bad_list = None
+
+    def __getitem__(self, key):
+        return self.regions[key]
+
+    def __setitem__(self, key, value):
+        """ Items are ScannedRegionFile objects """
+        if value.corrupted_chunks or value.wrong_located_chunks or value.entities_prob:
+            self.bad_list.append(key)
+            # seguramente es MUCHO mejor contar los valores cada vez que haga falta
+            # que no tiene que ser tan lento. mantenerlos en sincronía es
+            # seguramente muy mala idea
+            if value.corrupted_chunks:
+                self.corrupted_chunks += value.corrupted_chunks
+            if value.corrupted_chunks:
+                self.wrong_located_chunks += value.wrong_located_chunks
+            if value.entities_prob:
+                self.entities_problems += value.entities_prob
+        self.regions[key] = value
+    
+    def __delitem__(self, key):
+        # TODO this may raise ValueError, left it in here to test this
+        if value.corrupted_chunks or value.wrong_located_chunks or value.entities_prob:
+            bad_list.remove(key)
+            if value.corrupted_chunks:
+                self.corrupted_chunks -= value.corrupted_chunks
+            if value.corrupted_chunks:
+                self.wrong_located_chunks -= value.wrong_located_chunks
+            if value.entities_prob:
+                self.entities_problems -= value.entities_prob
+
+        del self.regions[key]
+    
+    def __len__(self):
+        return len(self.regions)
+
+    def keys(self):
+        return self.regions.keys()
+    
+    def get_region_list(self):
+        t = []
+        for e in self.regions.keys():
+            t.append(self.regions[e])
+        return t
+    
+    def count_problems(self, problem):
+        counter = 0
+        for r in self.keys():
+            counter += self[r].count_problems(problem)
+        return counter
+    
+    def count_chunks(self):
+        counter = 0
+        for r in self.keys():
+            counter += self[r].count_chunks()
+        return counter
 
 class World(object):
     """ This class stores all the info needed of a world, and once
@@ -44,21 +171,23 @@ class World(object):
         self.world_path = world_path
         
         # variables for region files
-        self.normal_region_files = glob(join(self.world_path, "region/r.*.*.mca"))
-        self.nether_region_files = glob(join(self.world_path,"DIM-1/region/r.*.*.mca"))
-        self.aether_region_files = glob(join(self.world_path,"DIM1/region/r.*.*.mca"))
-        self.all_region_files = self.normal_region_files + self.nether_region_files + self.aether_region_files
+        self.normal_region_files = RegionSet(glob(join(self.world_path, "region/r.*.*.mca")))
+        self.nether_region_files = RegionSet(glob(join(self.world_path,"DIM-1/region/r.*.*.mca")))
+        self.aether_region_files = RegionSet(glob(join(self.world_path,"DIM1/region/r.*.*.mca")))
+        #~ self.all_region_files = self.normal_region_files + self.nether_region_files + self.aether_region_files
         self.num_chunks = None # not used right now
         # dict storing all the problems found in the region files
-        self.region_problems = {}
+        #~ self.region_problems = {}
         
         # for level.dat
         self.level_file = join(self.world_path, "level.dat")
         if exists(self.level_file):
             self.level_data = nbt.NBTFile(self.level_file)["Data"]
+            self.name = self.level_data["LevelName"]
         else:
             self.level_file = None
             self.level_data = None
+            self.name = None
         # dictionary used to store all the problems found in level.dat file
         self.level_problems = []
         
@@ -70,24 +199,25 @@ class World(object):
         self.player_status = {}
 
         # does it look like a world folder?
-        if self.all_region_files or self.level_file or self.player_files:
+        if self.normal_region_files.regions or self.nether_region_files.regions \
+        or self.aether_region_files.regions or self.level_file or self.player_files:
             self.isworld = True
         else:
             self.isworld = False
 
     def count_problems(self, problem):
-        """ Counts problems from the 'mcr_problem' dictionary. Takes
-            problem value (see __init__) and returns the number of
-            said problems stored in the dictionary. """
+        """ Counts problems  """
 
-        counter = 0
-        for mcr in self.region_problems:
-            for chunk in self.region_problems[mcr]:
-                for prob in self.region_problems[mcr][chunk]:
-                    if prob == problem:
-                        counter += 1
+        counter = self.normal_region_files.count_problems(problem) + self.nether_region_files.count_problems(problem) + self.aether_region_files.count_problems(problem)
+
         return counter
 
+    def count_chunks(self):
+        """ Counts problems  """
+
+        counter = self.normal_region_files.count_chunks() + self.nether_region_files.count_chunks() + self.aether_region_files.count_chunks()
+
+        return counter
 
     def replace_problematic_chunks(self, backup_worlds, problem):
         """ Takes a list of world objects and a problem value and try
