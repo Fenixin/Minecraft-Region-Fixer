@@ -188,7 +188,7 @@ def scan_region_file(to_scan_region_file):
                 for z in range(32):
                     c = world.ScannedChunk((x,z))
                     r.chunks[(x,z)] = c
-                    scan_chunk(region_file, c, o)
+                    scan_and_fill_chunk(region_file, c, o)
                     if c.status != world.CHUNK_NOT_CREATED: chunk_count += 1
                     if c.status == world.CHUNK_OK:
                         continue
@@ -253,55 +253,66 @@ def add_problem(world_obj, region_file, chunk, problem):
         w.mcr_problems[region_file][chunk] = []
         w.mcr_problems[region_file][chunk].append(problem)
 
+def scan_chunk(region_file, coords, options):
+    """ Takes a RegionFile obj and the local coordinatesof the chun as
+        inputs, then scans the chunk and returns all the data."""
 
+    try:
+        chunk = region_file.get_chunk(*coords)
+        if chunk:
+            data_coords = world.get_chunk_data_coords(chunk)
+            global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
+            num_entities = len(chunk["Level"]["Entities"])
+            if data_coords != global_coords:
+                status = world.CHUNK_WRONG_LOCATED
+                status_text = "Mismatched coordinates (wrong located chunk)."
+                scan_time = time.time()
+            elif num_entities >= options.entity_limit:
+                status = world.CHUNK_TOO_MUCH_ENTITIES
+                status_text = "The chunks has too much entities (it has {0}, and it's more than the limit {1})".format(c.num_entities, options.entity_limit)
+                scan_time = time.time()
+            else:
+                status = world.CHUNK_OK
+                status_text = "OK"
+                scan_time = time.time()
+        else:
+            data_coords = None
+            global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])    
+            num_entities = None        
+            status = world.CHUNK_NOT_CREATED
+            status_text = "The chunk doesn't exist"
+            scan_time = time.time()
 
-def scan_chunk(region_file, scanned_chunk_obj, options):
+    except region.RegionHeaderError as e:
+        error = "Region header error: " + e.msg
+        status = world.CHUNK_CORRUPTED
+        status_text = error
+        scan_time = time.time()
+        chunk = None
+
+    except region.ChunkDataError as e:
+        error = "Chunk data error: " + e.msg
+        status = world.CHUNK_CORRUPTED
+        status_text = error
+        scan_time = time.time()
+        chunk = None
+
+    except region.ChunkHeaderError as e:
+        error = "Chunk herader error: " + e.msg
+        status = world.CHUNK_CORRUPTED
+        status_text = error
+        scan_time = time.time()
+        chunk = None
+    
+    return chunk, region_file, coords, data_coords, global_coords, num_entities, status, status_text, scan_time
+    
+def scan_and_fill_chunk(region_file, scanned_chunk_obj, options):
     """ Takes a RegionFile obj and a ScannedChunk obj as inputs, then 
         scans the chunk and fills the ScannedChunk obj."""
 
     c = scanned_chunk_obj
 
-    try:
-        chunk = region_file.get_chunk(*c.h_coords)
-        if chunk:
-            c.d_coords = world.get_chunk_data_coords(chunk)
-            c.g_coords = world.get_global_chunk_coords(region_file.filename, c.h_coords[0], c.h_coords[1])
-            c.num_entities = len(chunk["Level"]["Entities"])
-            if c.d_coords != c.g_coords:
-                c.status = world.CHUNK_WRONG_LOCATED
-                c.status_text = "Mismatched coordinates (wrong located chunk)."
-                c.scan_time = time.time()
-            elif c.num_entities >= options.entity_limit:
-                c.status = world.CHUNK_TOO_MUCH_ENTITIES
-                c.status_text = "The chunks has too much entities (it has {0}, and it's more than the limit {1})".format(c.num_entities, options.entity_limit)
-                c.scan_time = time.time()
-            else:
-                c.status = world.CHUNK_OK
-                c.status_text = "OK"
-                c.scan_time = time.time()
-        else:
-            c.status = world.CHUNK_NOT_CREATED
-            c.status_text = "The chunk doesn't exist"
-            c.scan_time = time.time()
-
-    except region.RegionHeaderError as e:
-        error = "Region header error: " + e.msg
-        c.status = world.CHUNK_CORRUPTED
-        c.status_text = error
-        c.scan_time = time.time()
-
-    except region.ChunkDataError as e:
-        error = "Chunk data error: " + e.msg
-        c.status = world.CHUNK_CORRUPTED
-        c.status_text = error
-        c.scan_time = time.time()
-
-    except region.ChunkHeaderError as e:
-        error = "Chunk herader error: " + e.msg
-        c.status = world.CHUNK_CORRUPTED
-        c.status_text = error
-        c.scan_time = time.time()
-
+    _, _, c.h_coords, c.d_coords, c.g_coords, c.num_entities, c.status, c.status_text, c.scan_time = scan_chunk(region_file, c.h_coords, options)
 
 def _mp_pool_init(regionset,options,q):
     """ Function to initialize the multiprocessing in scan_all_mca_files.
