@@ -213,10 +213,7 @@ def main():
             
             print "\n"
             print "{0:#^60}".format('')
-            if world_obj.name:
-                print "{0:#^60}".format(' Scanning world: {0} '.format(world_obj.name))
-            else:
-                print "{0:#^60}".format(' Scanning world: {0} '.format(world_obj.world_path))
+            print "{0:#^60}".format(' Scanning world: {0} '.format(world_obj.get_name()))
             print "{0:#^60}".format('')
             
             scan_world(world_obj, options)

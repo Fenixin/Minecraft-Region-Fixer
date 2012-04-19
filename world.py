@@ -204,6 +204,14 @@ class World(object):
             self.isworld = True
         else:
             self.isworld = False
+    
+    def get_name(self):
+        """ Returns a string with the name as found in level.dat or
+            with the world folder's name. """
+        if self.name:
+            return self.name
+        else:
+            return split(self.world_path)[-1]
 
     def count_problems(self, problem):
         """ Counts problems  """
