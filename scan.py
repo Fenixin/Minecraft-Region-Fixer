@@ -78,7 +78,7 @@ def scan_world(world_obj, options):
 
     # check the level.dat file and the *.dat files in players directory
 
-    print "\n{0:#^60}".format(' Scanning level.dat ')
+    print "\n{0:-^60}".format(' Scanning level.dat ')
 
     if not w.level_file:
 
@@ -92,7 +92,7 @@ def scan_world(world_obj, options):
             for e in w.level_problems: print e,
 
 
-    print "\n{0:#^60}".format(' Scanning player files ')
+    print "\n{0:-^60}".format(' Scanning player files ')
     
     if not w.player_files:
         print "Info: No player files to scan."
@@ -106,7 +106,7 @@ def scan_world(world_obj, options):
                 print "Warning: Player file \"{0}.dat\" has problems: {1}".format(player, w.player_status[player])
 
     # SCAN ALL THE CHUNKS!
-    print "\n{0:#^60}".format(' Scanning region files ')
+    print "\n{0:-^60}".format(' Scanning region files ')
     if len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files) == 0:
         print "No region files to scan!"
     else:
