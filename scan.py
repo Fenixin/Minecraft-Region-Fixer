@@ -256,7 +256,8 @@ def add_problem(world_obj, region_file, chunk, problem):
 
 
 def scan_chunk(region_file, scanned_chunk_obj, options):
-    """ Takes a region file and a scanned chunk obj and fills it"""
+    """ Takes a RegionFile obj and a ScannedChunk obj as inputs, then 
+        scans the chunk and fills the ScannedChunk obj."""
 
     c = scanned_chunk_obj
 
@@ -267,39 +268,32 @@ def scan_chunk(region_file, scanned_chunk_obj, options):
             c.g_coords = world.get_global_chunk_coords(region_file.filename, c.h_coords[0], c.h_coords[1])
             c.num_entities = len(chunk["Level"]["Entities"])
             if c.d_coords != c.g_coords:
-                #~ return (chunk, -2, "Mismatched coordinates.")
                 c.status = world.CHUNK_WRONG_LOCATED
                 c.status_text = "Mismatched coordinates (wrong located chunk)."
             elif c.num_entities >= options.entity_limit:
                 c.status = world.CHUNK_TOO_MUCH_ENTITIES
                 c.status_text = "The chunks has too much entities (it has {0}, and it's more than the limit {1})".format(c.num_entities, options.entity_limit)
+            else:
+                c.status = world.CHUNK_OK
+                c.status_text = "OK"
+        else:
+            c.status = world.CHUNK_NOT_CREATED
+            c.status_text = "The chunk doesn't exist"
 
     except region.RegionHeaderError as e:
         error = "Region header error: " + e.msg
         c.status = world.CHUNK_CORRUPTED
         c.status_text = error
-        #~ return (None, -1, error)
 
     except region.ChunkDataError as e:
         error = "Chunk data error: " + e.msg
         c.status = world.CHUNK_CORRUPTED
         c.status_text = error
-        #~ return (None, -1, error)
 
     except region.ChunkHeaderError as e:
         error = "Chunk herader error: " + e.msg
         c.status = world.CHUNK_CORRUPTED
         c.status_text = error
-        #~ return (None, -1, error)
-
-    if chunk != None:
-        #~ return (chunk, 0, "OK")
-        c.status = world.CHUNK_OK
-        c.status_text = "OK"
-    else:
-        c.status = world.CHUNK_NOT_CREATED
-        c.status_text = "The chunk doesn't exist"
-    #~ return (None, 1, "The chunk doesn't exist")
 
 
 def _mp_pool_init(regionset,options,q):
