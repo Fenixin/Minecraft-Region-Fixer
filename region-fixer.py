@@ -222,16 +222,20 @@ def main():
             wrong_located = world_obj.count_problems(world.CHUNK_WRONG_LOCATED)
 
             # Try to fix corrupted chunks with the backup copy
+            # TODO Tiene sentido esta opción al usarse con una input de varios mundos
+            # y una input de varias backups? Podríamos checkear que la backup corresponde al mundo
+            # pero aún así si se escanean varios mundos... quizás sería bueno limitar esta opción
+            # a cuando solo se introduce un mundo.
             if options.replace_corrupted or options.replace_wrong_located:
                 if options.replace_corrupted:
-                    print "{0:#^60}".format(' Trying to fix corrupted chunks ')
+                    print "{0:#^60}".format(' Trying to replace corrupted chunks ')
                     fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CORRUPTED)
-                    print "\n{0} fixed chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
+                    print "\n{0} replaced chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
                 
                 if options.replace_wrong_located:
-                    print "{0:#^60}".format(' Trying to fix wrong located chunks ')
+                    print "{0:#^60}".format(' Trying to replace wrong located chunks ')
                     fixed = world_obj.replace_problematic_chunks(backup_worlds, world.WRONG_LOCATED)
-                    print "\n{0} fixed chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
+                    print "\n{0} replaced chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
 
             # delete bad chunks! (if asked for)
             if options.delete_corrupted:
