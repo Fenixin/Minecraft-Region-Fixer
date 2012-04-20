@@ -226,15 +226,17 @@ def main():
             # y una input de varias backups? Podríamos checkear que la backup corresponde al mundo
             # pero aún así si se escanean varios mundos... quizás sería bueno limitar esta opción
             # a cuando solo se introduce un mundo.
+            
+            # TODO no entrar aquí si no hay chunks corruptos o mal localizados
             if options.replace_corrupted or options.replace_wrong_located:
                 if options.replace_corrupted:
                     print "{0:#^60}".format(' Trying to replace corrupted chunks ')
-                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CORRUPTED)
+                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_CORRUPTED)
                     print "\n{0} replaced chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
                 
                 if options.replace_wrong_located:
                     print "{0:#^60}".format(' Trying to replace wrong located chunks ')
-                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world.WRONG_LOCATED)
+                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_WRONG_LOCATED)
                     print "\n{0} replaced chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
 
             # delete bad chunks! (if asked for)

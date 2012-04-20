@@ -91,6 +91,17 @@ class ScannedRegionFile(object):
             if self.chunks[chunk].status != CHUNK_NOT_CREATED:
                 counter += 1
         return counter
+    
+    def list_chunks(self, status = None):
+        """ Returns a list of all global coordinates of the chunks with
+            status, if no status is given, returns all the existent
+            chunks in the region file """
+        
+        l = []
+        for c in self.chunks.keys():
+            if status == self.chunks[c].status: l.append(self.chunks[c].g_coords)
+            elif status == None: l.append(c.g_coords)
+        return l
 
 class RegionSet(object):
     """Stores an arbitrary number of region files and the scan results
@@ -161,6 +172,15 @@ class RegionSet(object):
         for r in self.keys():
             counter += self[r].count_chunks()
         return counter
+    
+    def list_chunks(self, status = None):
+        """ Returns a list of the global coordinates of the chunks
+            with status. If status = None returns all the chunks. """
+        l = []
+        for r in self.keys():
+            l.extend(self[r].list_chunks(status))
+        return l
+        
 
 class World(object):
     """ This class stores all the info needed of a world, and once
@@ -226,6 +246,11 @@ class World(object):
         counter = self.normal_region_files.count_chunks() + self.nether_region_files.count_chunks() + self.aether_region_files.count_chunks()
 
         return counter
+    
+    def list_chunks(self, status):
+        """ Returns a list of the global coordinates of chunks with
+            status """
+        return self.normal_region_files.list_chunks(status) + self.nether_region_files.list_chunks(status) + self.aether_region_files.list_chunks(status)
 
     def replace_problematic_chunks(self, backup_worlds, problem):
         """ Takes a list of world objects and a problem value and try
