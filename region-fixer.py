@@ -207,6 +207,9 @@ def main():
         print "Deleted {0} chunks".format(counter)
         
     else:
+        if len(region_list.regions) > 0:
+            scan_regionset(region_list, options)
+            
         for world_obj in world_list:
             # TODO hay que sustituir el nombre world por world_obj,
             # dejando world para referencias al módulo world.py
