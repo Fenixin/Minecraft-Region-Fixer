@@ -116,7 +116,7 @@ class RegionSet(object):
         self.corrupted_chunks = 0
         self.wrong_located_chunks = 0
         self.entities_problems = 0
-        self.bad_list = None
+        self.bad_list = []
 
     def __getitem__(self, key):
         return self.regions[key]
@@ -180,7 +180,16 @@ class RegionSet(object):
         for r in self.keys():
             l.extend(self[r].list_chunks(status))
         return l
+    
+    def locate_chunk(self, global_coords):
+        """ Takes the global coordinates of a chunk and returns the
+            region filename and the local coordinates of the chunk or
+            None, None if it doesn't exits in this RegionSet """
         
+        filename = get_chunk_region(*global_coords)
+        
+        
+    
 
 class World(object):
     """ This class stores all the info needed of a world, and once
@@ -264,60 +273,69 @@ class World(object):
         # same time is not a good idea
         fixed_chunks = []
 
-        for mcr_path in self.mcr_problems:
-            for chunk in self.mcr_problems[mcr_path]:
+        # TODO tenemos el problema de que esto tiene que ser por dimensión, no por mundo...
 
-                if problem in self.mcr_problems[mcr_path][chunk]:
+        for dimension in ["overworld", "nether", "end"]:
+            for backup in backup_worlds:
+                # choose the correct regionset
+                if dimension == "overworld":
+                    regionset = self.normal_region_files
+                    b_regionset = backup.normal_region_files
+                elif dimension == "nether":
+                    regionset = self.nether_region_files
+                    b_regionset = backup.nether_region_files
+                elif dimension == "end":
+                    regionset = self.aether_region_files
+                    b_regionset = backup.aether_region_files
+                
+                bad_chunks = regionset.list_chunks(problem)
+                for global_coords in bad_chunks:
                     print "\n{0:-^60}".format(' New chunk to fix! ')
-                    for backup in backup_worlds:
 
-                        # search for the region file
-                        region_name = split(mcr_path)[1]
-                        dimension = split(split(mcr_path)[0])[1]
-                        if dimension == "region":
-                            backup_region_path = join(backup.world_path, "region", region_name)
-                        else:
-                            backup_region_path = join(backup.world_path, dimension, region_name)
+                    # search for the region file
+                    region_name = split(mcr_path)[1]
+                    dimension = split(split(mcr_path)[0])[1]
+                    if dimension == "region":
+                        backup_region_path = join(backup.world_path, "region", region_name)
+                    else:
+                        backup_region_path = join(backup.world_path, dimension, region_name)
 
-                        if exists(backup_region_path):
-                            print "Backup region file found in: {0} \nfixing...".format(backup_region_path)
+                    if exists(backup_region_path):
+                        print "Backup region file found in: {0} \nfixing...".format(backup_region_path)
 
-                            # get the chunk
-                            from scan import scan_chunk
-                            backup_region_file = region.RegionFile(backup_mcr_path)
-                            working_chunk, status, errmsg = scan_chunk(backup_region_file, chunk[0], chunk[1])
-                            del backup_region_file
+                        # get the chunk
+                        from scan import scan_chunk
+                        backup_region_file = region.RegionFile(backup_mcr_path)
+                        working_chunk, status, errmsg = scan_chunk(backup_region_file, chunk[0], chunk[1])
+                        del backup_region_file
 
-                            ####### TODO TODO TODO
-                            # would be cool to check here for entities problem?
+                        ####### TODO TODO TODO
+                        # would be cool to check here for entities problem?
 
-                            if isinstance(working_chunk, nbt.TAG_Compound):
-                                # the chunk exists and is non-corrupted, fix it!
-                                tofix_region_file = region.RegionFile(mcr_path)
-                                tofix_region_file.write_chunk(chunk[0], chunk[1],working_chunk)
-                                del tofix_region_file
-                                counter += 1
-                                fixed_chunks.append((mcr_path, chunk, problem))
-                                print "Chunk fixed using backup dir: {0}".format(backup.world_path)
-                                break
+                        if isinstance(working_chunk, nbt.TAG_Compound):
+                            # the chunk exists and is non-corrupted, fix it!
+                            tofix_region_file = region.RegionFile(mcr_path)
+                            tofix_region_file.write_chunk(chunk[0], chunk[1],working_chunk)
+                            del tofix_region_file
+                            counter += 1
+                            fixed_chunks.append((mcr_path, chunk, problem))
+                            print "Chunk fixed using backup dir: {0}".format(backup.world_path)
+                            break
 
-                            elif working_chunk == None:
-                                print "The chunk doesn't exists in this backup directory: {0}".format(backup.world_path)
-                                # The chunk doesn't exists in the region file
-                                continue
+                        elif working_chunk == None:
+                            print "The chunk doesn't exists in this backup directory: {0}".format(backup.world_path)
+                            # The chunk doesn't exists in the region file
+                            continue
 
-                            elif status == -1:
-                                # The chunk is corrupted
-                                print "The chunk is corrupted in this backup directory: {0}".format(backup.world_path)
-                                continue
+                        elif status == -1:
+                            # The chunk is corrupted
+                            print "The chunk is corrupted in this backup directory: {0}".format(backup.world_path)
+                            continue
 
-                            elif status == -2:
-                                # The chunk is wrong located
-                                print "The chunk is wrong located in this backup directory: {0}".format(backup.world_path)
-                                continue
-
-        for mcr, chunk, problem in fixed_chunks:
-            self.remove_problem(mcr, chunk, problem)
+                        elif status == -2:
+                            # The chunk is wrong located
+                            print "The chunk is wrong located in this backup directory: {0}".format(backup.world_path)
+                            continue
 
         return counter
 
