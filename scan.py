@@ -254,7 +254,7 @@ def add_problem(world_obj, region_file, chunk, problem):
         w.mcr_problems[region_file][chunk].append(problem)
 
 def scan_chunk(region_file, coords, options):
-    """ Takes a RegionFile obj and the local coordinatesof the chun as
+    """ Takes a RegionFile obj and the local coordinatesof the chunk as
         inputs, then scans the chunk and returns all the data."""
 
     try:
@@ -278,7 +278,7 @@ def scan_chunk(region_file, coords, options):
         else:
             data_coords = None
             global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])    
-            num_entities = None        
+            num_entities = None
             status = world.CHUNK_NOT_CREATED
             status_text = "The chunk doesn't exist"
             scan_time = time.time()
@@ -289,6 +289,9 @@ def scan_chunk(region_file, coords, options):
         status_text = error
         scan_time = time.time()
         chunk = None
+        data_coords = None
+        global_coords = None
+        num_entities = None
 
     except region.ChunkDataError as e:
         error = "Chunk data error: " + e.msg
@@ -296,6 +299,9 @@ def scan_chunk(region_file, coords, options):
         status_text = error
         scan_time = time.time()
         chunk = None
+        data_coords = None
+        global_coords = None
+        num_entities = None
 
     except region.ChunkHeaderError as e:
         error = "Chunk herader error: " + e.msg
@@ -303,6 +309,9 @@ def scan_chunk(region_file, coords, options):
         status_text = error
         scan_time = time.time()
         chunk = None
+        data_coords = None
+        global_coords = None
+        num_entities = None
     
     return chunk, region_file, coords, data_coords, global_coords, num_entities, status, status_text, scan_time
     
