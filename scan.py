@@ -232,6 +232,9 @@ def scan_region_file(to_scan_region_file):
         # procesoss hijos que se cuelguen y no tenemos por qué cerrar todo el programa
         return
 
+    # TODO except IOError: para coger cualquier caso en el que el archivo 
+    # tiene un problema pero el problema está en el sistema de archivos.
+
     except:
 
         except_type, except_class, tb = sys.exc_info()

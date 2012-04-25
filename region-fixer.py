@@ -158,6 +158,12 @@ def main():
     if not (world_list or region_list):
         print ("Error: No worlds or region files to scan!")
         sys.exit(1)
+        
+    
+    # TODO las opciones --backups y --replace* solo deben funcionar
+    # si solo se introduce un único mundo como entrada, si se tiene un 
+    # regionset o varios mundos o todo a la vez, debe protestar, quizás
+    # puede ser ampliable a regionset?
 
     # Check basic options incompatibilities
     if options.interactive and (options.replace_corrupted or options.replace_wrong_located or options.delete_corrupted or options.delete_wrong_located):
@@ -208,7 +214,14 @@ def main():
         
     else:
         if len(region_list.regions) > 0:
+            print "\n"
+            print "{0:#^60}".format('')
+            print "{0:#^60}".format(' Scanning region files ')
+            print "{0:#^60}".format('')
             scan_regionset(region_list, options)
+            
+            corrupted = region_list.count_problems(world.CHUNK_CORRUPTED)
+            wrong_located = region_list.count_problems(world.CHUNK_WRONG_LOCATED)
             
         for world_obj in world_list:
             # TODO hay que sustituir el nombre world por world_obj,
