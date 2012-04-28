@@ -137,7 +137,6 @@ def scan_level(world_obj):
 
     try:
         level_dat = nbt.NBTFile(filename = w.level_file)
-        del level_dat
 
     except Exception, e:
         w.level_problems.append(e)
@@ -234,6 +233,11 @@ def scan_region_file(to_scan_region_file):
 
     # TODO except IOError: para coger cualquier caso en el que el archivo 
     # tiene un problema pero el problema está en el sistema de archivos.
+    
+    except IOError, e:
+        print "\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(e,e)
+        scan_region_file.q.put((r, filename, None, None, None, None))
+        return 
 
     except:
 
