@@ -176,8 +176,8 @@ def main():
         if not options.backups and (options.replace_corrupted or options.replace_wrong_located):
             parser.error("The options --replace-* need the --backups option")
 
-    if options.entity_limit <= 0:
-        parser.error("The entity limit must be at least 1!")
+    if options.entity_limit < 0:
+        parser.error("The entity limit must be at least 0!")
 
     print "Welcome to Region Fixer!"
 

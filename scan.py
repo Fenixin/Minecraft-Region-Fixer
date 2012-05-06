@@ -270,7 +270,7 @@ def scan_chunk(region_file, coords, options):
                 status = world.CHUNK_WRONG_LOCATED
                 status_text = "Mismatched coordinates (wrong located chunk)."
                 scan_time = time.time()
-            elif num_entities >= options.entity_limit:
+            elif num_entities > options.entity_limit:
                 status = world.CHUNK_TOO_MUCH_ENTITIES
                 status_text = "The chunks has too much entities (it has {0}, and it's more than the limit {1})".format(c.num_entities, options.entity_limit)
                 scan_time = time.time()
