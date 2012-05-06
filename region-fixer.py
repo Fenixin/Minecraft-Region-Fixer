@@ -158,26 +158,26 @@ def main():
     if not (world_list or region_list):
         print ("Error: No worlds or region files to scan!")
         sys.exit(1)
-        
-    
-    # TODO las opciones --backups y --replace* solo deben funcionar
-    # si solo se introduce un único mundo como entrada, si se tiene un 
-    # regionset o varios mundos o todo a la vez, debe protestar, quizás
-    # puede ser ampliable a regionset?
 
     # Check basic options incompatibilities
-    if options.interactive and (options.replace_corrupted or options.replace_wrong_located or options.delete_corrupted or options.delete_wrong_located):
-        parser.error("The can't use the options --replace-* or --delete-* while entering in interactive mode.")
+    if options.interactive and (options.replace_corrupted or options.replace_wrong_located or options.delete_corrupted or options.delete_wrong_located or options.summary):
+        parser.error("Can't use the options --replace-* , --delete-* and --summary with interactive mode.")
     
     else:
-        if options.backups and not (options.replace_corrupted or options.replace_wrong_located):
-            parser.error("The option --backups needs one of the --replace-* options")
+        if options.backups:
+            if not (options.replace_corrupted or options.replace_wrong_located):
+                parser.error("The option --backups needs one of the --replace-* options")
+            else:
+                if (len(region_list.regions) > 0):
+                    parser.error("The input should be only one world and you intruduced {0} individual region files.".format(len(region_list.regions)))
+                elif (len(world_list) > 1):
+                    parser.error("The input should be only one world and you intruduced {0} worlds.".format(len(world_list)))
         
         if not options.backups and (options.replace_corrupted or options.replace_wrong_located):
             parser.error("The options --replace-* need the --backups option")
 
-        if options.entity_limit <= 0:
-            parser.error("The entity limit must be at least 1!")
+    if options.entity_limit <= 0:
+        parser.error("The entity limit must be at least 1!")
 
     print "Welcome to Region Fixer!"
 
