@@ -124,10 +124,6 @@ def scan_world(world_obj, options):
         entities_prob = w.count_problems(world.CHUNK_TOO_MUCH_ENTITIES)
         total = w.count_chunks()
 
-        print "\nFound {0} corrupted, {1} wrong located chunks and {2} chunks with too much entities of a total of {3}\n".format(
-            corrupted, wrong_located, entities_prob, total)
-        
-
 
 def scan_level(world_obj):
     """ At the moment only tries to read a level.dat file and print a

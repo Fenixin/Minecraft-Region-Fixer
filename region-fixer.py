@@ -222,6 +222,11 @@ def main():
             
             corrupted = region_list.count_problems(world.CHUNK_CORRUPTED)
             wrong_located = region_list.count_problems(world.CHUNK_WRONG_LOCATED)
+            entities_prob = region_list.count_problems(world.CHUNK_TOO_MUCH_ENTITIES)
+            total = region_list.count_chunks()
+
+            print "\nFound {0} corrupted, {1} wrong located chunks and {2} chunks with too much entities of a total of {3}\n".format(
+                corrupted, wrong_located, entities_prob, total)
             
         for world_obj in world_list:
             # TODO hay que sustituir el nombre world por world_obj,
@@ -236,6 +241,11 @@ def main():
 
             corrupted = world_obj.count_problems(world.CHUNK_CORRUPTED)
             wrong_located = world_obj.count_problems(world.CHUNK_WRONG_LOCATED)
+            entities_prob = world_obj.count_problems(world.CHUNK_TOO_MUCH_ENTITIES)
+            total = world_obj.count_chunks()
+
+            print "\nFound {0} corrupted, {1} wrong located chunks and {2} chunks with too much entities of a total of {3}\n".format(
+                corrupted, wrong_located, entities_prob, total)
 
             # Try to fix corrupted chunks with the backup copy
             # TODO Tiene sentido esta opción al usarse con una input de varios mundos
