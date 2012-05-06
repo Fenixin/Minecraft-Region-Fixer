@@ -229,9 +229,6 @@ def main():
                 corrupted, wrong_located, entities_prob, total)
             
         for world_obj in world_list:
-            # TODO hay que sustituir el nombre world por world_obj,
-            # dejando world para referencias al módulo world.py
-            
             print "\n"
             print "{0:#^60}".format('')
             print "{0:#^60}".format(' Scanning world: {0} '.format(world_obj.get_name()))
@@ -239,9 +236,9 @@ def main():
             
             scan_world(world_obj, options)
 
-            corrupted = world_obj.count_problems(world.CHUNK_CORRUPTED)
-            wrong_located = world_obj.count_problems(world.CHUNK_WRONG_LOCATED)
-            entities_prob = world_obj.count_problems(world.CHUNK_TOO_MUCH_ENTITIES)
+            corrupted = world_obj.count_problems(world_obj.CHUNK_CORRUPTED)
+            wrong_located = world_obj.count_problems(world_obj.CHUNK_WRONG_LOCATED)
+            entities_prob = world_obj.count_problems(world_obj.CHUNK_TOO_MUCH_ENTITIES)
             total = world_obj.count_chunks()
 
             print "\nFound {0} corrupted, {1} wrong located chunks and {2} chunks with too much entities of a total of {3}\n".format(
@@ -257,12 +254,12 @@ def main():
             if options.replace_corrupted or options.replace_wrong_located:
                 if options.replace_corrupted:
                     print "{0:#^60}".format(' Trying to replace corrupted chunks ')
-                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_CORRUPTED)
+                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world_obj.CHUNK_CORRUPTED)
                     print "\n{0} replaced chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
                 
                 if options.replace_wrong_located:
                     print "{0:#^60}".format(' Trying to replace wrong located chunks ')
-                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_WRONG_LOCATED)
+                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world_obj.CHUNK_WRONG_LOCATED)
                     print "\n{0} replaced chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
 
             # delete bad chunks! (if asked for)
@@ -271,7 +268,7 @@ def main():
                     print "{0:#^60}".format(' Deleting  corrupted chunks ')
 
                     print "... ",
-                    counter = world_obj.remove_problematic_chunks(world.CORRUPTED)
+                    counter = world_obj.remove_problematic_chunks(world_obj.CORRUPTED)
                     print "Done!"
                     
                     print "Deleted {0} corrupted chunks".format(counter)
@@ -283,7 +280,7 @@ def main():
                     print "{0:#^60}".format(' Deleting wrong located chunks ')
                     
                     print "... ",
-                    counter = world_obj.remove_problematic_chunks(world.WRONG_LOCATED)
+                    counter = world_obj.remove_problematic_chunks(world_obj.WRONG_LOCATED)
                     print "Done!"
                     
                     print "Deleted {0} wrong located chunks".format(counter)
