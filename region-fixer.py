@@ -140,6 +140,11 @@ def main():
     parser.add_option('--verbose', '-v',action='store_true',help='Don\'t use progress bar, print a line per scanned region file. The letters mean c: corrupted, w: wrong located, t: total of chunks')
     parser.add_option('--interactive', '-i',action='store_true',help='Scans the world and then enter in interactive mode, where you can write commands an do things',dest = 'interactive',default = False)
     parser.add_option('--summary', '-s',action='store_true',help='Prints a summary with all the found problems in region files.', default = False)
+    # TODO TODO TOOD
+    # la ayuda de las opciones necesita una vuena actualización. Hay que decir que backups y replace no pueden usarse junto con varios mundos o con un 
+    # regionset.
+    
+    
     
     # Other options
     other_group = OptionGroup(parser, "Others", "This option is a different part of the program and is incompatible with the options above. You can't mix int he same line this options with above ones.")
@@ -187,10 +192,6 @@ def main():
         if not backup_worlds:
             print "[WARNING] No valid backup directories found, won't fix any chunk."
 
-# TODO hay que hacer una funcion
-# que sea scan_region_set, o similar. Estaria bien tb mejorar todo lo de
-# imprimir texto.
-
     # The program starts
     if options.delete_list: # Delete the given list of chunks
         # TODO esta función debería ctualizarse, una vez que cambiemos
@@ -236,39 +237,37 @@ def main():
             
             scan_world(world_obj, options)
 
-            corrupted = world_obj.count_problems(world_obj.CHUNK_CORRUPTED)
-            wrong_located = world_obj.count_problems(world_obj.CHUNK_WRONG_LOCATED)
-            entities_prob = world_obj.count_problems(world_obj.CHUNK_TOO_MUCH_ENTITIES)
+            corrupted = world_obj.count_problems(world.CHUNK_CORRUPTED)
+            wrong_located = world_obj.count_problems(world.CHUNK_WRONG_LOCATED)
+            entities_prob = world_obj.count_problems(world.CHUNK_TOO_MUCH_ENTITIES)
             total = world_obj.count_chunks()
 
             print "\nFound {0} corrupted, {1} wrong located chunks and {2} chunks with too much entities of a total of {3}\n".format(
                 corrupted, wrong_located, entities_prob, total)
-
-            # Try to fix corrupted chunks with the backup copy
-            # TODO Tiene sentido esta opción al usarse con una input de varios mundos
-            # y una input de varias backups? Podríamos checkear que la backup corresponde al mundo
-            # pero aún así si se escanean varios mundos... quizás sería bueno limitar esta opción
-            # a cuando solo se introduce un mundo.
             
-            # TODO no entrar aquí si no hay chunks corruptos o mal localizados
+            # Try to replace bad chunks with a backup copy
             if options.replace_corrupted or options.replace_wrong_located:
-                if options.replace_corrupted:
-                    print "{0:#^60}".format(' Trying to replace corrupted chunks ')
-                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world_obj.CHUNK_CORRUPTED)
-                    print "\n{0} replaced chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
+                if world_obj.count_problems(world.CHUNK_CORRUPTED):
+                    if options.replace_corrupted:
+                        print "{0:#^60}".format(' Trying to replace corrupted chunks ')
+                        fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_CORRUPTED, options)
+                        print "\n{0} replaced chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
+                else: print "No corrupted chunks to replace!"
                 
-                if options.replace_wrong_located:
-                    print "{0:#^60}".format(' Trying to replace wrong located chunks ')
-                    fixed = world_obj.replace_problematic_chunks(backup_worlds, world_obj.CHUNK_WRONG_LOCATED)
-                    print "\n{0} replaced chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
+                if world_obj.count_problems(world.CHUNK_WRONG_LOCATED):
+                    if options.replace_wrong_located:
+                        print "{0:#^60}".format(' Trying to replace wrong located chunks ')
+                        fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_WRONG_LOCATED, options)
+                        print "\n{0} replaced chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
+                else: print "No wrong located chuns to replace!"
 
-            # delete bad chunks! (if asked for)
+            # delete bad chunks!
             if options.delete_corrupted:
                 if corrupted:
                     print "{0:#^60}".format(' Deleting  corrupted chunks ')
 
                     print "... ",
-                    counter = world_obj.remove_problematic_chunks(world_obj.CORRUPTED)
+                    counter = world_obj.remove_problematic_chunks(world.CORRUPTED)
                     print "Done!"
                     
                     print "Deleted {0} corrupted chunks".format(counter)

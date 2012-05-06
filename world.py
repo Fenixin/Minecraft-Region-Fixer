@@ -107,12 +107,16 @@ class RegionSet(object):
     """Stores an arbitrary number of region files and the scan results
     Inits with a list of region files and the regions dict is filled
     while scanning with ScannedRegionFiles and ScannedChunks."""
-    def __init__(self, region_list):
+    def __init__(self, regionset_path = None, region_list = []):
+        if regionset_path:
+            self.path = regionset_path
+            self.region_list = glob(join(self.path, "r.*.*.mca"))
+        else:
+            self.region_list = region_list
         self.regions = {}
-        for path in region_list:
+        for path in self.region_list:
             r = ScannedRegionFile(path)
             self.regions[(r.x, r.z)] = r
-        
         self.corrupted_chunks = 0
         self.wrong_located_chunks = 0
         self.entities_problems = 0
@@ -186,7 +190,11 @@ class RegionSet(object):
             region filename and the local coordinates of the chunk or
             None, None if it doesn't exits in this RegionSet """
         
-        filename = get_chunk_region(*global_coords)
+        filename = self.path + get_chunk_region(*global_coords)
+        local_coords = get_local_chunk_coords(*global_coords)
+        
+        return filename, local_coords
+        
         
         
     
@@ -200,9 +208,9 @@ class World(object):
         self.world_path = world_path
         
         # variables for region files
-        self.normal_region_files = RegionSet(glob(join(self.world_path, "region/r.*.*.mca")))
-        self.nether_region_files = RegionSet(glob(join(self.world_path,"DIM-1/region/r.*.*.mca")))
-        self.aether_region_files = RegionSet(glob(join(self.world_path,"DIM1/region/r.*.*.mca")))
+        self.normal_region_files = RegionSet(join(self.world_path, "region/"))
+        self.nether_region_files = RegionSet(join(self.world_path,"DIM-1/region/"))
+        self.aether_region_files = RegionSet(join(self.world_path,"DIM1/region/"))
         #~ self.all_region_files = self.normal_region_files + self.nether_region_files + self.aether_region_files
         self.num_chunks = None # not used right now
         # dict storing all the problems found in the region files
@@ -261,7 +269,7 @@ class World(object):
             status """
         return self.normal_region_files.list_chunks(status) + self.nether_region_files.list_chunks(status) + self.aether_region_files.list_chunks(status)
 
-    def replace_problematic_chunks(self, backup_worlds, problem):
+    def replace_problematic_chunks(self, backup_worlds, problem, options):
         """ Takes a list of world objects and a problem value and try
             to replace every chunk with that problem using a working
             chunk from the list of world objects. It uses the world
@@ -272,8 +280,9 @@ class World(object):
         # dict once the iteration over it has finished, doing it at the 
         # same time is not a good idea
         fixed_chunks = []
-
-        # TODO tenemos el problema de que esto tiene que ser por dimensión, no por mundo...
+        
+        # TODO TODO TODO esto parece tener algunos problemas serios,
+        # aunque tb parece que funciona....
 
         for dimension in ["overworld", "nether", "end"]:
             for backup in backup_worlds:
@@ -290,52 +299,50 @@ class World(object):
                 
                 bad_chunks = regionset.list_chunks(problem)
                 for global_coords in bad_chunks:
-                    print "\n{0:-^60}".format(' New chunk to fix! ')
+                    print "\n{0:-^60}".format(' New chunk to replace! Coords {0} '.format(global_coords))
 
                     # search for the region file
-                    region_name = split(mcr_path)[1]
-                    dimension = split(split(mcr_path)[0])[1]
-                    if dimension == "region":
-                        backup_region_path = join(backup.world_path, "region", region_name)
-                    else:
-                        backup_region_path = join(backup.world_path, dimension, region_name)
-
+                    backup_region_path, local_coords = b_regionset.locate_chunk(global_coords)
+                    tofix_region_path, _ = regionset.locate_chunk(global_coords)
                     if exists(backup_region_path):
-                        print "Backup region file found in: {0} \nfixing...".format(backup_region_path)
+                        print "Backup region file found in: {0} \nreplacing...".format(backup_region_path)
 
                         # get the chunk
                         from scan import scan_chunk
-                        backup_region_file = region.RegionFile(backup_mcr_path)
-                        working_chunk, status, errmsg = scan_chunk(backup_region_file, chunk[0], chunk[1])
-                        del backup_region_file
+                        backup_region_file = region.RegionFile(backup_region_path)
+                        working_chunk, region_file, coords, data_coords, global_coords, num_entities, status, status_text, scan_time = \
+                            scan_chunk(backup_region_file, local_coords, options)
 
-                        ####### TODO TODO TODO
-                        # would be cool to check here for entities problem?
-
-                        if isinstance(working_chunk, nbt.TAG_Compound):
+                        if status == CHUNK_OK:
                             # the chunk exists and is non-corrupted, fix it!
-                            tofix_region_file = region.RegionFile(mcr_path)
-                            tofix_region_file.write_chunk(chunk[0], chunk[1],working_chunk)
-                            del tofix_region_file
+                            tofix_region_file = region.RegionFile(tofix_region_path)
+                            tofix_region_file.write_chunk(local_coords[0], local_coords[1],working_chunk)
                             counter += 1
-                            fixed_chunks.append((mcr_path, chunk, problem))
-                            print "Chunk fixed using backup dir: {0}".format(backup.world_path)
-                            break
+                            fixed_chunks.append((tofix_region_path, local_coords, status))
+                            print "Chunk replaced using backup dir: {0}".format(backup.world_path)
 
-                        elif working_chunk == None:
+                        elif status == CHUNK_NOT_CREATED:
                             print "The chunk doesn't exists in this backup directory: {0}".format(backup.world_path)
                             # The chunk doesn't exists in the region file
                             continue
 
-                        elif status == -1:
+                        elif status == CHUNK_CORRUPTED:
                             # The chunk is corrupted
                             print "The chunk is corrupted in this backup directory: {0}".format(backup.world_path)
                             continue
 
-                        elif status == -2:
+                        elif status == CHUNK_WRONG_LOCATED:
                             # The chunk is wrong located
                             print "The chunk is wrong located in this backup directory: {0}".format(backup.world_path)
                             continue
+                        
+                        elif status == CHUNK_TOO_MUCH_ENTITIES:
+                            # The chunk is wrong located
+                            print "The chunk in this backup directory has too many entities ({1} entities): {0}".format(backup.world_path, num_entities)
+                            continue
+
+                    else:
+                        print "The region file doesn't exist in the backup directory: {0}".format(backup_region_path)
 
         return counter
 
@@ -411,6 +418,10 @@ def get_global_chunk_coords(region_filename, chunkX, chunkZ):
     
     return chunkX, chunkZ
 
+def get_local_chunk_coords(chunkx, chunkz):
+    """ Takes the chunk global coords and returns the local coords """
+    return chunkx % 32, chunkz % 32
+
 def get_chunk_region(chunkX, chunkZ):
     """ Returns the name of the region file given global chunk
         coords """
@@ -418,7 +429,7 @@ def get_chunk_region(chunkX, chunkZ):
     regionX = chunkX / 32
     regionZ = chunkZ / 32
     
-    region_name = 'r.' + str(regionX) + '.' + str(regionZ) + '.mcr'
+    region_name = 'r.' + str(regionX) + '.' + str(regionZ) + '.mca'
     
     return region_name
     

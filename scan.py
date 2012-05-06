@@ -293,7 +293,7 @@ def scan_chunk(region_file, coords, options):
         scan_time = time.time()
         chunk = None
         data_coords = None
-        global_coords = None
+        global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
         num_entities = None
 
     except region.ChunkDataError as e:
@@ -303,7 +303,7 @@ def scan_chunk(region_file, coords, options):
         scan_time = time.time()
         chunk = None
         data_coords = None
-        global_coords = None
+        global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
         num_entities = None
 
     except region.ChunkHeaderError as e:
@@ -313,7 +313,7 @@ def scan_chunk(region_file, coords, options):
         scan_time = time.time()
         chunk = None
         data_coords = None
-        global_coords = None
+        global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
         num_entities = None
     
     return chunk, region_file, coords, data_coords, global_coords, num_entities, status, status_text, scan_time
