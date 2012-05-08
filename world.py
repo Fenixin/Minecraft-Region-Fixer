@@ -194,10 +194,23 @@ class RegionSet(object):
         local_coords = get_local_chunk_coords(*global_coords)
         
         return filename, local_coords
-        
-        
-        
     
+    def remove_problematic_chunks(self, problem):
+        """ Removes all the chunks with the given problem. """
+
+        counter = 0
+        bad_chunks = self.list_chunks(problem)
+        print ' Deleting chunks:'
+        for global_coords in bad_chunks:
+            print "{0},".format(global_coords),
+            r, local_coords = self.locate_chunk(global_coords)
+            region_file = region.RegionFile(r)
+            region_file.unlink_chunk(*local_coords)
+            counter += 1
+        
+        print 
+        return counter
+
 
 class World(object):
     """ This class stores all the info needed of a world, and once
@@ -351,21 +364,19 @@ class World(object):
         """ Removes all the chunks with the given problem, it also
         removes the entry in the dictionary mcr_problems """
 
-        deleted = []
-        for reg in self.mcr_problems:
-            for chunk in self.mcr_problems[reg]:
-                for p in self.mcr_problems[reg][chunk]:
-                    if p == problem:
-                        region_file = region.RegionFile(reg)
-                        region_file.unlink_chunk(chunk[0], chunk[1])
-                        deleted.append((reg, chunk, "all"))
-                        del region_file
+        counter = 0
+        for dimension in ["overworld", "nether", "end"]:
+            # choose the correct regionset
+            if dimension == "overworld":
+                regionset = self.normal_region_files
+            elif dimension == "nether":
+                regionset = self.nether_region_files
+            elif dimension == "end":
+                regionset = self.aether_region_files
 
-        for d in deleted:
-            reg, chunk, prob = d
-            self.remove_problem(reg, chunk, prob)
+            counter += regionset.remove_problematic_chunks(problem)
 
-        return len(deleted)
+        return counter
 
 
     def remove_problem(self, rgn, chunk, problem):

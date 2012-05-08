@@ -262,24 +262,27 @@ def main():
                 else: print "No wrong located chuns to replace!"
 
             # delete bad chunks!
+            # TODO this only works in the last world scanned!
+            
             if options.delete_corrupted:
-                if corrupted:
-                    print "{0:#^60}".format(' Deleting  corrupted chunks ')
+                if len(region_list.regions) > 0:
+                    if corrupted:
+                        print "{0:#^60}".format(' Deleting  corrupted chunks ')
 
-                    print "... ",
-                    counter = world_obj.remove_problematic_chunks(world.CORRUPTED)
-                    print "Done!"
-                    
-                    print "Deleted {0} corrupted chunks".format(counter)
-                else:
-                    print "No corrupted chunks to delete!"
+                        print "... ",
+                        counter = world_obj.remove_problematic_chunks(world.CORRUPTED)
+                        print "Done!"
+                        
+                        print "Deleted {0} corrupted chunks".format(counter)
+                    else:
+                        print "No corrupted chunks to delete!"
             
             if options.delete_wrong_located:
                 if wrong_located:
                     print "{0:#^60}".format(' Deleting wrong located chunks ')
                     
                     print "... ",
-                    counter = world_obj.remove_problematic_chunks(world_obj.WRONG_LOCATED)
+                    counter = world_obj.remove_problematic_chunks(world.CHUNK_WRONG_LOCATED)
                     print "Done!"
                     
                     print "Deleted {0} wrong located chunks".format(counter)
