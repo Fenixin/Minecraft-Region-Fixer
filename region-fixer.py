@@ -34,9 +34,14 @@ def parse_paths(args):
     # parese the list of region files and worlds paths
     world_list = []
     region_list = []
+    warning = False
     for arg in args:
         if arg[-4:] == ".mca":
             region_list.append(arg)
+        elif arg[-4:] == ".mcr": # ignore pre-anvil region files
+            if not warning:
+                print "Warning: Region-Fixer only works with anvil format region files. Ignoring *.mcr files"
+                warning = True
         else:
             world_list.append(arg)
 
