@@ -376,7 +376,20 @@ class interactive_loop(Cmd):
                         self.options.entity_limit = int(args[1])
                         print "entity-limit = {0}".format(args[1])
                     else:
-                        print "Invalid value. Valid values are positive integers and zero"
+                        print "Invalid vale. Valid values are positive integers and zero"
+
+        if len(args) > 2 or len(args) == 0:
+            print "Error: too many parameters."
+        else:
+            if args[0] in ("processes"):
+                if len(args) == 1:
+                    print "processes = {0}".format(self.options.processes)
+                else:
+                    if int(args[1]) > 0:
+                        self.options.processes = int(args[1])
+                        print "processes = {0}".format(args[1])
+                    else:
+                        print "Invalid value. Valid values are positive integers."
 
             if args[0] in ("verbose", "v"):
                 if len(args) == 1:
@@ -533,7 +546,7 @@ class interactive_loop(Cmd):
         return l
 
     def complete_set(self, text, line, begidx, endidx):
-        possible_args = ('entity-limit','verbose')
+        possible_args = ('entity-limit','verbose','processes')
         return self.complete_arg(text, possible_args)
 
     def complete_list(self, text, line, begidx, endidx):
