@@ -34,8 +34,11 @@ import sys
 import traceback
 
 class ChildProcessException(Exception):
-    """ probando como sacar las excepciones de de los procesos hijos"""
+    """Takes the child process traceback texts and prints it as a 
+    real traceback."""
     def __init__(self, r):
+        # This is, probably, the worst way to print a traceback, but
+        # works for now
         print "*** Printint the child's Traceback:"
         print "*** Exception:", r[0], r[1]
         for tb in r[2]:
@@ -119,10 +122,10 @@ def scan_world(world_obj, options):
         if w.aether_region_files.regions:
             print "\n{0:-^60}".format(' Scanning the end ')
             scan_regionset(w.aether_region_files, options)
-        corrupted = w.count_problems(world.CHUNK_CORRUPTED)
-        wrong_located = w.count_problems(world.CHUNK_WRONG_LOCATED)
-        entities_prob = w.count_problems(world.CHUNK_TOO_MUCH_ENTITIES)
-        total = w.count_chunks()
+        #~ corrupted = w.count_chunks(world.CHUNK_CORRUPTED)
+        #~ wrong_located = w.count_chunks(world.CHUNK_WRONG_LOCATED)
+        #~ entities_prob = w.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
+        #~ total = w.count_chunks()
 
 
 def scan_level(world_obj):
@@ -161,11 +164,8 @@ def scan_all_players(world_obj):
 
 
 def scan_region_file(to_scan_region_file):
-    """ Scans a region file reporting problems.
-    
-    Takes a ScannedRegionFile obj.
+    """ Scans a region file and fills a ScannedRegionFile obj.
     """
-    
     try:
         r = to_scan_region_file
         o = scan_region_file.options
@@ -183,23 +183,22 @@ def scan_region_file(to_scan_region_file):
                 for z in range(32):
                     c = world.ScannedChunk((x,z))
                     r.chunks[(x,z)] = c
-                    scan_and_fill_chunk(region_file, c, o)
+                    chunk = scan_and_fill_chunk(region_file, c, o)
                     if c.status != world.CHUNK_NOT_CREATED: chunk_count += 1
                     if c.status == world.CHUNK_OK:
                         continue
                     elif c.status == world.CHUNK_TOO_MUCH_ENTITIES:
+                        # TODO: this needs a big update and a BIG test
                         # deleting entities is in here because parsing a chunk with thousands of wrong entities
                         # takes a long time, and once detected is better to fix it at once.
                         if delete_entities:
-                            empty_tag_list = nbt.TAG_List(nbt.TAG_Byte,'','Entities')
-                            chunk['Level']['Entities'] = empty_tag_list
-                            print "Deleted {0} entities in chunk ({1},{2}).".format(total_entities, x, z)
-                            region_file.write_chunk(x, z, chunk)
+                            world.delete_entities(region_file, x, z)
+                            # TODO: is not very useful to name the local chunk coords, name also the region file?
+                            print "Deleted {0} entities in chunk ({1},{2}).".format(c.num_entities, x, z)
                             c.num_entities = 0
 
                         else:
                             entities_prob += 1
-                            print "[WARNING!]: The chunk ({0},{1}) in region file {2} has {3} entities, and this may be too much. This may be a problem!".format(x,z,split(region_file.filename)[1],total_entities)
                             # This stores all the entities in a file,
                             # comes handy sometimes.
                             #~ pretty_tree = chunk['Level']['Entities'].pretty_tree()
@@ -223,20 +222,15 @@ def scan_region_file(to_scan_region_file):
         r.entities_prob = entities_prob
         scan_region_file.q.put((r, filename, corrupted, wrong, entities_prob, chunk_count))
 
-        # Podríamos usar los resultados para guardar las traceback de los
-        # procesoss hijos que se cuelguen y no tenemos por qué cerrar todo el programa
         return
 
-    # TODO except IOError: para coger cualquier caso en el que el archivo 
-    # tiene un problema pero el problema está en el sistema de archivos.
-    
     except IOError, e:
         print "\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(e,e)
-        scan_region_file.q.put((r, filename, None, None, None, None))
-        return 
+        # for now stop the scan process completely, as a child process exception
+        scan_region_file.q.put((r, filename, None))
+        return
 
     except:
-
         except_type, except_class, tb = sys.exc_info()
         scan_region_file.q.put((except_type, except_class, traceback.extract_tb(tb)))
         return
@@ -272,7 +266,7 @@ def scan_chunk(region_file, coords, options):
                 scan_time = time.time()
             elif num_entities > options.entity_limit:
                 status = world.CHUNK_TOO_MUCH_ENTITIES
-                status_text = "The chunks has too much entities (it has {0}, and it's more than the limit {1})".format(c.num_entities, options.entity_limit)
+                status_text = "The chunks has too much entities (it has {0}, and it's more than the limit {1})".format(num_entities, options.entity_limit)
                 scan_time = time.time()
             else:
                 status = world.CHUNK_OK
@@ -319,12 +313,13 @@ def scan_chunk(region_file, coords, options):
     return chunk, region_file, coords, data_coords, global_coords, num_entities, status, status_text, scan_time
     
 def scan_and_fill_chunk(region_file, scanned_chunk_obj, options):
-    """ Takes a RegionFile obj and a ScannedChunk obj as inputs, then 
-        scans the chunk and fills the ScannedChunk obj."""
+    """ Takes a RegionFile obj and a ScannedChunk obj as inputs, 
+        scans the chunk, fills the ScannedChunk obj and returns the chunk
+        as a NBT object."""
 
     c = scanned_chunk_obj
-
-    _, _, c.h_coords, c.d_coords, c.g_coords, c.num_entities, c.status, c.status_text, c.scan_time = scan_chunk(region_file, c.h_coords, options)
+    chunk, region_file, c.h_coords, c.d_coords, c.g_coords, c.num_entities, c.status, c.status_text, c.scan_time = scan_chunk(region_file, c.h_coords, options)
+    return chunk
 
 def _mp_pool_init(regionset,options,q):
     """ Function to initialize the multiprocessing in scan_all_mca_files.
@@ -336,8 +331,8 @@ def _mp_pool_init(regionset,options,q):
 
 def scan_regionset(regionset, options):
     """ This function scans all te region files in a regionset object 
-    and fills the obj with the results
- """
+    and fills the ScannedRegionFile obj with the results
+    """
 
     total_regions = len(regionset.regions)
     total_chunks = 0
@@ -345,6 +340,7 @@ def scan_regionset(regionset, options):
     wrong_total = 0
     entities_total = 0
 
+    # TODO: improve all the status printing stuff
     # init progress bar
     if not options.verbose:
         pbar = progressbar.ProgressBar(
@@ -384,7 +380,7 @@ def scan_regionset(regionset, options):
                 entities_total += entities_prob
                 counter += 1
                 if options.verbose:
-                    stats = "(c: {0}, w: {1}, t: {2})".format( corrupted, wrong, num_chunks)
+                    stats = "(c: {0}, w: {1}, tme: {2}, t: {3})".format( corrupted, wrong, entities_prob, num_chunks)
                     print "Scanned {0: <15} {1:.<40} {2}/{3}".format(filename, stats, counter, total_regions)
                 else:
                     pbar.update(counter)
