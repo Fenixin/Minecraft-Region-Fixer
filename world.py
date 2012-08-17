@@ -257,7 +257,7 @@ class World(object):
         self.level_file = join(self.world_path, "level.dat")
         if exists(self.level_file):
             self.level_data = nbt.NBTFile(self.level_file)["Data"]
-            self.name = self.level_data["LevelName"]
+            self.name = self.level_data["LevelName"].value
         else:
             self.level_file = None
             self.level_data = None
@@ -278,7 +278,10 @@ class World(object):
             self.isworld = True
         else:
             self.isworld = False
-
+        
+        # set in scan.py, used in interactive.py
+        self.scanned = False
+        
     def __str__(self):
         text = "World path: {0}".format(self.world_path)
         text += "\nWorld name: {0}".format(self.name)

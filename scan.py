@@ -126,6 +126,8 @@ def scan_world(world_obj, options):
         #~ wrong_located = w.count_chunks(world.CHUNK_WRONG_LOCATED)
         #~ entities_prob = w.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
         #~ total = w.count_chunks()
+    
+    w.scanned = True
 
 
 def scan_level(world_obj):

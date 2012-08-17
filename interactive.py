@@ -21,17 +21,26 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from cmd import Cmd
+import world
 
+from cmd import Cmd
+from scan import scan_world
 
 class interactive_loop(Cmd):
     # TODO ideas: a flag saying if the world
     # is scanned or not, make a separate file for all this: interactive.py,
     # remove entities command, set options command, pasar el scan del programa
     # y ejecutar aquí un sacan world
-    def __init__(self, world, options, backup_worlds):
+    def __init__(self, world_list, regionset, options, backup_worlds):
         Cmd.__init__(self)
-        self.w = world
+        self.world_list = world_list
+        self.regionset = regionset
+        # if there's more than one world you have to set which one use
+        # while in interactive mode
+        if len(self.world_list) == 1:
+            self.w = world
+        else:
+            self.w = None
         self.options = options
         self.backup_worlds = backup_worlds
         self.prompt = "-> "
@@ -45,7 +54,7 @@ class interactive_loop(Cmd):
         if len(args) > 2 or len(args) == 0:
             print "Error: too many parameters."
         else:
-            if args[0] in ("entity-limit"):
+            if args[0] == "entity-limit":
                 if len(args) == 1:
                     print "entity-limit = {0}".format(self.options.entity_limit)
                 else:
@@ -55,10 +64,41 @@ class interactive_loop(Cmd):
                     else:
                         print "Invalid vale. Valid values are positive integers and zero"
 
-        if len(args) > 2 or len(args) == 0:
-            print "Error: too many parameters."
-        else:
-            if args[0] in ("processes"):
+            elif args[0] == "workload":
+                world_names = [i.name for i in self.world_list]
+                if len(args) == 1:
+                    number = 1
+                    for w in self.world_list:
+                        print "### world{0} ###".format(number)
+                        number += 1
+                        print w, "\n"
+                    print self.regionset
+                    print "(Use: \"set workload world1\" or name_of_the_world or regionset)"
+                    print "\n"
+                else:
+                    a = args[1]
+                    if len(a) == 6 and a[:5] == "world" and int(a[-1]) >= 1 :
+                        # get the number and choos the correct world from the list
+                        number = int(args[1][-1]) - 1
+                        try:
+                            self.w = self.world_list[number]
+                            print "workload = {0}".format(self.w.world_path)
+                        except IndexError:
+                            print "This world is not in the list!"
+                    elif a in world_names:
+                        for w in self.world_list:
+                            if w.name == args[1]:
+                                self.w = w
+                                print "workload = {0}".format(self.w.world_path)
+                                break
+                        else:
+                            print "This world name is not on the list!"
+                    elif args[1] == "regionset":
+                        self.w = self.regionset
+                    else:
+                        print "Invalid value."
+
+            elif args[0] == "processes":
                 if len(args) == 1:
                     print "processes = {0}".format(self.options.processes)
                 else:
@@ -68,7 +108,7 @@ class interactive_loop(Cmd):
                     else:
                         print "Invalid value. Valid values are positive integers."
 
-            if args[0] in ("verbose", "v"):
+            elif args[0] == "verbose":
                 if len(args) == 1:
                     print "verbose = {0}".format(self.options.verbose)
                 else:
@@ -126,20 +166,13 @@ class interactive_loop(Cmd):
             print self.w
 
     def do_scan(self, arg):
-        if len(arg.split()) > 1:
+        if len(arg.split()) > 0:
             print "Error: too many parameters."
         else:
-            # TODO scan multiple worlds and multiple regionsets?
-            if arg == "world":
-                if self.w:
-                    scan_world(self.w, self.options)
-                else:
-                    print "No world set!"
-            elif arg == "regionset":
-                if self.regionset:
-                    scan_regionset(self.regionset)
-                else:
-                    print "No regionset set!"
+            if self.w:
+                scan_world(self.w, self.options)
+            else:
+                print "No world set! use \'set workload\'"
 
     def do_remove_entities(self, arg):
         # TODO: once scanned you don't need scan it again to change the status of the chunks with too much entities, 
@@ -223,7 +256,8 @@ class interactive_loop(Cmd):
         return l
 
     def complete_set(self, text, line, begidx, endidx):
-        possible_args = ('entity-limit','verbose','processes')
+        #~ print text, line,
+        possible_args = ('entity-limit','verbose','processes','workload')
         return self.complete_arg(text, possible_args)
 
     def complete_list(self, text, line, begidx, endidx):

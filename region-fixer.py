@@ -221,7 +221,19 @@ def main():
         print "Done!"
         
         print "Deleted {0} chunks".format(counter)
-        
+
+    # Go to interactive mode?
+    elif options.interactive:
+        print region_list
+        print world_list[0]
+        print world_list[1]
+        # TODO make interactive mode incompatible with noraml mode
+        ########################################################
+        #~ import readline # interactive prompt with history 
+        # WARNING NEEDS CHANGES FOR WINDOWS
+        c = interactive_loop(world_list, region_list, options, backup_worlds)
+        c.cmdloop()
+
     else:
         if len(region_list.regions) > 0:
             print "\n"
@@ -298,19 +310,13 @@ def main():
                 else:
                     print "No wrong located chunks to delete!"
 
+        # TODO: This is broken!
         if options.summary:
             print "\n{0:#^60}".format(' Summary of found problems ')
             text = summary(world_list[0], [world_list[0].CORRUPTED, world_list[0].WRONG_LOCATED, world_list[0].TOO_MUCH_ENTITIES])
             print text
 
-        # Go to interactive mode?
-        if options.interactive:
-            # TODO make interactive mode incompatible with noraml mode
-            ########################################################
-            #~ import readline # interactive prompt with history 
-            # WARNING NEEDS CHANGES FOR WINDOWS
-            c = interactive_loop(world_obj, options, backup_worlds)
-            c.cmdloop()
+
 
 
 def summary(world, problems):
