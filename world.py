@@ -136,6 +136,7 @@ class RegionSet(object):
     Inits with a list of region files and the regions dict is filled
     while scanning with ScannedRegionFiles and ScannedChunks."""
     def __init__(self, regionset_path = None, region_list = []):
+        # TODO: add __str__
         if regionset_path:
             self.path = regionset_path
             self.region_list = glob(join(self.path, "r.*.*.mca"))

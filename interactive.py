@@ -35,8 +35,9 @@ class interactive_loop(Cmd):
         Cmd.__init__(self)
         self.world_list = world_list
         self.regionset = regionset
+        self.world_names = [i.name for i in self.world_list]
         # if there's more than one world you have to set which one use
-        # while in interactive mode
+        # while in interactive mode using 'set workload'
         if len(self.world_list) == 1:
             self.w = world
         else:
@@ -65,13 +66,14 @@ class interactive_loop(Cmd):
                         print "Invalid vale. Valid values are positive integers and zero"
 
             elif args[0] == "workload":
-                world_names = [i.name for i in self.world_list]
+                
                 if len(args) == 1:
                     number = 1
                     for w in self.world_list:
                         print "### world{0} ###".format(number)
                         number += 1
                         print w, "\n"
+                    print "### regionset ###"
                     print self.regionset
                     print "(Use: \"set workload world1\" or name_of_the_world or regionset)"
                     print "\n"
@@ -85,7 +87,7 @@ class interactive_loop(Cmd):
                             print "workload = {0}".format(self.w.world_path)
                         except IndexError:
                             print "This world is not in the list!"
-                    elif a in world_names:
+                    elif a in self.world_names:
                         for w in self.world_list:
                             if w.name == args[1]:
                                 self.w = w
@@ -94,7 +96,10 @@ class interactive_loop(Cmd):
                         else:
                             print "This world name is not on the list!"
                     elif args[1] == "regionset":
-                        self.w = self.regionset
+                        if len(self.regionset):
+                            self.w = self.regionset
+                        else:
+                            print "The region set is empty!"
                     else:
                         print "Invalid value."
 
@@ -122,29 +127,32 @@ class interactive_loop(Cmd):
                         print "Invalid value. Valid values are True and False."
 
     def do_count(self, arg):
-        if len(arg.split()) > 1:
-            print "Error: too many parameters."
-        else:
-            if arg == "entities":
-                n = self.w.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
-                print "Chunks with too much entities problem: {0}. (Note: entity limit = {1}).".format(n)
-            elif arg == "corrupted":
-                n = self.w.count_chunks(world.CHUNK_CORRUPTED)
-                print "Corrupted chunks: {0}".format(n)
-            elif arg == "wrong":
-                n = self.w.count_chunks(world.CHUNK_WRONG_LOCATED)
-                print "Wrong located chunks: {0}".format(n)
-            elif arg == "all":
-                nw = self.w.count_chunks(world.CHUNK_WRONG_LOCATED)
-                nc = self.w.count_chunks(world.CHUNK_CORRUPTED)
-                ne = self.w.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
-                
-                print "Corrupted chunks: {0}".format(nc)
-                print "Wrong located chunks: {0}".format(nw)
-                print "Chunks with too much entities problem: {0}. (Note: entity limit = {1}).".format(ne, self.options.entity_limit)
-                
+        if self.w and self.w.scanned:
+            if len(arg.split()) > 1:
+                print "Error: too many parameters."
             else:
-                print "Unknown counter."
+                if arg == "entities":
+                    n = self.w.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
+                    print "Chunks with too much entities problem: {0}. (Note: entity limit = {1}).".format(n)
+                elif arg == "corrupted":
+                    n = self.w.count_chunks(world.CHUNK_CORRUPTED)
+                    print "Corrupted chunks: {0}".format(n)
+                elif arg == "wrong":
+                    n = self.w.count_chunks(world.CHUNK_WRONG_LOCATED)
+                    print "Wrong located chunks: {0}".format(n)
+                elif arg == "all":
+                    nw = self.w.count_chunks(world.CHUNK_WRONG_LOCATED)
+                    nc = self.w.count_chunks(world.CHUNK_CORRUPTED)
+                    ne = self.w.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
+                    
+                    print "Corrupted chunks: {0}".format(nc)
+                    print "Wrong located chunks: {0}".format(nw)
+                    print "Chunks with too much entities problem: {0}. (Note: entity limit = {1}).".format(ne, self.options.entity_limit)
+                    
+                else:
+                    print "Unknown counter."
+        else:
+            print "The world hasn't be scanned. Use \'scan\' to scan it."
 
     def do_list(self, arg):
         # TODO: this is completely broken 
@@ -178,68 +186,82 @@ class interactive_loop(Cmd):
         # TODO: once scanned you don't need scan it again to change the status of the chunks with too much entities, 
         # the number of entities is stored in the ScannedChunks obj. Make it in this way?
         # also, prompt a yes question?
-        print "WARNING: This will delete all the entities in the chunks that have more entities than entity-limit. Note: you need to rescan your world if you change entity-limit. Are you sure you want to continue?"
-        if len(arg.split()) > 0:
-            print "Error: too many parameters."
+        if self.w and self.w.scanned:
+            print "WARNING: This will delete all the entities in the chunks that have more entities than entity-limit. Note: you need to rescan your world if you change entity-limit. Are you sure you want to continue?"
+            if len(arg.split()) > 0:
+                print "Error: too many parameters."
+            else:
+                counter = self.w.remove_entities()
+                print "Deleted {0} entities.".format(counter)
         else:
-            counter = self.w.remove_entities()
-            print "Deleted {0} entities.".format(counter)
+            print "The world hasn't be scanned. Use \'scan\' to scan it."
+            
             
     def do_remove_chunks(self, arg):
-        if len(arg.split()) > 1:
-            print "Error: too many parameters."
-        else:
-            if arg == "corrupted":
-                self.w.remove_problematic_chunks(world.CHUNK_CORRUPTED)
-            elif arg == "wrong":
-                self.w.remove_problematic_chunks(world.CHUNK_WRONG_LOCATED)
-            elif arg == "entities":
-                # TODO: there should be a remove_entities command and this one should be remove chunks
-                # it'd be a good a idea to throw a big warning telling that you can delete the entities
-                # without deleting the chunks.
-                counter = self.w.remove_problematic_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
-                print "Done! Removed {0} chunks".format(counter)
-            elif arg == "all":
-                self.w.remove_problematic_chunks(world.CHUNK_CORRUPTED)
-                self.w.remove_problematic_chunks(world.CHUNK_WRONG_LOCATED)
-                counter = self.w.remove_problematic_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
+        if self.w and self.w.scanned:
+            if len(arg.split()) > 1:
+                print "Error: too many parameters."
             else:
-                print "Unknown argumen."
+                if arg == "corrupted":
+                    self.w.remove_problematic_chunks(world.CHUNK_CORRUPTED)
+                elif arg == "wrong":
+                    self.w.remove_problematic_chunks(world.CHUNK_WRONG_LOCATED)
+                elif arg == "entities":
+                    # TODO: there should be a remove_entities command and this one should be remove chunks
+                    # it'd be a good a idea to throw a big warning telling that you can delete the entities
+                    # without deleting the chunks.
+                    counter = self.w.remove_problematic_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
+                    print "Done! Removed {0} chunks".format(counter)
+                elif arg == "all":
+                    self.w.remove_problematic_chunks(world.CHUNK_CORRUPTED)
+                    self.w.remove_problematic_chunks(world.CHUNK_WRONG_LOCATED)
+                    counter = self.w.remove_problematic_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
+                else:
+                    print "Unknown argumen."
+        else:
+            print "The world hasn't be scanned. Use \'scan\' to scan it."
 
     def do_replace_chunks(self, arg):
         # TODO: parece que sustituye los chunks sin comprobar si están bien o no!
         # el replace necesita una buena revisión
-        if len(arg.split()) > 1:
-            print "Error: too many parameters."
-        else:
-            if arg == "corrupted":
-                if self.w.count_chunks(world.CHUNK_CORRUPTED):
-                    counter = self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_CORRUPTED, self.options)
-                    print "Done! Replaced {0} chunks".format(counter)
-                else:
-                    print "No corrupted chunks to replace!"
-            elif arg == "wrong":
-                if self.w.count_chunks(world.CHUNK_WRONG_LOCATED):
-                    counter = self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_WRONG_LOCATED, self.options, )
-                    print "Done! Replaced {0} chunks".format(counter)
-                else:
-                    print "No wrong located chunks to replace!"
-            elif arg == "entities":
-                if self.w.count_chunks(world.CHUNK_WRONG_LOCATED):
-                    counter = self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_TOO_MUCH_ENTITIES, self.options)
-                    print "Done! Replaced {0} chunks".format(counter)
-                else:
-                    print "No chunks with too much entities problems to replace!"
-            elif arg == "all":
-                counter = self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_CORRUPTED, self.options)
-                counter += self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_WRONG_LOCATED, self.options)
-                counter += self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_TOO_MUCH_ENTITIES, self.options)
-                print "Done! Replaced {0} chunks".format(counter)
+        if self.w and self.w.scanned:
+            if len(arg.split()) > 1:
+                print "Error: too many parameters."
             else:
-                print "Unknown argumen."
-
+                if arg == "corrupted":
+                    if self.w.count_chunks(world.CHUNK_CORRUPTED):
+                        counter = self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_CORRUPTED, self.options)
+                        print "Done! Replaced {0} chunks".format(counter)
+                    else:
+                        print "No corrupted chunks to replace!"
+                elif arg == "wrong":
+                    if self.w.count_chunks(world.CHUNK_WRONG_LOCATED):
+                        counter = self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_WRONG_LOCATED, self.options, )
+                        print "Done! Replaced {0} chunks".format(counter)
+                    else:
+                        print "No wrong located chunks to replace!"
+                elif arg == "entities":
+                    if self.w.count_chunks(world.CHUNK_WRONG_LOCATED):
+                        counter = self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_TOO_MUCH_ENTITIES, self.options)
+                        print "Done! Replaced {0} chunks".format(counter)
+                    else:
+                        print "No chunks with too much entities problems to replace!"
+                elif arg == "all":
+                    counter = self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_CORRUPTED, self.options)
+                    counter += self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_WRONG_LOCATED, self.options)
+                    counter += self.w.replace_problematic_chunks(self.backup_worlds, world.CHUNK_TOO_MUCH_ENTITIES, self.options)
+                    print "Done! Replaced {0} chunks".format(counter)
+                else:
+                    print "Unknown argumen."
+        else:
+            print "The world hasn't be scanned. Use \'scan\' to scan it."
+            
     def do_quit(self, arg):
         print "Quitting."
+        return True
+
+    def do_exit(self, arg):
+        print "Exiting."
         return True
 
     def do_EOF(self, arg):
@@ -247,7 +269,7 @@ class interactive_loop(Cmd):
         return True
 
     # complete
-    # TODO: complete_scan
+    # TODO: complete set
     def complete_arg(self, text, possible_args):
         l = []
         for arg in possible_args:
