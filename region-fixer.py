@@ -57,7 +57,7 @@ def parse_paths(args):
             print "Warning: The region file {0} doesn't exists. Skipping it and scanning the rest.".format(f)
     region_list = region_list_tmp
     
-    # check for the world folders
+    # init the world objects
     world_list = parse_world_list(world_list)
 
     return world_list, world.RegionSet(region_list = region_list)
@@ -224,9 +224,6 @@ def main():
 
     # Go to interactive mode?
     elif options.interactive:
-        print region_list
-        print world_list[0]
-        print world_list[1]
         # TODO make interactive mode incompatible with noraml mode
         ########################################################
         #~ import readline # interactive prompt with history 

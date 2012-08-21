@@ -132,15 +132,16 @@ class ScannedRegionFile(object):
 
 
 class RegionSet(object):
-    """Stores an arbitrary number of region files and the scan results
+    """Stores an arbitrary number of region files and the scan results.
     Inits with a list of region files and the regions dict is filled
     while scanning with ScannedRegionFiles and ScannedChunks."""
     def __init__(self, regionset_path = None, region_list = []):
-        # TODO: add __str__
+        # note: this self.path is not used anywhere for the moment
         if regionset_path:
             self.path = regionset_path
             self.region_list = glob(join(self.path, "r.*.*.mca"))
         else:
+            self.path = None
             self.region_list = region_list
         self.regions = {}
         for path in self.region_list:
@@ -150,6 +151,16 @@ class RegionSet(object):
         self.wrong_located_chunks = 0
         self.entities_problems = 0
         self.bad_list = []
+        self.scanned = False
+
+    def __str__(self):
+        if self.path:
+            text = "Regionset path: {0}\n".format(self.world_path)
+        else:
+            text = ""
+        text += "Region files: {0}\n".format(len(self.regions))
+        text += "Scanned: {0}".format(str(self.scanned))
+        return text
 
     def __getitem__(self, key):
         return self.regions[key]
@@ -287,6 +298,7 @@ class World(object):
         text = "World path: {0}".format(self.world_path)
         text += "\nWorld name: {0}".format(self.name)
         text += "\nRegion files: {0}".format(len(self.normal_region_files) + len(self.nether_region_files) + len(self.aether_region_files))
+        text += "\nScanned: {0}".format(str(self.scanned))
         return text
 
     def get_name(self):
