@@ -36,7 +36,7 @@ class interactive_loop(Cmd):
         # while in interactive mode using 'set workload'
         if len(self.world_list) == 1 and len(self.regionset) == 0:
             self.current = world_list[0]
-        elif len(self.world_list) == 0 and len(self.regionset) > 1:
+        elif len(self.world_list) == 0 and len(self.regionset) > 0:
             self.current = self.regionset
         else:
             self.current = None
