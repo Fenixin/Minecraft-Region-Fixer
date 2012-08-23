@@ -154,12 +154,11 @@ class RegionSet(object):
         self.scanned = False
 
     def __str__(self):
+        text = "Region-set information:\n"
         if self.path:
-            text = "Regionset path: {0}\n".format(self.world_path)
-        else:
-            text = ""
-        text += "Region files: {0}\n".format(len(self.regions))
-        text += "Scanned: {0}".format(str(self.scanned))
+            text += "   Regionset path: {0}\n".format(self.world_path)
+        text += "   Region files: {0}\n".format(len(self.regions))
+        text += "   Scanned: {0}".format(str(self.scanned))
         return text
 
     def __getitem__(self, key):
@@ -295,10 +294,11 @@ class World(object):
         self.scanned = False
         
     def __str__(self):
-        text = "World path: {0}".format(self.world_path)
-        text += "\nWorld name: {0}".format(self.name)
-        text += "\nRegion files: {0}".format(len(self.normal_region_files) + len(self.nether_region_files) + len(self.aether_region_files))
-        text += "\nScanned: {0}".format(str(self.scanned))
+        text = "World information:\n"
+        text += "   World path: {0}\n".format(self.world_path)
+        text += "   World name: {0}\n".format(self.name)
+        text += "   Region files: {0}\n".format(len(self.normal_region_files) + len(self.nether_region_files) + len(self.aether_region_files))
+        text += "   Scanned: {0}".format(str(self.scanned))
         return text
 
     def get_name(self):

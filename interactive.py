@@ -31,9 +31,8 @@ class interactive_loop(Cmd):
         Cmd.__init__(self)
         self.world_list = world_list
         self.regionset = regionset
-        self.world_names = [i.name for i in self.world_list]
-        # if there's more than one world you have to set which one use
-        # while in interactive mode using 'set workload'
+        self.world_names = [str(i.name)  for i in self.world_list]
+        # if there's only one world use it 
         if len(self.world_list) == 1 and len(self.regionset) == 0:
             self.current = world_list[0]
         elif len(self.world_list) == 0 and len(self.regionset) > 0:
@@ -42,39 +41,48 @@ class interactive_loop(Cmd):
             self.current = None
         self.options = options
         self.backup_worlds = backup_worlds
-        self.prompt = "-> "
-        self.intro = "Minecraft Region-Fixer interactive mode."
+        self.prompt = "#-> "
+        self.intro = "Minecraft Region-Fixer interactive mode.\n(Note: Use tab to autocomplete.)\n"
     
     # do
     def do_set(self,arg):
-        # the idea of this is to let change some of the scan options in
-        # interactive mode.
+        # command to change some options and variables
         args = arg.split()
-        if len(args) > 2 or len(args) == 0:
+        if len(args) > 2:
             print "Error: too many parameters."
+        elif len(args) == 0:
+            print "Write \'help set\' to see a list of all possible variables"
         else:
             if args[0] == "entity-limit":
                 if len(args) == 1:
                     print "entity-limit = {0}".format(self.options.entity_limit)
                 else:
-                    if int(args[1]) >= 0:
-                        self.options.entity_limit = int(args[1])
-                        print "entity-limit = {0}".format(args[1])
-                    else:
-                        print "Invalid vale. Valid values are positive integers and zero"
+                    try:
+                        if int(args[1]) >= 0:
+                            self.options.entity_limit = int(args[1])
+                            print "entity-limit = {0}".format(args[1])
+                        else:
+                            print "Invalid value. Valid values are positive integers and zero"
+                    except ValueError:
+                        print "Invalid value. Valid values are positive integers and zero"
 
             elif args[0] == "workload":
-                
+
                 if len(args) == 1:
+                    if self.current:
+                        print "Current workload:\n{0}\n".format(self.current.__str__())
+                    print "List of possible worlds and region-sets:"
                     number = 1
                     for w in self.world_list:
-                        print "### world{0} ###".format(number)
+                        print "   ### world{0} ###".format(number)
                         number += 1
-                        print w, "\n"
-                    print "### regionset ###"
-                    print self.regionset
-                    print "(Use: \"set workload world1\" or name_of_the_world or regionset)"
-                    print "\n"
+                        # add a tab and print
+                        for i in w.__str__().split("\n"): print "\t" + i
+                        print 
+                    print "   ### regionset ###"
+                    for i in self.regionset.__str__().split("\n"): print "\t" + i
+                    print "\n(Use \"set workload world1\" or name_of_the_world or regionset to choose one)"
+
                 else:
                     a = args[1]
                     if len(a) == 6 and a[:5] == "world" and int(a[-1]) >= 1 :
@@ -96,24 +104,28 @@ class interactive_loop(Cmd):
                     elif args[1] == "regionset":
                         if len(self.regionset):
                             self.current = self.regionset
+                            print "workload = set of region files"
                         else:
                             print "The region set is empty!"
                     else:
-                        print "Invalid value."
+                        print "Invalid world number, world name or regionset."
 
             elif args[0] == "processes":
                 if len(args) == 1:
                     print "processes = {0}".format(self.options.processes)
                 else:
-                    if int(args[1]) > 0:
-                        self.options.processes = int(args[1])
-                        print "processes = {0}".format(args[1])
-                    else:
+                    try:
+                        if int(args[1]) > 0:
+                            self.options.processes = int(args[1])
+                            print "processes = {0}".format(args[1])
+                        else:
+                            print "Invalid value. Valid values are positive integers."
+                    except ValueError:
                         print "Invalid value. Valid values are positive integers."
 
             elif args[0] == "verbose":
                 if len(args) == 1:
-                    print "verbose = {0}".format(self.options.verbose)
+                    print "verbose = {0}".format(str(self.options.verbose))
                 else:
                     if args[1] == "True":
                         self.options.verbose = True
@@ -123,6 +135,8 @@ class interactive_loop(Cmd):
                         print "verbose = {0}".format(args[1])
                     else:
                         print "Invalid value. Valid values are True and False."
+            else:
+                print "Invalid argument! Write \'help set\' to see a list of valid variables."
 
     def do_count(self, arg):
         if self.current and self.current.scanned:
@@ -269,7 +283,6 @@ class interactive_loop(Cmd):
         return True
 
     # complete
-    # TODO: complete set
     def complete_arg(self, text, possible_args):
         l = []
         for arg in possible_args:
@@ -278,8 +291,13 @@ class interactive_loop(Cmd):
         return l
 
     def complete_set(self, text, line, begidx, endidx):
-        #~ print text, line,
-        possible_args = ('entity-limit','verbose','processes','workload')
+        if "workload " in line:
+            # return the list of world names plus 'regionset' plus a list of world1, world2...
+            possible_args = tuple(self.world_names) + ('regionset',) + tuple([ 'world' + str(i+1) for i in range(len(self.world_names))])
+        elif 'verbose ' in line:
+            possible_args = ('True','False')
+        else:
+            possible_args = ('entity-limit','verbose','processes','workload')
         return self.complete_arg(text, possible_args)
 
     def complete_list(self, text, line, begidx, endidx):
@@ -300,7 +318,15 @@ class interactive_loop(Cmd):
 
     # help
     def help_set(self):
-        print "Sets some variables used for the scan in interactive mode. You can set \"verbose\" and \"entity-limit\" in this way."
+        print "Sets some variables used for the scan in interactive mode. If you run this command without variable you can see the current state. You can set:"
+        print "   verbose" 
+        print "If True prints a line per scanned region file instead of showing a progress bar."
+        print "\n   entity-limit"
+        print "If a chunk has more than this number of entities it will be added to the list of chunks with too-much-entities problem."
+        print "\n   processes"
+        print "Number of cores used while scanning the world."
+        print "\n   workload"
+        print "If you input a few worlds you can choose wich one will be scanned using this command."
     def help_regionset(self):
         print "Prints information of the current region-set/world. This will be the region-set/world to scan and fix."
     def help_scan(self):
