@@ -46,7 +46,8 @@ class interactive_loop(Cmd):
     
     # do
     def do_set(self,arg):
-        # command to change some options and variables
+        """ Command to change some options and variables in interactive
+            mode """
         args = arg.split()
         if len(args) > 2:
             print "Error: too many parameters."
@@ -139,6 +140,8 @@ class interactive_loop(Cmd):
                 print "Invalid argument! Write \'help set\' to see a list of valid variables."
 
     def do_count(self, arg):
+        """ Counts the number of chunks with the given problem and
+            prints the result """
         if self.current and self.current.scanned:
             if len(arg.split()) > 1:
                 print "Error: too many parameters."
@@ -180,7 +183,8 @@ class interactive_loop(Cmd):
             else:
                 print "Unknown list."
 
-    def do_regionset(self, arg):
+    def do_current_workload(self, arg):
+        """ Prints the info of the current workload """
         if len(arg) == 0:
             if self.current: print self.current
             else: print "No world/region-set set! Use \'set workload\' to set a world/regionset to work with."
@@ -188,6 +192,7 @@ class interactive_loop(Cmd):
             print "This command doesn't use any arguments."
 
     def do_scan(self, arg):
+        """ Scans the current workload. """
         if len(arg.split()) > 0:
             print "Error: too many parameters."
         else:
@@ -327,7 +332,7 @@ class interactive_loop(Cmd):
         print "Number of cores used while scanning the world."
         print "\n   workload"
         print "If you input a few worlds you can choose wich one will be scanned using this command."
-    def help_regionset(self):
+    def help_current_workload(self):
         print "Prints information of the current region-set/world. This will be the region-set/world to scan and fix."
     def help_scan(self):
         print "Scans the world set or the region set choosen when region-fixer is ran."
