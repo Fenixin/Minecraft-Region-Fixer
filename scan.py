@@ -109,7 +109,6 @@ def scan_world(world_obj, options):
                 print "Warning: Player file \"{0}.dat\" has problems: {1}".format(player, w.player_status[player])
 
     # SCAN ALL THE CHUNKS!
-    print "\n{0:-^60}".format(' Scanning region files ')
     if len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files) == 0:
         print "No region files to scan!"
     else:
@@ -388,3 +387,5 @@ def scan_regionset(regionset, options):
                     pbar.update(counter)
 
     if not options.verbose: pbar.finish()
+    
+    regionset.scanned = True

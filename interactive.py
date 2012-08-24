@@ -24,7 +24,7 @@
 import world
 
 from cmd import Cmd
-from scan import scan_world
+from scan import scan_world, scan_regionset
 
 class interactive_loop(Cmd):
     def __init__(self, world_list, regionset, options, backup_worlds):
@@ -42,7 +42,7 @@ class interactive_loop(Cmd):
         self.options = options
         self.backup_worlds = backup_worlds
         self.prompt = "#-> "
-        self.intro = "Minecraft Region-Fixer interactive mode.\n(Note: Use tab to autocomplete.)\n"
+        self.intro = "Minecraft Region-Fixer interactive mode.\n(Note: Use tab to autocomplete. Type help for a list of commands.)\n"
     
     # do
     def do_set(self,arg):
@@ -197,7 +197,11 @@ class interactive_loop(Cmd):
             print "Error: too many parameters."
         else:
             if self.current:
-                scan_world(self.current, self.options)
+                if isinstance(self.current, world.World):
+                    scan_world(self.current, self.options)
+                elif isinstance(self.current, world.RegionSet):
+                    print "\n{0:-^60}".format(' Scanning region files ')
+                    scan_regionset(self.current, self.options)
             else:
                 print "No world set! Use \'set workload\'"
 
