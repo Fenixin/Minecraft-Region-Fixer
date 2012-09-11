@@ -143,27 +143,22 @@ class interactive_loop(Cmd):
         """ Counts the number of chunks with the given problem and
             prints the result """
         if self.current and self.current.scanned:
-            if len(arg.split()) > 1:
+            
+            if len(arg.split()) == 0:
+                print "Possible counters are: corrupted, wrong, entities, all."
+            elif len(arg.split()) > 1:
                 print "Error: too many parameters."
             else:
-                if arg == "entities":
-                    n = self.current.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
-                    print "Chunks with too much entities problem: {0}. (Note: entity limit = {1}).".format(n)
-                elif arg == "corrupted":
-                    n = self.current.count_chunks(world.CHUNK_CORRUPTED)
-                    print "Corrupted chunks: {0}".format(n)
-                elif arg == "wrong":
-                    n = self.current.count_chunks(world.CHUNK_WRONG_LOCATED)
-                    print "Wrong located chunks: {0}".format(n)
-                elif arg == "all":
-                    nw = self.current.count_chunks(world.CHUNK_WRONG_LOCATED)
-                    nc = self.current.count_chunks(world.CHUNK_CORRUPTED)
-                    ne = self.current.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
-                    
-                    print "Corrupted chunks: {0}".format(nc)
-                    print "Wrong located chunks: {0}".format(nw)
-                    print "Chunks with too much entities problem: {0}. (Note: entity limit = {1}).".format(ne, self.options.entity_limit)
-                    
+                if arg in ('corrupted', 'all','wrong','entities'):
+                    if arg in ('corrupted', 'all'):
+                        n = self.current.count_chunks(world.CHUNK_CORRUPTED)
+                        print "Corrupted: {0}".format(n)
+                    if arg in ('wrong', 'all'):
+                        n = self.current.count_chunks(world.CHUNK_WRONG_LOCATED)
+                        print "Wrong located: {0}".format(n)
+                    if arg in ('entities', 'all'):
+                        n = self.current.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
+                        print "Too much entities: {0}  (entity limit = {1})".format(n, self.options.entity_limit)
                 else:
                     print "Unknown counter."
         else:
@@ -341,8 +336,10 @@ class interactive_loop(Cmd):
     def help_scan(self):
         print "Scans the world set or the region set choosen when region-fixer is ran."
     def help_count(self):
-        print "Prints out the number of chunks with that error. Example: \n\'count corrupted\'\n \
-                prints the number of corrupted chunks in the world.\nProblems are: corrupted, wrong, entities or all"
+        print "   Prints out the number of chunks with that error. For example "
+        print "\'count corrupted\' prints the number of corrupted chunks in the world."
+        print 
+        print "Possible counters are: corrupted, wrong, entities or all"
     def help_remove_entities(self):
         print "Remove all the entities in chunks that have more than entity-limit entities."
     def help_remove_chunks(self):
