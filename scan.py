@@ -55,7 +55,7 @@ class FractionWidget(progressbar.ProgressBarWidget):
         return '%2d%s%2d' % (pbar.currval, self.sep, pbar.maxval)
 
 def scan_world(world_obj, options):
-
+    # TODO clean this up
     w = world_obj
     # scan the world dir
     print "Scanning directory..."

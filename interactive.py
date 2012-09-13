@@ -164,19 +164,13 @@ class interactive_loop(Cmd):
         else:
             print "The world hasn't be scanned. Use \'scan\' to scan it."
 
-    def do_list(self, arg):
-        # TODO: this is completely broken 
-        if len(arg.split()) > 1:
-            print "Error: too many parameters."
+    def do_summary(self, arg):
+        """ Prints a summary of all the problems found in the region
+            files. """
+        if len(arg) == 0:
+            print self.current.summary()
         else:
-            if arg == "corrupted":
-                print summary(self.current, [world.CHUNK_CORRUPTED])
-            elif arg == "wrong":
-                print summary(self.current, [world.CHUNK_WRONG_LOCATED])
-            elif arg == "entities":
-                print summary(self.current, [world.CHUNK_TOO_MUCH_ENTITIES])
-            else:
-                print "Unknown list."
+            print "This command doesn't use any arguments."
 
     def do_current_workload(self, arg):
         """ Prints the info of the current workload """
@@ -304,10 +298,6 @@ class interactive_loop(Cmd):
             possible_args = ('entity-limit','verbose','processes','workload')
         return self.complete_arg(text, possible_args)
 
-    def complete_list(self, text, line, begidx, endidx):
-        possible_args = ('corrupted','wrong','entities')
-        return self.complete_arg(text, possible_args)
-
     def complete_count(self, text, line, begidx, endidx):
         possible_args = ('corrupted','wrong','entities','all')
         return self.complete_arg(text, possible_args)
@@ -346,10 +336,8 @@ class interactive_loop(Cmd):
         print "Removes bad chunks with the given problem. Problems are: corrupted, wrong, entities. Please, be careful, when used with the too much entities problem this will remove the chunks with too much entities problems, not the entities.\nUsage: \"remove_chunks c\"\nthis will remove the corrupted chunks"
     def help_replace_chunks(self):
         print "Replaces bad chunks with the given problem, using the backups directories. Problems are: corrupted, wrong, entities or all.\nUsage: \"replace_chunks corrupted\"\nthis will replace the corrupted chunks with the given backups"
-    def help_list(self):
-        print "Prints a list of chunks with that problem, exmaple: \
-                \'list corrupted\' or \'list c\'. \n\
-                Problems are: corrupted, wrong, entities and all."
+    def help_summary(self):
+        print "Prints a summary of all the problems found in region files."
     def help_quit(self):
         print "Quits interactive mode, exits region-fixer."
     def help_EOF(self):

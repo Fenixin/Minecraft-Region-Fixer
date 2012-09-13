@@ -88,6 +88,9 @@ class ScannedRegionFile(object):
         return text
 
     def count_chunks(self, problem = None):
+        """ Counts chunks in the region file with the given problem.
+            If problem is not given counts all the chunks. Returns
+            an integer with the counter. """
         counter = 0
         for chunk in self.chunks.keys():
             if self.chunks[chunk].status == problem or problem == None:
@@ -105,6 +108,23 @@ class ScannedRegionFile(object):
             elif status == None: l.append(c.g_coords)
         return l
 
+    def summary(self):
+        """ Returns a summary of the problematic chunks. The summary
+            is a string with region file, global coords, local coords,
+            data coords and status of every problematic chunk. """
+        text = ""
+        for c in self.chunks.keys():
+            if self.chunks[c].status == CHUNK_OK or self.chunks[c].status == CHUNK_NOT_CREATED: continue
+            status = self.chunks[c].status
+            g_coords = self.chunks[c].g_coords
+            h_coords = self.chunks[c].h_coords
+            d_coords = self.chunks[c].d_coords
+            text += " |-+-" + "Chunk coords: {0}, global {1}, data {2}. Status:\n".format(h_coords,g_coords,d_coords if d_coords != None else "N/A")
+            text += " | +-" + "{0}\n".format(self.chunks[c].status_text)
+            text += " |\n"
+        
+        return text
+            
     def remove_problematic_chunks(self, problem):
         """ Removes all the chunks with the given problem, returns a 
             counter with the number of deleted chunks. """
@@ -217,7 +237,20 @@ class RegionSet(object):
         for r in self.keys():
             l.extend(self[r].list_chunks(status))
         return l
-    
+
+    def summary(self):
+        """ Returns a summary of the problematic chunks. The summary
+            is a string with global coords, local coords, data coords
+            and status. """
+        text = ""
+        for r in self.keys():
+            if not (self[r].count_chunks(CHUNK_CORRUPTED) or self[r].count_chunks(CHUNK_TOO_MUCH_ENTITIES) or self[r].count_chunks(CHUNK_WRONG_LOCATED)):
+                continue
+            text += "Region file: " + self[r].filename + "\n"
+            text += self[r].summary()
+            text += " +\n\n"
+        return text
+
     def locate_chunk(self, global_coords):
         """ Takes the global coordinates of a chunk and returns the
             region filename and the local coordinates of the chunk or
@@ -301,6 +334,26 @@ class World(object):
         text += "   Scanned: {0}".format(str(self.scanned))
         return text
 
+    def summary(self):
+        final = ""
+        for dimension in ["overworld", "nether", "end"]:
+            
+            if dimension == "overworld":
+                regionset = self.normal_region_files
+                title = "Overworld:\n"
+            elif dimension == "nether":
+                regionset = self.nether_region_files
+                title =  "Nether:\n"
+            elif dimension == "end":
+                regionset = self.aether_region_files
+                title = "End:\n"
+
+            # don't add text if there aren't broken chunks
+            text = regionset.summary()
+            final += (title + text) if text else ""
+
+        return final
+
     def get_name(self):
         """ Returns a string with the name as found in level.dat or
             with the world folder's name. """
@@ -323,6 +376,7 @@ class World(object):
         # TODO does this have any problems with the different dimensions?
         # where is this used? When replacing chunks regionset.list_chunks is used
         # there shouldn't be any problems
+        # TODO this isn't used anywhere
         return self.normal_region_files.list_chunks(status) + self.nether_region_files.list_chunks(status) + self.aether_region_files.list_chunks(status)
 
     def replace_problematic_chunks(self, backup_worlds, problem, options):
