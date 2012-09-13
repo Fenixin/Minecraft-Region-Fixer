@@ -34,7 +34,7 @@ CHUNK_OK = 0
 CHUNK_CORRUPTED = 1
 CHUNK_WRONG_LOCATED = 2
 CHUNK_TOO_MUCH_ENTITIES = 3
-
+STATUS_TEXT = {-1:"Not created", 0:"OK", 1:"Corrupted", 2:"Wrong located", 3:"Too much entities"}
 
 class ScannedChunk(object):
     def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None):
@@ -119,8 +119,10 @@ class ScannedRegionFile(object):
             g_coords = self.chunks[c].g_coords
             h_coords = self.chunks[c].h_coords
             d_coords = self.chunks[c].d_coords
-            text += " |-+-" + "Chunk coords: {0}, global {1}, data {2}. Status:\n".format(h_coords,g_coords,d_coords if d_coords != None else "N/A")
-            text += " | +-" + "{0}\n".format(self.chunks[c].status_text)
+            text += " |-+-Chunk coords: {0}, global {1}, data {2}.\n".format(h_coords,g_coords,d_coords if d_coords != None else "N/A")
+            text += " | +-Status: {0}\n".format(STATUS_TEXT[self.chunks[c].status])
+            text += " | +-Error:\n"
+            text += " |   -{0}\n".format(self.chunks[c].status_text)
             text += " |\n"
         
         return text
@@ -246,7 +248,7 @@ class RegionSet(object):
         for r in self.keys():
             if not (self[r].count_chunks(CHUNK_CORRUPTED) or self[r].count_chunks(CHUNK_TOO_MUCH_ENTITIES) or self[r].count_chunks(CHUNK_WRONG_LOCATED)):
                 continue
-            text += "Region file: " + self[r].filename + "\n"
+            text += "Region file: {0}\n".format(self[r].filename)
             text += self[r].summary()
             text += " +\n\n"
         return text
