@@ -225,9 +225,10 @@ def scan_region_file(to_scan_region_file):
 
         return
 
+        # Fatal exceptions:
     except IOError, e:
-        print "\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(e,e)
-        # for now stop the scan process completely, as a child process exception
+        print "\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(filename,e)
+        # for now, stop the scan process completely
         scan_region_file.q.put((r, filename, None))
         return
 
@@ -237,6 +238,7 @@ def scan_region_file(to_scan_region_file):
         return
 
 def add_problem(world_obj, region_file, chunk, problem):
+    # TODO: no longer used
     """ This function adds a problem to the mcr_problems dict. """
 
     w = world_obj

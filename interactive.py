@@ -311,6 +311,7 @@ class interactive_loop(Cmd):
         return self.complete_arg(text, possible_args)
 
     # help
+    # TODO sería una buena idea poner un artículo de ayuda de como usar el programa en un caso típico.
     def help_set(self):
         print "Sets some variables used for the scan in interactive mode. If you run this command without variable you can see the current state. You can set:"
         print "   verbose" 
