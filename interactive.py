@@ -205,14 +205,18 @@ class interactive_loop(Cmd):
     def do_remove_entities(self, arg):
         # TODO: once scanned you don't need scan it again to change the status of the chunks with too much entities, 
         # the number of entities is stored in the ScannedChunks obj. Make it in this way?
-        # also, prompt a yes question?
         if self.current and self.current.scanned:
-            print "WARNING: This will delete all the entities in the chunks that have more entities than entity-limit. Note: you need to rescan your world if you change entity-limit. Are you sure you want to continue?"
             if len(arg.split()) > 0:
                 print "Error: too many parameters."
             else:
-                counter = self.current.remove_entities()
-                print "Deleted {0} entities.".format(counter)
+                print "WARNING: This will delete all the entities in the chunks that have more entities than entity-limit, make sure you know what entities are!.\nNote: you need to rescan your world if you change entity-limit.\nAre you sure you want to continue? (yes/no):"
+                answer = raw_input()
+                if answer == 'yes':
+                    counter = self.current.remove_entities()
+                    print "Deleted {0} entities.".format(counter)
+                elif answer == 'no':
+                    print "Ok!"
+                else: print "Invalid answer, use \'yes\' or \'no\' the next time!."
         else:
             print "The world hasn't be scanned. Use \'scan\' to scan it."
             
