@@ -162,13 +162,21 @@ class interactive_loop(Cmd):
                 else:
                     print "Unknown counter."
         else:
-            print "The world hasn't be scanned. Use \'scan\' to scan it."
+            print "The workload hasn't be scanned. Use \'scan\' to scan it."
 
     def do_summary(self, arg):
         """ Prints a summary of all the problems found in the region
             files. """
         if len(arg) == 0:
-            print self.current.summary()
+            if self.current:
+                if self.current.scanned:
+                    text = self.current.summary()
+                    if text: print text
+                    else: print "No problems found!"
+                else:
+                    print "The workload hasn't be scanned. Use \'scan\' to scan it."
+            else:
+                print "No world/region-set is set! Use \'set workload\' to set a world/regionset to work with."
         else:
             print "This command doesn't use any arguments."
 
@@ -176,7 +184,7 @@ class interactive_loop(Cmd):
         """ Prints the info of the current workload """
         if len(arg) == 0:
             if self.current: print self.current
-            else: print "No world/region-set set! Use \'set workload\' to set a world/regionset to work with."
+            else: print "No world/region-set is set! Use \'set workload\' to set a world/regionset to work with."
         else:
             print "This command doesn't use any arguments."
 
