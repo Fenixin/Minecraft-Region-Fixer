@@ -150,15 +150,7 @@ def main():
     # TODO TODO TOOD
     # la ayuda de las opciones necesita una buena actualización. Hay que decir que backups y replace no pueden usarse junto con varios mundos o con un 
     # regionset.
-    
-    
-    
-    # Other options
-    other_group = OptionGroup(parser, "Others", "This option is a different part of the program and is incompatible with the options above. You can't mix int he same line this options with above ones.")
-    
-    other_group.add_option('--delete-list', metavar = 'delete_list', type = str, help = 'Takes a file with a chunk list inside and deletes the chunks in that list. The list is formed by one chunk\
-                                                                                        per line with the format (x,z). [INFO] if you use this option the world won\'t be scanned.', default = None)
-    parser.add_option_group(other_group)
+
     (options, args) = parser.parse_args()
 
     # Args are world_paths and region files
@@ -204,28 +196,8 @@ def main():
         backup_worlds = []
 
     # The program starts
-    if options.delete_list: # Delete the given list of chunks
-        # TODO esta función debería ctualizarse, una vez que cambiemos
-        # a regionset y a multiworlds no tendrá sentido borrar una lista
-        # de chunk con coordenadas globales... eliminar por completo la
-        # opción? Yo voto que sí!
-        try:
-            list_file = file(options.delete_list)
-        except:
-            print 'List file not found!'
-            sys.exit(1)
-
-        delete_list = parse_chunk_list(list_file, w)
-        
-        print "{0:#^60}".format(' Deleting the chunks on the list ')
-        
-        counter = w.delete_chunk_list(delete_list)
-        print "Done!"
-        
-        print "Deleted {0} chunks".format(counter)
-
     # Go to interactive mode?
-    elif options.interactive:
+    if options.interactive:
         # TODO make interactive mode incompatible with noraml mode
         ########################################################
         #~ import readline # interactive prompt with history 
