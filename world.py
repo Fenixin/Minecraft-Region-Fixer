@@ -34,7 +34,7 @@ CHUNK_OK = 0
 CHUNK_CORRUPTED = 1
 CHUNK_WRONG_LOCATED = 2
 CHUNK_TOO_MUCH_ENTITIES = 3
-STATUS_TEXT = {-1:"Not created", 0:"OK", 1:"Corrupted", 2:"Wrong located", 3:"Too much entities"}
+STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created", CHUNK_OK:"OK", CHUNK_CORRUPTED:"Corrupted", CHUNK_WRONG_LOCATED:"Wrong located", CHUNK_TOO_MUCH_ENTITIES:"Too much entities"}
 
 class ScannedChunk(object):
     def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None):
@@ -187,6 +187,9 @@ class RegionSet(object):
         return self.regions[key]
 
     def __setitem__(self, key, value):
+        # TODO esto no se usa en ningún momento y además es peligroso
+        # voto por borrar y hacer lo que pone en el comentario de más
+        # abajo
         """ Items are ScannedRegionFile objects """
         if value.corrupted_chunks or value.wrong_located_chunks or value.entities_prob:
             self.bad_list.append(key)
@@ -202,7 +205,9 @@ class RegionSet(object):
         self.regions[key] = value
     
     def __delitem__(self, key):
+        # TODO borrar junto con setitem una vez que veamos que no se usa
         # TODO this may raise ValueError, left it in here to test this
+        
         if value.corrupted_chunks or value.wrong_located_chunks or value.entities_prob:
             bad_list.remove(key)
             if value.corrupted_chunks:
@@ -227,6 +232,8 @@ class RegionSet(object):
         return t
     
     def count_chunks(self, problem = None):
+        """ Returns the number of chunks with the given problem. If 
+            problem is None returns the number of chunks. """
         counter = 0
         for r in self.keys():
             counter += self[r].count_chunks(problem)
@@ -275,6 +282,7 @@ class RegionSet(object):
         return counter
     
     def remove_entities(self):
+        # TODO esto debería ser remove_entities!
         counter = 0
         problem = CHUNK_TOO_MUCH_ENTITIES
         for r in self.regions.keys():
@@ -290,7 +298,7 @@ class World(object):
     def __init__(self, world_path):
         self.world_path = world_path
         
-        # variables for region files
+        # path to the region files
         self.normal_region_files = RegionSet(join(self.world_path, "region/"))
         self.nether_region_files = RegionSet(join(self.world_path,"DIM-1/region/"))
         self.aether_region_files = RegionSet(join(self.world_path,"DIM1/region/"))
@@ -337,6 +345,7 @@ class World(object):
         return text
 
     def summary(self):
+        """ Makes a text summary of all the problems found. """
         final = ""
         for dimension in ["overworld", "nether", "end"]:
             

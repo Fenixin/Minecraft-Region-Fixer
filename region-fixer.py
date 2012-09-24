@@ -30,6 +30,8 @@ import world
 from scan import scan_all_players, scan_level, scan_regionset, scan_world
 from interactive import interactive_loop
 
+# HUGE TODO: we have to update the NBT lib
+
 def parse_paths(args):
     # parese the list of region files and worlds paths
     world_list = []
@@ -146,7 +148,7 @@ def main():
     parser.add_option('--interactive', '-i',action='store_true',help='Scans the world and then enter in interactive mode, where you can write commands an do things',dest = 'interactive',default = False)
     parser.add_option('--summary', '-s',action='store_true',help='Prints a summary with all the found problems in region files.', default = False)
     # TODO TODO TOOD
-    # la ayuda de las opciones necesita una vuena actualización. Hay que decir que backups y replace no pueden usarse junto con varios mundos o con un 
+    # la ayuda de las opciones necesita una buena actualización. Hay que decir que backups y replace no pueden usarse junto con varios mundos o con un 
     # regionset.
     
     
@@ -206,7 +208,7 @@ def main():
         # TODO esta función debería ctualizarse, una vez que cambiemos
         # a regionset y a multiworlds no tendrá sentido borrar una lista
         # de chunk con coordenadas globales... eliminar por completo la
-        # opción?
+        # opción? Yo voto que sí!
         try:
             list_file = file(options.delete_list)
         except:
@@ -227,7 +229,7 @@ def main():
         # TODO make interactive mode incompatible with noraml mode
         ########################################################
         #~ import readline # interactive prompt with history 
-        # WARNING NEEDS CHANGES FOR WINDOWS
+        # TODO WARNING NEEDS CHANGES FOR WINDOWS
         c = interactive_loop(world_list, region_list, options, backup_worlds)
         c.cmdloop()
 
@@ -312,42 +314,6 @@ def main():
             print "\n{0:#^60}".format(' Summary of found problems ')
             text = summary(world_list[0], [world_list[0].CORRUPTED, world_list[0].WRONG_LOCATED, world_list[0].TOO_MUCH_ENTITIES])
             print text
-
-
-
-
-def summary(world, problems):
-    # TODO: This is completely broken
-    # add a summary to file, and multiworld or multi regionset support
-    w = world
-    text = ''
-    for mcr in w.mcr_problems:
-        write = False
-        chunk_problems = []
-        for chunk in w.mcr_problems[mcr]:
-            for p in w.mcr_problems[mcr][chunk]:
-                # first check if we need to print this
-                if p in problems:
-                    write = True
-                    chunk_problems.append((chunk, p))
-        
-        if write:
-            # now print text for the region file
-            text += split(mcr)[1] + ":\n"
-            for c in chunk_problems:
-                chunk = c[0]
-                problem = c[1]
-                text += "\tchunk " + str(c) + " :"
-                if problem in problems:
-                    if problem == w.CORRUPTED:
-                        text += " corrupted\n"
-                    elif problem == w.WRONG_LOCATED:
-                        text += " wrong located\n"
-                    elif problem == w.TOO_MUCH_ENTITIES:
-                        text += " too much entities\n"
-        if len(text) == 0:
-            text = "No chunks with this problem."
-    return text
 
 
 if __name__ == '__main__':
