@@ -34,11 +34,11 @@ import sys
 import traceback
 
 class ChildProcessException(Exception):
-    """Takes the child process traceback texts and prints it as a 
-    real traceback."""
+    """Takes the child process traceback text and prints it as a 
+    real traceback with asterisks everywhere."""
     def __init__(self, r):
-        # This is, probably, the worst way to print a traceback, but
-        # works for now
+        # Helps to see wich one is the child process traceback
+        print "*"*10
         print "*** Printint the child's Traceback:"
         print "*** Exception:", r[0], r[1]
         for tb in r[2]:
@@ -55,23 +55,18 @@ class FractionWidget(progressbar.ProgressBarWidget):
         return '%2d%s%2d' % (pbar.currval, self.sep, pbar.maxval)
 
 def scan_world(world_obj, options):
-    # TODO clean this up
     w = world_obj
     # scan the world dir
     print "Scanning directory..."
 
     if not w.level_file:
         print "Warning: No \'level.dat\' file found!"
-
     if not w.normal_region_files:
         print "Warning: No region files found in the \"region\" directory!"
-
     if not w.nether_region_files:
         print "Info: No nether dimension in the world directory."
-
     if not w.aether_region_files:
         print "Info: No aether dimension in the world directory."
-        
     if w.player_files:
         print "There are {0} region files and {1} player files in the world directory.".format(\
             len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files), len(w.player_files))
@@ -80,7 +75,7 @@ def scan_world(world_obj, options):
             len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files))
 
     # check the level.dat file and the *.dat files in players directory
-
+    # TODO maybe imrpove the level.dat and the players.dta scanning?
     print "\n{0:-^60}".format(' Scanning level.dat ')
 
     if not w.level_file:
@@ -121,11 +116,7 @@ def scan_world(world_obj, options):
         if w.aether_region_files.regions:
             print "\n{0:-^60}".format(' Scanning the end ')
             scan_regionset(w.aether_region_files, options)
-        #~ corrupted = w.count_chunks(world.CHUNK_CORRUPTED)
-        #~ wrong_located = w.count_chunks(world.CHUNK_WRONG_LOCATED)
-        #~ entities_prob = w.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
-        #~ total = w.count_chunks()
-    
+
     w.scanned = True
 
 
@@ -221,6 +212,7 @@ def scan_region_file(to_scan_region_file):
         r.corrupted_chunks = corrupted
         r.wrong_located_chunks = wrong
         r.entities_prob = entities_prob
+        # TODO: add the scan time
         scan_region_file.q.put((r, filename, corrupted, wrong, entities_prob, chunk_count))
 
         return
@@ -236,22 +228,6 @@ def scan_region_file(to_scan_region_file):
         except_type, except_class, tb = sys.exc_info()
         scan_region_file.q.put((except_type, except_class, traceback.extract_tb(tb)))
         return
-
-def add_problem(world_obj, region_file, chunk, problem):
-    # TODO: no longer used
-    """ This function adds a problem to the mcr_problems dict. """
-
-    w = world_obj
-    if region_file in w.mcr_problems:
-        if chunk in w.mcr_problems[region_file]:
-            w.mcr_problems[region_file][chunk].append(problem)
-        else:
-            w.mcr_problems[region_file][chunk] = []
-            w.mcr_problems[region_file][chunk].append(problem)
-    else:
-        w.mcr_problems[region_file] = {}
-        w.mcr_problems[region_file][chunk] = []
-        w.mcr_problems[region_file][chunk].append(problem)
 
 def scan_chunk(region_file, coords, options):
     """ Takes a RegionFile obj and the local coordinatesof the chunk as

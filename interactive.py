@@ -166,6 +166,7 @@ class interactive_loop(Cmd):
             print "The workload hasn't be scanned. Use \'scan\' to scan it."
 
     def do_summary(self, arg):
+        # TODO: add info about level.dat and players.dat
         """ Prints a summary of all the problems found in the region
             files. """
         if len(arg) == 0:
