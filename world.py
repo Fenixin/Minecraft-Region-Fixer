@@ -54,9 +54,20 @@ class ScannedChunk(object):
         text += "\tNumber of entities:" + str(self.num_entities) + "\n"
         text += "\tScan time:" + time.ctime(self.scan_time) + "\n"
         return text
+    
+    def rescan_entities(self, options):
+        """ Updates the status of the chunk when the the option
+            entity limit is changed. """
+        if self.num_entities >= options.entity_limit:
+            self.status = CHUNK_TOO_MUCH_ENTITIES
+            self.status_text = STATUS_TEXT[CHUNK_TOO_MUCH_ENTITIES]
+        else:
+            self.status = CHUNK_OK
+            self.status_text = STATUS_TEXT[CHUNK_OK]
 
 class ScannedRegionFile(object):
     """ Stores all the info for a scanned region file """
+    # TODO update this with __setitem__ keys and other stuff
     def __init__(self, filename, corrupted = None, wrong = None, entities_prob = None, chunks = None, time = None):
         self.path = filename
         self.filename = split(filename)[1]
@@ -154,6 +165,11 @@ class ScannedRegionFile(object):
         
         return counter
 
+    def rescan_entities(self, options):
+        """ Updates the status of all the chunks in the region file when
+            the the option entity limit is changed. """
+        for c in self.chunks.keys():
+            self.chunks[c].rescan_entities(options)
 
 class RegionSet(object):
     """Stores an arbitrary number of region files and the scan results.
@@ -266,6 +282,12 @@ class RegionSet(object):
         for r in self.regions.keys():
             counter += self.regions[r].remove_problematic_chunks(problem)
         return counter
+
+    def rescan_entities(self, options):
+        """ Updates the status of all the chunks in the regionset when
+            the option entity limit is changed. """
+        for r in self.keys():
+            self[r].rescan_entities(options)
 
 
 class World(object):
@@ -478,6 +500,18 @@ class World(object):
 
         return counter
 
+    def rescan_entities(self, options):
+        """ Updates the status of all the chunks in the world when the
+            option entity limit is changed. """
+        for dimension in ["overworld", "nether", "end"]:
+            if dimension == "overworld":
+                regionset = self.normal_region_files
+            elif dimension == "nether":
+                regionset = self.nether_region_files
+            elif dimension == "end":
+                regionset = self.aether_region_files
+
+            regionset.rescan_entities(options)
     
 def delete_entities(region_file, x, z):
     """ Takes a region file and the chunk local coordinates. Deletes all 

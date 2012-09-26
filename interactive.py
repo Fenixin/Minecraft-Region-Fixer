@@ -62,6 +62,8 @@ class interactive_loop(Cmd):
                         if int(args[1]) >= 0:
                             self.options.entity_limit = int(args[1])
                             print "entity-limit = {0}".format(args[1])
+                            print "Updating chunk status..."
+                            self.current.rescan_entities(self.options)
                         else:
                             print "Invalid value. Valid values are positive integers and zero"
                     except ValueError:
@@ -205,8 +207,6 @@ class interactive_loop(Cmd):
                 print "No world set! Use \'set workload\'"
 
     def do_remove_entities(self, arg):
-        # TODO: once scanned you don't need scan it again to change the status of the chunks with too much entities, 
-        # the number of entities is stored in the ScannedChunks obj. Make it in this way?
         if self.current and self.current.scanned:
             if len(arg.split()) > 0:
                 print "Error: too many parameters."
@@ -235,7 +235,6 @@ class interactive_loop(Cmd):
                     counter = self.current.remove_problematic_chunks(world.CHUNK_WRONG_LOCATED)
                     print "Done! Removed {0} chunks".format(counter)
                 elif arg == "entities":
-                    # TODO Si cambiamos lo de entities y el rescaneo tenemos que cambiar esto y el remove_entities
                     print "WARNING: This will delete all the CHUNKS that have more entities than entity-limit, make sure you know what this means!.\nNote: you need to rescan your world if you change entity-limit.\nAre you sure you want to continue? (yes/no):"
                     answer = raw_input()
                     if answer == 'yes':
