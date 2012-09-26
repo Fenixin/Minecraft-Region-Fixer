@@ -96,14 +96,23 @@ class ScannedRegionFile(object):
         text += "\nScanned: {0}".format(scanned)
         
         return text
+    
+    def __getitem__(self, key):
+        return self.chunks[key]
+    
+    def __setitem__(self, key, value):
+        self.chunks[key] = value
+
+    def keys(self):
+        return self.chunks.keys()
 
     def count_chunks(self, problem = None):
         """ Counts chunks in the region file with the given problem.
             If problem is omited or None, counts all the chunks. Returns
             an integer with the counter. """
         counter = 0
-        for chunk in self.chunks.keys():
-            if self.chunks[chunk].status == problem or problem == None:
+        for chunk in self.keys():
+            if self[chunk].status == problem or problem == None:
                 counter += 1
         return counter
 
@@ -113,8 +122,8 @@ class ScannedRegionFile(object):
             all the existent chunks in the region file """
         
         l = []
-        for c in self.chunks.keys():
-            if status == self.chunks[c].status: l.append(self.chunks[c].g_coords)
+        for c in self.keys():
+            if status == self[c].status: l.append(self[c].g_coords)
             elif status == None: l.append(c.g_coords)
         return l
 
@@ -123,16 +132,16 @@ class ScannedRegionFile(object):
             is a string with region file, global coords, local coords,
             data coords and status of every problematic chunk. """
         text = ""
-        for c in self.chunks.keys():
-            if self.chunks[c].status == CHUNK_OK or self.chunks[c].status == CHUNK_NOT_CREATED: continue
-            status = self.chunks[c].status
-            g_coords = self.chunks[c].g_coords
-            h_coords = self.chunks[c].h_coords
-            d_coords = self.chunks[c].d_coords
+        for c in self.keys():
+            if self[c].status == CHUNK_OK or self[c].status == CHUNK_NOT_CREATED: continue
+            status = self[c].status
+            g_coords = self[c].g_coords
+            h_coords = self[c].h_coords
+            d_coords = self[c].d_coords
             text += " |-+-Chunk coords: {0}, global {1}, data {2}.\n".format(h_coords,g_coords,d_coords if d_coords != None else "N/A")
-            text += " | +-Status: {0}\n".format(STATUS_TEXT[self.chunks[c].status])
+            text += " | +-Status: {0}\n".format(STATUS_TEXT[self[c].status])
             text += " | +-Error:\n"
-            text += " |   -{0}\n".format(self.chunks[c].status_text)
+            text += " |   -{0}\n".format(self[c].status_text)
             text += " |\n"
         
         return text
@@ -168,8 +177,8 @@ class ScannedRegionFile(object):
     def rescan_entities(self, options):
         """ Updates the status of all the chunks in the region file when
             the the option entity limit is changed. """
-        for c in self.chunks.keys():
-            self.chunks[c].rescan_entities(options)
+        for c in self.keys():
+            self[c].rescan_entities(options)
 
 class RegionSet(object):
     """Stores an arbitrary number of region files and the scan results.

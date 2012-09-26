@@ -289,7 +289,8 @@ def scan_chunk(region_file, coords, options):
         global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
         num_entities = None
     
-    return chunk, region_file, coords, data_coords, global_coords, num_entities, status, status_text, scan_time
+    return chunk, region_file, coords, data_coords, global_coords,\
+            num_entities, status, status_text, scan_time
     
 def scan_and_fill_chunk(region_file, scanned_chunk_obj, options):
     """ Takes a RegionFile obj and a ScannedChunk obj as inputs, 
