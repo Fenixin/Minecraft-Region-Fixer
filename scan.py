@@ -95,6 +95,7 @@ def scan_world(world_obj, options):
     if not w.player_files:
         print "Info: No player files to scan."
     else:
+        # TODO update the player scanning thing
         scan_all_players(w)
     
         if not w.player_with_problems:
@@ -185,8 +186,9 @@ def scan_region_file(to_scan_region_file):
                         # takes a long time, and once detected is better to fix it at once.
                         if delete_entities:
                             world.delete_entities(region_file, x, z)
+                            # TODO: no dará esto problemas si se selecciona remove_entities y además se usa la función en world para ello?
                             # TODO: is not very useful to name the local chunk coords, name also the region file?
-                            print "Deleted {0} entities in chunk ({1},{2}).".format(c.num_entities, x, z)
+                            print "Deleted {0} entities in chunk ({1},{2}) of the region file: {3}".format(c.num_entities, x, z, r.filename)
                             c.num_entities = 0
 
                         else:
@@ -212,7 +214,7 @@ def scan_region_file(to_scan_region_file):
         r.corrupted_chunks = corrupted
         r.wrong_located_chunks = wrong
         r.entities_prob = entities_prob
-        # TODO: add the scan time
+        r.scan_time = time.time()
         scan_region_file.q.put((r, filename, corrupted, wrong, entities_prob, chunk_count))
 
         return
@@ -220,11 +222,12 @@ def scan_region_file(to_scan_region_file):
         # Fatal exceptions:
     except IOError, e:
         print "\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(filename,e)
-        # for now, stop the scan process completely
+        # TODO: This doesn't need to be fatal.
         scan_region_file.q.put((r, filename, None))
         return
 
     except:
+        # anything else is a ChildProcessException
         except_type, except_class, tb = sys.exc_info()
         scan_region_file.q.put((except_type, except_class, traceback.extract_tb(tb)))
         return
@@ -321,6 +324,7 @@ def scan_regionset(regionset, options):
     entities_total = 0
 
     # TODO: improve all the status printing stuff
+    # TODO: use logging module?
     # init progress bar
     if not options.verbose:
         pbar = progressbar.ProgressBar(

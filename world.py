@@ -39,6 +39,8 @@ STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created", CHUNK_OK:"OK", CHUNK_CORRUPTED:"
 class ScannedChunk(object):
     def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None):
         # TODO no sé si debería poner más información en este obj
+        # TODO: what happens if a chunk has two erros? For example:
+        #   too-much-entities and wrong-located.
         self.h_coords = header_coords
         self.g_coords = global_coords
         self.d_coords = data_coords
@@ -67,7 +69,6 @@ class ScannedChunk(object):
 
 class ScannedRegionFile(object):
     """ Stores all the info for a scanned region file """
-    # TODO update this with __setitem__ keys and other stuff
     def __init__(self, filename, corrupted = None, wrong = None, entities_prob = None, chunks = None, time = None):
         self.path = filename
         self.filename = split(filename)[1]
@@ -86,7 +87,7 @@ class ScannedRegionFile(object):
         self.chunk_count = chunks
         
         # time when the scan finished
-        self.last_scan_time = time
+        self.scan_time = time
 
     def __str__(self):
         text = "Path: {0}".format(self.path)
@@ -283,14 +284,14 @@ class RegionSet(object):
         print "Done! Removed {0} chunks".format(counter)
         return counter
     
-    def remove_entities(self):
-        # TODO esto debería ser remove_entities!
-        # TODO move delete entities aquí!?
-        counter = 0
-        problem = CHUNK_TOO_MUCH_ENTITIES
-        for r in self.regions.keys():
-            counter += self.regions[r].remove_problematic_chunks(problem)
-        return counter
+    #~ def remove_entities(self):
+        #~ # TODO esto debería ser remove_entities!
+        #~ # TODO move delete entities aquí!?
+        #~ counter = 0
+        #~ problem = CHUNK_TOO_MUCH_ENTITIES
+        #~ for r in self.regions.keys():
+            #~ counter += self.regions[r].remove_problematic_chunks(problem)
+        #~ return counter
 
     def rescan_entities(self, options):
         """ Updates the status of all the chunks in the regionset when
@@ -523,6 +524,7 @@ class World(object):
             regionset.rescan_entities(options)
     
 def delete_entities(region_file, x, z):
+    #TODO: move this inside of regionset.
     """ Takes a region file and the chunk local coordinates. Deletes all 
         the entities in that chunk. Returns an integer with the number
         of deleted entities. """

@@ -168,7 +168,7 @@ class interactive_loop(Cmd):
             print "The workload hasn't be scanned. Use \'scan\' to scan it."
 
     def do_summary(self, arg):
-        # TODO: add info about level.dat and players.dat
+        # TODO: add info about level.dat and players.dat, do it after updating the scanning process.
         """ Prints a summary of all the problems found in the region
             files. """
         if len(arg) == 0:
@@ -211,11 +211,14 @@ class interactive_loop(Cmd):
             if len(arg.split()) > 0:
                 print "Error: too many parameters."
             else:
-                print "WARNING: This will delete all the entities in the chunks that have more entities than entity-limit, make sure you know what entities are!.\nNote: you need to rescan your world if you change entity-limit.\nAre you sure you want to continue? (yes/no):"
+                print "WARNING: This will delete all the entities in the chunks that have more entities than entity-limit, make sure you know what entities are!.\nAre you sure you want to continue? (yes/no):"
                 answer = raw_input()
                 if answer == 'yes':
                     counter = self.current.remove_entities()
                     print "Deleted {0} entities.".format(counter)
+                    #~ self.current.rescan_entities(self.options)
+                    # TODO: After deleting entities you need to rescan the world.
+                    #   or maybe is better to update ScannedChunk with 0 entities?
                 elif answer == 'no':
                     print "Ok!"
                 else: print "Invalid answer, use \'yes\' or \'no\' the next time!."
