@@ -216,9 +216,7 @@ class interactive_loop(Cmd):
                 if answer == 'yes':
                     counter = self.current.remove_entities()
                     print "Deleted {0} entities.".format(counter)
-                    #~ self.current.rescan_entities(self.options)
-                    # TODO: After deleting entities you need to rescan the world.
-                    #   or maybe is better to update ScannedChunk with 0 entities?
+                    self.current.rescan_entities(self.options)
                 elif answer == 'no':
                     print "Ok!"
                 else: print "Invalid answer, use \'yes\' or \'no\' the next time!."

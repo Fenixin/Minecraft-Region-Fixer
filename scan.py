@@ -235,7 +235,6 @@ def scan_region_file(to_scan_region_file):
 def scan_chunk(region_file, coords, options):
     """ Takes a RegionFile obj and the local coordinatesof the chunk as
         inputs, then scans the chunk and returns all the data."""
-
     try:
         chunk = region_file.get_chunk(*coords)
         if chunk:
@@ -293,7 +292,7 @@ def scan_chunk(region_file, coords, options):
         num_entities = None
     
     return chunk, region_file, coords, data_coords, global_coords,\
-            num_entities, status, status_text, scan_time
+            num_entities, status, status_text, scan_time, region_file.filename
     
 def scan_and_fill_chunk(region_file, scanned_chunk_obj, options):
     """ Takes a RegionFile obj and a ScannedChunk obj as inputs, 
@@ -301,7 +300,7 @@ def scan_and_fill_chunk(region_file, scanned_chunk_obj, options):
         as a NBT object."""
 
     c = scanned_chunk_obj
-    chunk, region_file, c.h_coords, c.d_coords, c.g_coords, c.num_entities, c.status, c.status_text, c.scan_time = scan_chunk(region_file, c.h_coords, options)
+    chunk, region_file, c.h_coords, c.d_coords, c.g_coords, c.num_entities, c.status, c.status_text, c.scan_time, c.region_path = scan_chunk(region_file, c.h_coords, options)
     return chunk
 
 def _mp_pool_init(regionset,options,q):

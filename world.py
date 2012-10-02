@@ -37,8 +37,7 @@ CHUNK_TOO_MUCH_ENTITIES = 3
 STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created", CHUNK_OK:"OK", CHUNK_CORRUPTED:"Corrupted", CHUNK_WRONG_LOCATED:"Wrong located", CHUNK_TOO_MUCH_ENTITIES:"Too much entities"}
 
 class ScannedChunk(object):
-    def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None):
-        # TODO no sé si debería poner más información en este obj
+    def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None, region_path = None):
         # TODO: what happens if a chunk has two erros? For example:
         #   too-much-entities and wrong-located.
         self.h_coords = header_coords
@@ -48,6 +47,8 @@ class ScannedChunk(object):
         self.status_text = None
         self.num_entities = num_entities
         self.scan_time = scan_time
+        self.region_path = region_path
+
     def __str__(self):
         text = "Chunk with header coordinates:" + str(self.h_coords) + "\n"
         text += "\tData coordinates:" + str(self.d_coords) + "\n"
@@ -56,7 +57,7 @@ class ScannedChunk(object):
         text += "\tNumber of entities:" + str(self.num_entities) + "\n"
         text += "\tScan time:" + time.ctime(self.scan_time) + "\n"
         return text
-    
+
     def rescan_entities(self, options):
         """ Updates the status of the chunk when the the option
             entity limit is changed. """
@@ -118,14 +119,14 @@ class ScannedRegionFile(object):
         return counter
 
     def list_chunks(self, status = None):
-        """ Returns a list of all global coordinates of the chunks with
-            the given status, if no status is omited or None, returns
-            all the existent chunks in the region file """
+        """ Returns a list of all the ScannedChunk objects of the chunks
+            with the given status, if no status is omited or None,
+            returns all the existent chunks in the region file """
         
         l = []
         for c in self.keys():
-            if status == self[c].status: l.append(self[c].g_coords)
-            elif status == None: l.append(c.g_coords)
+            if status == self[c].status: l.append(self[c])
+            elif status == None: l.append(self[c])
         return l
 
     def summary(self):
@@ -153,25 +154,39 @@ class ScannedRegionFile(object):
 
         counter = 0
         bad_chunks = self.list_chunks(problem)
-        for global_coords in bad_chunks:
-            local_coords = get_local_chunk_coords(*global_coords)
+        for c in bad_chunks:
+            local_coords = get_local_chunk_coords(*c.g_coords)
             region_file = region.RegionFile(self.path)
             region_file.unlink_chunk(*local_coords)
             counter += 1
-        
+            # fill up the new ScannedChunk obj
+            self[local_coords] = ScannedChunk(local_coords, c.g_coords, None, CHUNK_NOT_CREATED, None, time.time(), region_file.filename)
+            
         return counter
     
     def remove_entities(self):
         """ Removes all the entities in chunks with the problematic
             status CHUNK_TOO_MUCH_ENTITIES that are in this region file.
             Returns a counter of all the removed entities. """
-        problem = world.CHUNK_TOO_MUCH_ENTITIES
+        problem = CHUNK_TOO_MUCH_ENTITIES
         counter = 0
         bad_chunks = self.list_chunks(problem)
-        for global_coords in bad_chunks:
-            local_coords = get_local_chunk_coords(*global_coords)
-            region_file = region.RegionFile(self.path)
-            counter += delete_entities(region_file, *local_coords)
+        for c in bad_chunks:
+            local_coords = get_local_chunk_coords(*c.g_coords)
+            counter += self.remove_chunk_entities(*local_coords)
+            c.num_entities = 0
+        return counter
+
+    def remove_chunk_entities(self, x, z):
+        """ Takes a region file object and the chunk local coordinates.
+            Deletes all the entities in that chunk. Returns an integer
+            with the number of deleted entities. """
+        region_file = region.RegionFile(self.path)
+        chunk = region_file.get_chunk(x,z)
+        counter = len(chunk['Level']['Entities'])
+        empty_tag_list = nbt.TAG_List(nbt.TAG_Byte,'','Entities')
+        chunk['Level']['Entities'] = empty_tag_list
+        region_file.write_chunk(x, z, chunk)
         
         return counter
 
@@ -180,6 +195,7 @@ class ScannedRegionFile(object):
             the the option entity limit is changed. """
         for c in self.keys():
             self[c].rescan_entities(options)
+
 
 class RegionSet(object):
     """Stores an arbitrary number of region files and the scan results.
@@ -243,8 +259,9 @@ class RegionSet(object):
         return counter
 
     def list_chunks(self, status = None):
-        """ Returns a list of the global coordinates of the chunks
-            with status. If status = None returns all the chunks. """
+        """ Returns a list of the ScannedChunk objects of the chunks
+            with the given status. If status = None returns all the
+            chunks. """
         l = []
         for r in self.keys():
             l.extend(self[r].list_chunks(status))
@@ -284,14 +301,13 @@ class RegionSet(object):
         print "Done! Removed {0} chunks".format(counter)
         return counter
     
-    #~ def remove_entities(self):
-        #~ # TODO esto debería ser remove_entities!
-        #~ # TODO move delete entities aquí!?
-        #~ counter = 0
-        #~ problem = CHUNK_TOO_MUCH_ENTITIES
-        #~ for r in self.regions.keys():
-            #~ counter += self.regions[r].remove_problematic_chunks(problem)
-        #~ return counter
+    def remove_entities(self):
+        """ Removes entities in chunks with the status
+            TOO_MUCH_ENTITIES. """
+        counter = 0
+        for r in self.regions.keys():
+            counter += self.regions[r].remove_entities()
+        return counter
 
     def rescan_entities(self, options):
         """ Updates the status of all the chunks in the regionset when
@@ -312,6 +328,8 @@ class World(object):
         self.normal_region_files = RegionSet(join(self.world_path, "region/"))
         self.nether_region_files = RegionSet(join(self.world_path,"DIM-1/region/"))
         self.aether_region_files = RegionSet(join(self.world_path,"DIM1/region/"))
+        
+        self.dimensions = (self.normal_region_files, self.nether_region_files, self.aether_region_files)
 
         # for level.dat
         self.level_file = join(self.world_path, "level.dat")
@@ -387,16 +405,6 @@ class World(object):
          + self.nether_region_files.count_chunks(problem)\
          + self.aether_region_files.count_chunks(problem)
         return counter
-
-    def list_chunks(self, status):
-        """ Returns a list of the global coordinates of chunks with
-            status. WARNING: this don't make any difference between dimensions
-            use RegionSet.list_chunks instead"""
-        # TODO does this have any problems with the different dimensions?
-        # where is this used? When replacing chunks regionset.list_chunks is used
-        # there shouldn't be any problems
-        # TODO this isn't used anywhere
-        return self.normal_region_files.list_chunks(status) + self.nether_region_files.list_chunks(status) + self.aether_region_files.list_chunks(status)
 
     def replace_problematic_chunks(self, backup_worlds, problem, options):
         """ Takes a list of world objects and a problem value and try
@@ -478,64 +486,25 @@ class World(object):
     def remove_problematic_chunks(self, problem):
         """ Removes all the chunks with the given problem, it also
         removes the entry in the dictionary mcr_problems """
-
         counter = 0
-        for dimension in ["overworld", "nether", "end"]:
-            if dimension == "overworld":
-                regionset = self.normal_region_files
-            elif dimension == "nether":
-                regionset = self.nether_region_files
-            elif dimension == "end":
-                regionset = self.aether_region_files
-
+        for regionset in self.dimensions:
             counter += regionset.remove_problematic_chunks(problem)
-
         return counter
-
 
     def remove_entities(self):
         """ Delete all the entities in the chunks that have more than
             entity-limit entities. """
-        
         counter = 0
-        for dimension in ["overworld", "nether", "end"]:
-            if dimension == "overworld":
-                regionset = self.normal_region_files
-            elif dimension == "nether":
-                regionset = self.nether_region_files
-            elif dimension == "end":
-                regionset = self.aether_region_files
-
-            counter += regionset.remove_entities()
-
+        for regionset in self.dimensions:
+            counter += regionset.remove_entities()        
         return counter
 
     def rescan_entities(self, options):
         """ Updates the status of all the chunks in the world when the
             option entity limit is changed. """
-        for dimension in ["overworld", "nether", "end"]:
-            if dimension == "overworld":
-                regionset = self.normal_region_files
-            elif dimension == "nether":
-                regionset = self.nether_region_files
-            elif dimension == "end":
-                regionset = self.aether_region_files
-
+        for regionset in self.dimensions:
             regionset.rescan_entities(options)
-    
-def delete_entities(region_file, x, z):
-    #TODO: move this inside of regionset.
-    """ Takes a region file and the chunk local coordinates. Deletes all 
-        the entities in that chunk. Returns an integer with the number
-        of deleted entities. """
-    # not sure where to put this function
-    chunk = region_file.get_chunk(x,z)
-    counter = len(chunk['Level']['Entities'])
-    empty_tag_list = nbt.TAG_List(nbt.TAG_Byte,'','Entities')
-    chunk['Level']['Entities'] = empty_tag_list
-    region_file.write_chunk(x, z, chunk)
-    
-    return counter
+
 
 def get_global_chunk_coords(region_filename, chunkX, chunkZ):
     """ Takes the region filename and the chunk local 
