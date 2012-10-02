@@ -186,8 +186,6 @@ def scan_region_file(to_scan_region_file):
                         # takes a long time, and once detected is better to fix it at once.
                         if delete_entities:
                             world.delete_entities(region_file, x, z)
-                            # TODO: no dará esto problemas si se selecciona remove_entities y además se usa la función en world para ello?
-                            # TODO: is not very useful to name the local chunk coords, name also the region file?
                             print "Deleted {0} entities in chunk ({1},{2}) of the region file: {3}".format(c.num_entities, x, z, r.filename)
                             c.num_entities = 0
 
@@ -322,8 +320,6 @@ def scan_regionset(regionset, options):
     wrong_total = 0
     entities_total = 0
 
-    # TODO: improve all the status printing stuff
-    # TODO: use logging module?
     # init progress bar
     if not options.verbose:
         pbar = progressbar.ProgressBar(

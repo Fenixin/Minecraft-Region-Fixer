@@ -505,6 +505,19 @@ class World(object):
         for regionset in self.dimensions:
             regionset.rescan_entities(options)
 
+def delete_entities(region_file, x, z):
+    """ This function is used while scanning the world in scan.py! Takes
+        a region file obj and a local chunks coords and deletes all the 
+        entities in that chunk. """
+    chunk = region_file.get_chunk(x,z)
+    counter = len(chunk['Level']['Entities'])
+    empty_tag_list = nbt.TAG_List(nbt.TAG_Byte,'','Entities')
+    chunk['Level']['Entities'] = empty_tag_list
+    region_file.write_chunk(x, z, chunk)
+    
+    return counter
+
+
 
 def get_global_chunk_coords(region_filename, chunkX, chunkZ):
     """ Takes the region filename and the chunk local 
