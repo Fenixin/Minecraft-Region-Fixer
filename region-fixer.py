@@ -27,7 +27,7 @@ from os.path import join, split, exists, isfile
 import sys
 
 import world
-from scan import scan_all_players, scan_level, scan_regionset, scan_world
+from scan import scan_regionset, scan_world
 from interactive import interactive_loop
 
 # HUGE TODO: we have to update the NBT lib

@@ -59,7 +59,7 @@ def scan_world(world_obj, options):
     # scan the world dir
     print "Scanning directory..."
 
-    if not w.level_file:
+    if not w.scanned_level.path:
         print "Warning: No \'level.dat\' file found!"
     if not w.normal_region_files:
         print "Warning: No region files found in the \"region\" directory!"
@@ -67,42 +67,38 @@ def scan_world(world_obj, options):
         print "Info: No nether dimension in the world directory."
     if not w.aether_region_files:
         print "Info: No aether dimension in the world directory."
-    if w.player_files:
+    if w.players:
         print "There are {0} region files and {1} player files in the world directory.".format(\
-            len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files), len(w.player_files))
+            len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files), len(w.players))
     else:
         print "There are {0} region files in the world directory.".format(\
             len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files))
 
     # check the level.dat file and the *.dat files in players directory
-    # TODO maybe imrpove the level.dat and the players.dta scanning?
-    print "\n{0:-^60}".format(' Scanning level.dat ')
+    print "\n{0:-^60}".format(' Checking level.dat ')
 
-    if not w.level_file:
-
+    if not w.scanned_level.path:
         print "[WARNING!] \'level.dat\' doesn't exist!"
     else:
-        scan_level(w)
-        if len(w.level_problems) == 0:
-            print "\'level.dat'\ is redable"
+        if w.scanned_level.readable == True:
+            print "\'level.dat\' is redable"
         else:
             print "[WARNING!]: \'level.dat\' is corrupted with the following error/s:"
-            for e in w.level_problems: print e,
+            print "\t {0}".format(w.scanned_level.status_text)
 
+    print "\n{0:-^60}".format(' Checking player files ')
 
-    print "\n{0:-^60}".format(' Scanning player files ')
-    
-    if not w.player_files:
+    if not w.players:
         print "Info: No player files to scan."
     else:
-        # TODO update the player scanning thing
-        scan_all_players(w)
-    
-        if not w.player_with_problems:
+        scan_all_players(w)        
+        all_ok = True
+        for name in w.players:
+            if w.players[name].readable == False:
+                print "[WARNING]: Player file {0} has problems.\n\tError: {1}".format(w.players[name].filename, w.players[name].status_text)
+                all_ok = False
+        if all_ok:
             print "All player files are readable."
-        else:
-            for player in w.player_with_problems:
-                print "Warning: Player file \"{0}.dat\" has problems: {1}".format(player, w.player_status[player])
 
     # SCAN ALL THE CHUNKS!
     if len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files) == 0:
@@ -121,39 +117,24 @@ def scan_world(world_obj, options):
     w.scanned = True
 
 
-def scan_level(world_obj):
-    """ At the moment only tries to read a level.dat file and print a
-    warning if there are problems. """
-
-    w = world_obj
-
-    try:
-        level_dat = nbt.NBTFile(filename = w.level_file)
-
-    except Exception, e:
-        w.level_problems.append(e)
-
-
-def scan_player(world_obj, player_file_path):
+def scan_player(scanned_dat_file):
     """ At the moment only tries to read a .dat player file. It returns
     0 if it's ok and 1 if has some problem """
 
-    w = world_obj
-    nick = split(player_file_path)[1].split(".")[0]
+    s = scanned_dat_file
     try:
-        player_dat = nbt.NBTFile(filename = player_file_path)
-        w.player_status[nick] = world.CHUNK_OK
-
+        player_dat = nbt.NBTFile(filename = s.path)
+        s.readable = True
     except Exception, e:
-        w.player_status[nick] = e
-        w.player_with_problems.append(nick)
+        s.readable = False
+        s.status_text = e
 
 
 def scan_all_players(world_obj):
     """ Scans all the players using the scan_player function. """
 
-    for player in world_obj.player_files:
-        scan_player(world_obj, player)
+    for name in world_obj.players:
+        scan_player(world_obj.players[name])
 
 
 def scan_region_file(to_scan_region_file):

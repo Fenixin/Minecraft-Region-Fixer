@@ -36,6 +36,21 @@ CHUNK_WRONG_LOCATED = 2
 CHUNK_TOO_MUCH_ENTITIES = 3
 STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created", CHUNK_OK:"OK", CHUNK_CORRUPTED:"Corrupted", CHUNK_WRONG_LOCATED:"Wrong located", CHUNK_TOO_MUCH_ENTITIES:"Too much entities"}
 
+class ScannedDatFile(object):
+    def __init__(self, path = None, readable = None, status_text = None):
+        self.path = path
+        if self.path and exists(self.path):
+            self.filename = split(path)[1]
+        else:
+            self.filename = None
+        self.readable = readable
+        self.status_text = status_text
+
+    def __str__(self):
+        text = "NBT file:" + str(self.path) + "\n"
+        text += "\tReadable:" + str(self.readable) + "\n"
+        return text
+
 class ScannedChunk(object):
     def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None, region_path = None):
         # TODO: what happens if a chunk has two erros? For example:
@@ -199,8 +214,8 @@ class ScannedRegionFile(object):
 
 class RegionSet(object):
     """Stores an arbitrary number of region files and the scan results.
-    Inits with a list of region files. The regions dict is filled
-    while scanning with ScannedRegionFiles and ScannedChunks."""
+        Inits with a list of region files. The regions dict is filled
+        while scanning with ScannedRegionFiles and ScannedChunks."""
     def __init__(self, regionset_path = None, region_list = []):
         # note: this self.path is not used anywhere for the moment
         if regionset_path:
@@ -332,24 +347,29 @@ class World(object):
         self.dimensions = (self.normal_region_files, self.nether_region_files, self.aether_region_files)
 
         # for level.dat
-        self.level_file = join(self.world_path, "level.dat")
-        if exists(self.level_file):
-            self.level_data = nbt.NBTFile(self.level_file)["Data"]
-            self.name = self.level_data["LevelName"].value
+        # let's scan level.dat here so we can extracta the world name
+        # right now
+        level_dat_path = join(self.world_path, "level.dat")
+        if exists(level_dat_path):
+            try:
+                self.level_data = nbt.NBTFile(level_dat_path)["Data"]
+                self.name = self.level_data["LevelName"].value
+                self.scanned_level = ScannedDatFile(level_dat_path, readable = True, status_text = "OK")
+            except Exception, e:
+                self.name = None
+                self.scanned_level = ScannedDatFile(level_dat_path, readable = False, status_text = e)
         else:
             self.level_file = None
             self.level_data = None
             self.name = None
-        # dictionary used to store all the problems found in level.dat file
-        self.level_problems = []
-        
+            self.scanned_level = ScannedDatFile(None, False, "The file doesn't exist")        
+
         # for player files
-        # not sure yet how to store this properly because I'm not sure
-        # on what to scan about players.
-        # TODO: this needs a good review
-        self.player_files = glob(join(join(self.world_path, "players"), "*.dat"))
-        self.player_with_problems = []
-        self.player_status = {}
+        player_paths = glob(join(join(self.world_path, "players"), "*.dat"))
+        self.players = {}
+        for path in player_paths:
+            name = split(path)[1].split(".")[0]
+            self.players[name] = ScannedDatFile(path)
 
         # does it look like a world folder?
         if self.normal_region_files.regions or self.nether_region_files.regions \
@@ -373,6 +393,24 @@ class World(object):
         """ Returns a text string with a summary of all the problems 
             found."""
         final = ""
+        # dat files info
+        final += "\nlevel.dat:\n"
+        if self.scanned_level.readable:
+            final += "\t-\'level.dat\' is readable\n"
+        else:
+            final += "\t-[WARNING]: \'leve.dat\' isn't readable, error: {0}\n".format(self.scanned_level.status_text)
+        
+        all_ok = True
+        final += "\nPlayer files:\n"
+        for name in self.players:
+            if not self.players[name].readable:
+                all_ok = False
+                final += "\t-[WARNING]: Player file {0} has problems.\n\t\tError: {1}\n\n".format(self.players[name].filename, self.players[name].status_text)
+        if all_ok:
+            final += "All player files are readable.\n\n"
+        
+        # chunk info
+        chunk_info = ""
         for dimension in ["overworld", "nether", "end"]:
             
             if dimension == "overworld":
@@ -387,8 +425,9 @@ class World(object):
 
             # don't add text if there aren't broken chunks
             text = regionset.summary()
-            final += (title + text) if text else ""
-
+            chunk_info += (title + text) if text else ""
+        final += chunk_info if chunk_info else "All the chunks are ok."
+        
         return final
 
     def get_name(self):
