@@ -1,2 +1,7 @@
-include *.txt
-include bigtest.nbt
+include README.txt
+include LICENSE.txt
+include CONTRIBUTORS.txt
+include tests/*.py
+include tests/bigtest.nbt
+include examples/*.py
+include doc/*.rst

@@ -165,7 +165,7 @@ class interactive_loop(Cmd):
                 else:
                     print "Unknown counter."
         else:
-            print "The workload hasn't be scanned. Use \'scan\' to scan it."
+            print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
 
     def do_summary(self, arg):
         """ Prints a summary of all the problems found in the region
@@ -177,7 +177,7 @@ class interactive_loop(Cmd):
                     if text: print text
                     else: print "No problems found!"
                 else:
-                    print "The workload hasn't be scanned. Use \'scan\' to scan it."
+                    print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
             else:
                 print "No world/region-set is set! Use \'set workload\' to set a world/regionset to work with."
         else:
