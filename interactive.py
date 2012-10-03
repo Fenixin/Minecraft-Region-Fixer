@@ -192,6 +192,7 @@ class interactive_loop(Cmd):
             print "This command doesn't use any arguments."
 
     def do_scan(self, arg):
+        # TODO: what about scanning while deleting entities as done in non-interactive mode?
         """ Scans the current workload. """
         if len(arg.split()) > 0:
             print "Error: too many parameters."
@@ -304,7 +305,6 @@ class interactive_loop(Cmd):
         return True
 
     # complete
-    # TODO: needs to return an space after every word!
     def complete_arg(self, text, possible_args):
         l = []
         for arg in possible_args:
@@ -336,9 +336,9 @@ class interactive_loop(Cmd):
 
     # help
     # TODO sería una buena idea poner un artículo de ayuda de como usar el programa en un caso típico.
-    # TODO: maybe is a good idea to put \n after and before all the help texts
+    # TODO: the help texts need a normalize
     def help_set(self):
-        print "Sets some variables used for the scan in interactive mode. If you run this command without variable you can see the current state. You can set:"
+        print "\nSets some variables used for the scan in interactive mode. If you run this command without variable you can see the current state. You can set:"
         print "   verbose" 
         print "If True prints a line per scanned region file instead of showing a progress bar."
         print "\n   entity-limit"
@@ -346,27 +346,27 @@ class interactive_loop(Cmd):
         print "\n   processes"
         print "Number of cores used while scanning the world."
         print "\n   workload"
-        print "If you input a few worlds you can choose wich one will be scanned using this command."
+        print "If you input a few worlds you can choose wich one will be scanned using this command.\n"
     def help_current_workload(self):
-        print "Prints information of the current region-set/world. This will be the region-set/world to scan and fix."
+        print "\nPrints information of the current region-set/world. This will be the region-set/world to scan and fix.\n"
     def help_scan(self):
-        print "Scans the world set or the region set choosen when region-fixer is ran."
+        print "\nScans the world set or the region set choosen when region-fixer is ran.\n"
     def help_count(self):
-        print "   Prints out the number of chunks with that error. For example "
+        print "\n   Prints out the number of chunks with that error. For example "
         print "\'count corrupted\' prints the number of corrupted chunks in the world."
         print 
-        print "Possible counters are: corrupted, wrong, entities or all"
+        print "Possible counters are: corrupted, wrong, entities or all\n"
     def help_remove_entities(self):
-        print "Remove all the entities in chunks that have more than entity-limit entities."
+        print "\nRemove all the entities in chunks that have more than entity-limit entities.\n"
     def help_remove_chunks(self):
-        print "Removes bad chunks with the given problem. Problems are: corrupted, wrong, entities. Please, be careful, when used with the too much entities problem this will remove the chunks with too much entities problems, not the entities.\nUsage: \"remove_chunks c\"\nthis will remove the corrupted chunks"
+        print "\nRemoves bad chunks with the given problem. Problems are: corrupted, wrong, entities. Please, be careful, when used with the too much entities problem this will remove the chunks with too much entities problems, not the entities.\nUsage: \"remove_chunks c\"\nthis will remove the corrupted chunks.\n"
     def help_replace_chunks(self):
-        print "Replaces bad chunks with the given problem, using the backups directories. Problems are: corrupted, wrong, entities or all.\nUsage: \"replace_chunks corrupted\"\nthis will replace the corrupted chunks with the given backups.\n\nNote: after replacing any chunks you have to scan the world."
+        print "\nReplaces bad chunks with the given problem, using the backups directories. Problems are: corrupted, wrong, entities or all.\nUsage: \"replace_chunks corrupted\"\nthis will replace the corrupted chunks with the given backups.\n\nNote: after replacing any chunks you have to scan the world.\n"
     def help_summary(self):
-        print "Prints a summary of all the problems found in region files."
+        print "\nPrints a summary of all the problems found in region files.\n"
     def help_quit(self):
-        print "Quits interactive mode, exits region-fixer."
+        print "\nQuits interactive mode, exits region-fixer.\n"
     def help_EOF(self):
-        print "Quits interactive mode, exits region-fixer."
+        print "\nQuits interactive mode, exits region-fixer.\n"
     def help_help(self):
         print "Prints help help."

@@ -162,7 +162,6 @@ def scan_region_file(to_scan_region_file):
                     if c.status == world.CHUNK_OK:
                         continue
                     elif c.status == world.CHUNK_TOO_MUCH_ENTITIES:
-                        # TODO: this needs a big update and a BIG test
                         # deleting entities is in here because parsing a chunk with thousands of wrong entities
                         # takes a long time, and once detected is better to fix it at once.
                         if delete_entities:
