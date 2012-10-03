@@ -220,7 +220,7 @@ class interactive_loop(Cmd):
                     print "Ok!"
                 else: print "Invalid answer, use \'yes\' or \'no\' the next time!."
         else:
-            print "The world hasn't be scanned. Use \'scan\' to scan it."
+            print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
             
             
     def do_remove_chunks(self, arg):
@@ -252,7 +252,7 @@ class interactive_loop(Cmd):
                 else:
                     print "Unknown argumen."
         else:
-            print "The world hasn't be scanned. Use \'scan\' to scan it."
+            print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
 
     def do_replace_chunks(self, arg):
         if self.current and self.current.scanned:
@@ -262,18 +262,21 @@ class interactive_loop(Cmd):
                 if arg == "corrupted":
                     if self.current.count_chunks(world.CHUNK_CORRUPTED):
                         counter = self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_CORRUPTED, self.options)
+                        if counter != 0: self.current.scanned = False
                         print "Done! Replaced {0} chunks".format(counter)
                     else:
                         print "No corrupted chunks to replace!"
                 elif arg == "wrong":
                     if self.current.count_chunks(world.CHUNK_WRONG_LOCATED):
                         counter = self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_WRONG_LOCATED, self.options, )
+                        if counter != 0: self.current.scanned = False
                         print "Done! Replaced {0} chunks".format(counter)
                     else:
                         print "No wrong located chunks to replace!"
                 elif arg == "entities":
                     if self.current.count_chunks(world.CHUNK_WRONG_LOCATED):
                         counter = self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_TOO_MUCH_ENTITIES, self.options)
+                        if counter != 0: self.current.scanned = False
                         print "Done! Replaced {0} chunks".format(counter)
                     else:
                         print "No chunks with too much entities problems to replace!"
@@ -281,11 +284,12 @@ class interactive_loop(Cmd):
                     counter = self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_CORRUPTED, self.options)
                     counter += self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_WRONG_LOCATED, self.options)
                     counter += self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_TOO_MUCH_ENTITIES, self.options)
+                    if counter != 0: self.current.scanned = False
                     print "Done! Replaced {0} chunks".format(counter)
                 else:
                     print "Unknown argumen."
         else:
-            print "The world hasn't be scanned. Use \'scan\' to scan it."
+            print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
             
     def do_quit(self, arg):
         print "Quitting."
@@ -300,6 +304,7 @@ class interactive_loop(Cmd):
         return True
 
     # complete
+    # TODO: needs to return an space after every word!
     def complete_arg(self, text, possible_args):
         l = []
         for arg in possible_args:
@@ -331,6 +336,7 @@ class interactive_loop(Cmd):
 
     # help
     # TODO sería una buena idea poner un artículo de ayuda de como usar el programa en un caso típico.
+    # TODO: maybe is a good idea to put \n after and before all the help texts
     def help_set(self):
         print "Sets some variables used for the scan in interactive mode. If you run this command without variable you can see the current state. You can set:"
         print "   verbose" 
@@ -355,7 +361,7 @@ class interactive_loop(Cmd):
     def help_remove_chunks(self):
         print "Removes bad chunks with the given problem. Problems are: corrupted, wrong, entities. Please, be careful, when used with the too much entities problem this will remove the chunks with too much entities problems, not the entities.\nUsage: \"remove_chunks c\"\nthis will remove the corrupted chunks"
     def help_replace_chunks(self):
-        print "Replaces bad chunks with the given problem, using the backups directories. Problems are: corrupted, wrong, entities or all.\nUsage: \"replace_chunks corrupted\"\nthis will replace the corrupted chunks with the given backups"
+        print "Replaces bad chunks with the given problem, using the backups directories. Problems are: corrupted, wrong, entities or all.\nUsage: \"replace_chunks corrupted\"\nthis will replace the corrupted chunks with the given backups.\n\nNote: after replacing any chunks you have to scan the world."
     def help_summary(self):
         print "Prints a summary of all the problems found in region files."
     def help_quit(self):

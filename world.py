@@ -452,14 +452,6 @@ class World(object):
             objects in left to riht order. """
 
         counter = 0
-        # this list is used to remove chunks from the problems
-        # dict once the iteration over it has finished, doing it at the 
-        # same time is not a good idea
-        # TODO: this is no longer needed, is it?
-        fixed_chunks = []
-        
-        # TODO test this carefully
-
         for dimension in ["overworld", "nether", "end"]:
             for backup in backup_worlds:
                 # choose the correct regionset
@@ -474,46 +466,32 @@ class World(object):
                     b_regionset = backup.aether_region_files
                 
                 bad_chunks = regionset.list_chunks(problem)
-                for global_coords in bad_chunks:
+                for c in bad_chunks:
+                    global_coords = c.g_coords
                     print "\n{0:-^60}".format(' New chunk to replace! Coords {0} '.format(global_coords))
 
                     # search for the region file
                     backup_region_path, local_coords = b_regionset.locate_chunk(global_coords)
                     tofix_region_path, _ = regionset.locate_chunk(global_coords)
                     if exists(backup_region_path):
-                        print "Backup region file found in: {0}".format(backup_region_path)
+                        print "Backup region file found in:\n  {0}".format(backup_region_path)
 
                         # get the chunk
                         from scan import scan_chunk
-                        backup_region_file = region.RegionFile(backup_region_path)
-                        working_chunk, region_file, coords, data_coords, global_coords, num_entities, status, status_text, scan_time = \
+                        backup_region_file = region.RegionFile(backup_region_path)                        
+                        working_chunk, region_file, _,_,_,_, status, status_text, _,_ = \
                             scan_chunk(backup_region_file, local_coords, options)
-                        
-                        print working_chunk, region_file, coords, data_coords, global_coords, num_entities, status, status_text, scan_time
 
                         if status == CHUNK_OK:
                             print "Replacing..."
-                            # the chunk exists and is non-corrupted, fix it!
+                            # the chunk exists and is healthy, fix it!
                             tofix_region_file = region.RegionFile(tofix_region_path)
                             tofix_region_file.write_chunk(local_coords[0], local_coords[1],working_chunk)
                             counter += 1
-                            fixed_chunks.append((tofix_region_path, local_coords, status))
                             print "Chunk replaced using backup dir: {0}".format(backup.world_path)
 
-                        elif status == CHUNK_NOT_CREATED:
-                            print "The chunk doesn't exists in this backup directory: {0}".format(backup.world_path)
-                            continue
-
-                        elif status == CHUNK_CORRUPTED:
-                            print "The chunk is corrupted in this backup directory: {0}".format(backup.world_path)
-                            continue
-
-                        elif status == CHUNK_WRONG_LOCATED:
-                            print "The chunk is wrong located in this backup directory: {0}".format(backup.world_path)
-                            continue
-                        
-                        elif status == CHUNK_TOO_MUCH_ENTITIES:
-                            print "The chunk in this backup directory has too many entities ({1} entities): {0}".format(backup.world_path, num_entities)
+                        else:
+                            print "Can't use this backup directory, the chunk has the status: {0}".format(STATUS_TEXT[status])
                             continue
 
                     else:
@@ -555,7 +533,6 @@ def delete_entities(region_file, x, z):
     region_file.write_chunk(x, z, chunk)
     
     return counter
-
 
 
 def get_global_chunk_coords(region_filename, chunkX, chunkZ):
