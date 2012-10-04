@@ -30,7 +30,6 @@ import world
 from scan import scan_regionset, scan_world
 from interactive import interactive_loop
 
-# HUGE TODO: we have to update the NBT lib
 
 def parse_paths(args):
     # parese the list of region files and worlds paths
@@ -119,7 +118,7 @@ def parse_chunk_list(chunk_list, world_obj):
 
 def main():
     
-    usage = 'usage: %prog [options] <world-path> <region-files>'
+    usage = 'usage: %prog [options] <world-path> <other-world-path> ... <region-files> ...'
     epilog = 'Copyright (C) 2011  Alejandro Aguilera (Fenixin) \
     https://github.com/Fenixin/Minecraft-Region-Fixer                                        \
     This program comes with ABSOLUTELY NO WARRANTY; for details see COPYING.txt. This is free software, and you are welcome to redistribute it under certain conditions; see COPYING.txt for details.'
@@ -129,27 +128,38 @@ def main():
                                             Sponsored by: NITRADO Servers (http://nitrado.net)',\
     prog = 'region-fixer', version='0.0.9', usage=usage, epilog=epilog)
 
-    parser.add_option('--backups', '-b', metavar = '<backups>', type = str, dest = 'backups', help = 'List of backup directories of the Minecraft \
-                                        world to use to fix corrupted chunks and/or wrong located chunks. Warning! This script is not going \
-                                        to check if it \'s the same world, so be careful! \
-                                        This argument can be a comma separated list (but never with spaces between elements!).', default = None)
-    parser.add_option('--replace-corrupted','--rc', dest = 'replace_corrupted', action='store_true', \
-                                            help = 'Tries to replace the corrupted chunks using the backups directories', default = False)
-    parser.add_option('--replace-wrong-located','--rw', dest = 'replace_wrong_located', action='store_true', \
-                                            help = 'Tries to replace the wrong located chunks using the backups directories', default = False)
-    parser.add_option('--delete-corrupted', '--dc', action = 'store_true', help = '[WARNING!] This option deletes! And deleting can make you lose data, so be careful! :P \
-                                            This option will delete all the corrupted chunks. Used with --replace-corrupted or --replace-wrong-located it will delete all the non-replaced chunks.', default = False)
-    parser.add_option('--delete-wrong-located', '--dw', action = 'store_true', help = '[WARNING!] This option deletes! The same as --delete-corrupted but for \
-                                            wrong located chunks', default = False)
-    parser.add_option('--delete-entities', '--de', action = 'store_true', help = '[WARNING!] This option deletes! This deletes ALL the entities of chunks with more entities than --entity-limit (500 by default). In a Minecraft world entities are mobs and items dropped in the grond, items in chests and other stuff won\'t be touched. Read the README for more info. Region-Fixer will delete the entities when scanning so you can stop and resume the process', default = False, dest = 'delete_entities')
-    parser.add_option('--entity-limit', '--el', action = 'store', type = int, help = 'Specify the limit for the --delete-entities option (default = 500).', dest = 'entity_limit', default = 500,)
-    parser.add_option('--processes', '-p', action = 'store', type = int, help = 'Set the number of workers to use for scanning region files. Default is to not use multiprocessing at all', default = 1)
-    parser.add_option('--verbose', '-v',action='store_true', default = False, help='Don\'t use progress bar, print a line per scanned region file. The letters mean c: corrupted, w: wrong located, t: total of chunks')
-    parser.add_option('--interactive', '-i',action='store_true',help='Scans the world and then enter in interactive mode, where you can write commands an do things',dest = 'interactive',default = False)
-    parser.add_option('--summary', '-s',action='store_true',help='Prints a summary with all the found problems in region files.', default = False)
-    # TODO TODO TOOD
-    # la ayuda de las opciones necesita una buena actualización. Hay que decir que backups y replace no pueden usarse junto con varios mundos o con un 
-    # regionset.
+    parser.add_option('--backups', '-b', help = 'List of backup directories of the Minecraft world to use to fix corrupted chunks and/or wrong located chunks. Warning! Region-Fixer is not going to check if it\'s the same world, be careful! This argument can be a comma separated list (but never with spaces between elements!). This option can be only used scanning one world.',\
+        metavar = '<backups>', type = str, dest = 'backups', default = None)
+
+    parser.add_option('--replace-corrupted','--rc', help = 'Tries to replace the corrupted chunks using the backup directories. This option can be only used scanning one world.',\
+        default = False, dest = 'replace_corrupted', action='store_true')
+
+    parser.add_option('--replace-wrong-located','--rw', help = 'Tries to replace the wrong located chunks using the backup directories. This option can be only used scanning one world.',\
+        default = False, dest = 'replace_wrong_located', action='store_true')
+
+    parser.add_option('--delete-corrupted', '--dc', help = '[WARNING!] This option deletes! This option will delete all the corrupted chunks. Used with --replace-corrupted or --replace-wrong-located it will delete all the non-replaced chunks.',\
+        action = 'store_true', default = False)
+
+    parser.add_option('--delete-wrong-located', '--dw', help = '[WARNING!] This option deletes! The same as --delete-corrupted but for wrong located chunks',\
+        action = 'store_true', default = False)
+
+    parser.add_option('--delete-entities', '--de', help = '[WARNING!] This option deletes! This option deletes ALL the entities in chunks with more entities than --entity-limit (300 by default). In a Minecraft entities are mostly mobs and items dropped in the grond, items in chests and other stuff won\'t be touched. Read the README for more info. Region-Fixer will delete the entities while scanning so you can stop and resume the process',\
+        action = 'store_true', default = False, dest = 'delete_entities')
+
+    parser.add_option('--entity-limit', '--el', help = 'Specify the limit for the --delete-entities option (default = 300).',\
+        dest = 'entity_limit', default = 300, action = 'store', type = int)
+
+    parser.add_option('--processes', '-p',  help = 'Set the number of workers to use for scanning. (defaulta = 1, not use multiprocessing at all)',\
+        action = 'store', type = int, default = 1)
+
+    parser.add_option('--verbose', '-v', help='Don\'t use a progress bar, instead print a line per scanned region file with results information. The letters mean c: corrupted; w: wrong located; t: total of chunksm; tme: too many entities problem',\
+        action='store_true', default = False)
+
+    parser.add_option('--interactive', '-i',help='Enter in interactive mode, where you can scan, see the problems, and fix them in a terminal like mode',\
+        dest = 'interactive',default = False, action='store_true',)
+
+    parser.add_option('--summary', '-s',help='Prints a summary with all the found problems in region files.',\
+        action='store_true', default = False)
 
     (options, args) = parser.parse_args()
 
@@ -280,12 +290,7 @@ def main():
                     print "Deleted {0} wrong located chunks".format(counter)
                 else:
                     print "No wrong located chunks to delete!"
-
-        # TODO: This is broken!
-        if options.summary:
-            print "\n{0:#^60}".format(' Summary of found problems ')
-            text = summary(world_list[0], [world_list[0].CORRUPTED, world_list[0].WRONG_LOCATED, world_list[0].TOO_MUCH_ENTITIES])
-            print text
+        # TODO: add option summary
 
 
 if __name__ == '__main__':
