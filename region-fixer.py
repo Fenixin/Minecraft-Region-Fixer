@@ -158,7 +158,7 @@ def main():
     parser.add_option('--interactive', '-i',help='Enter in interactive mode, where you can scan, see the problems, and fix them in a terminal like mode',\
         dest = 'interactive',default = False, action='store_true',)
 
-    parser.add_option('--summary', '-s',help='Prints a summary with all the found problems in region files.',\
+    parser.add_option('--summary', '-s',help='Prints a summary for each world or regionset scanned with all the problems found.',\
         action='store_true', default = False)
 
     (options, args) = parser.parse_args()
@@ -176,13 +176,14 @@ def main():
     # Check basic options incompatibilities
     # TODO: with interactive mode this needs a good revision
     if options.interactive and (options.replace_corrupted or options.replace_wrong_located or options.delete_corrupted or options.delete_wrong_located or options.summary):
-        parser.error("Can't use the options --replace-* , --delete-* and --summary with interactive mode.")
+        parser.error("Can't use the options --replace-* , --delete-* and --summary with --interactive.")
     
     else:
         if options.backups:
+            # TODO: check if there are backups in there
             if not (options.replace_corrupted or options.replace_wrong_located):
-                #~ parser.error("The option --backups needs one of the --replace-* options")
-                pass
+                parser.error("The option --backups needs one of the --replace-* options")
+                #~ pass
             else:
                 if (len(region_list.regions) > 0):
                     parser.error("The input should be only one world and you intruduced {0} individual region files.".format(len(region_list.regions)))
@@ -206,14 +207,12 @@ def main():
         backup_worlds = []
 
     # The program starts
-    # Go to interactive mode?
     if options.interactive:
-        # TODO make interactive mode incompatible with noraml mode
-        ########################################################
         #~ import readline # interactive prompt with history 
-        # TODO WARNING NEEDS CHANGES FOR WINDOWS
+        # TODO: WARNING, NEEDS CHANGES FOR WINDOWS
         c = interactive_loop(world_list, region_list, options, backup_worlds)
         c.cmdloop()
+
 
     else:
         if len(region_list.regions) > 0:
@@ -227,10 +226,11 @@ def main():
             wrong_located = region_list.count_chunks(world.CHUNK_WRONG_LOCATED)
             entities_prob = region_list.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
             total = region_list.count_chunks()
+            # TODO: this needs a delete_corrupted and delte_wrong_located
 
             print "\nFound {0} corrupted, {1} wrong located chunks and {2} chunks with too much entities of a total of {3}\n".format(
                 corrupted, wrong_located, entities_prob, total)
-            
+
         for world_obj in world_list:
             print "\n"
             print "{0:#^60}".format('')
@@ -264,20 +264,17 @@ def main():
                 else: print "No wrong located chuns to replace!"
 
             # delete bad chunks!
-            # TODO this only works in the last world scanned!
-            
             if options.delete_corrupted:
-                if len(region_list.regions) > 0:
-                    if corrupted:
-                        print "{0:#^60}".format(' Deleting  corrupted chunks ')
+                if corrupted:
+                    print "{0:#^60}".format(' Deleting  corrupted chunks ')
 
-                        print "... ",
-                        counter = world_obj.remove_problematic_chunks(world.CORRUPTED)
-                        print "Done!"
-                        
-                        print "Deleted {0} corrupted chunks".format(counter)
-                    else:
-                        print "No corrupted chunks to delete!"
+                    print "... ",
+                    counter = world_obj.remove_problematic_chunks(world.CHUNK_CORRUPTED)
+                    print "Done!"
+                    
+                    print "Deleted {0} corrupted chunks".format(counter)
+                else:
+                    print "No corrupted chunks to delete!"
             
             if options.delete_wrong_located:
                 if wrong_located:
@@ -290,7 +287,11 @@ def main():
                     print "Deleted {0} wrong located chunks".format(counter)
                 else:
                     print "No wrong located chunks to delete!"
-        # TODO: add option summary
+            
+            # print a summary for this world
+            if options.summary:
+                # TODO: Add an option to save the log to a file?
+                print world_obj.summary()
 
 
 if __name__ == '__main__':

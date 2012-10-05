@@ -373,7 +373,7 @@ class World(object):
 
         # does it look like a world folder?
         if self.normal_region_files.regions or self.nether_region_files.regions \
-        or self.aether_region_files.regions or self.level_file or self.player_files:
+        or self.aether_region_files.regions or self.level_file or self.players:
             self.isworld = True
         else:
             self.isworld = False
