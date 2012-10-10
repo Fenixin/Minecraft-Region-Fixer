@@ -51,37 +51,37 @@ class ScannedDatFile(object):
         text += "\tReadable:" + str(self.readable) + "\n"
         return text
 
-class ScannedChunk(object):
-    def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None, region_path = None):
-        # TODO: what happens if a chunk has two erros? For example:
-        #   too-much-entities and wrong-located.
-        self.h_coords = header_coords
-        self.g_coords = global_coords
-        self.d_coords = data_coords
-        self.status = status
-        self.status_text = None
-        self.num_entities = num_entities
-        self.scan_time = scan_time
-        self.region_path = region_path
-
-    def __str__(self):
-        text = "Chunk with header coordinates:" + str(self.h_coords) + "\n"
-        text += "\tData coordinates:" + str(self.d_coords) + "\n"
-        text +="\tGlobal coordinates:" + str(self.g_coords) + "\n"
-        text += "\tStatus:" + str(self.status_text) + "\n"
-        text += "\tNumber of entities:" + str(self.num_entities) + "\n"
-        text += "\tScan time:" + time.ctime(self.scan_time) + "\n"
-        return text
-
-    def rescan_entities(self, options):
-        """ Updates the status of the chunk when the the option
-            entity limit is changed. """
-        if self.num_entities >= options.entity_limit:
-            self.status = CHUNK_TOO_MUCH_ENTITIES
-            self.status_text = STATUS_TEXT[CHUNK_TOO_MUCH_ENTITIES]
-        else:
-            self.status = CHUNK_OK
-            self.status_text = STATUS_TEXT[CHUNK_OK]
+#~ class ScannedChunk(object):
+    #~ def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None, region_path = None):
+        #~ # TODO: what happens if a chunk has two erros? For example:
+        #~ #   too-much-entities and wrong-located.
+        #~ self.h_coords = header_coords
+        #~ self.g_coords = global_coords
+        #~ self.d_coords = data_coords
+        #~ self.status = status
+        #~ self.status_text = None
+        #~ self.num_entities = num_entities
+        #~ self.scan_time = scan_time
+        #~ self.region_path = region_path
+#~ 
+    #~ def __str__(self):
+        #~ text = "Chunk with header coordinates:" + str(self.h_coords) + "\n"
+        #~ text += "\tData coordinates:" + str(self.d_coords) + "\n"
+        #~ text +="\tGlobal coordinates:" + str(self.g_coords) + "\n"
+        #~ text += "\tStatus:" + str(self.status_text) + "\n"
+        #~ text += "\tNumber of entities:" + str(self.num_entities) + "\n"
+        #~ text += "\tScan time:" + time.ctime(self.scan_time) + "\n"
+        #~ return text
+#~ 
+    #~ def rescan_entities(self, options):
+        #~ """ Updates the status of the chunk when the the option
+            #~ entity limit is changed. """
+        #~ if self.num_entities >= options.entity_limit:
+            #~ self.status = CHUNK_TOO_MUCH_ENTITIES
+            #~ self.status_text = STATUS_TEXT[CHUNK_TOO_MUCH_ENTITIES]
+        #~ else:
+            #~ self.status = CHUNK_OK
+            #~ self.status_text = STATUS_TEXT[CHUNK_OK]
 
 class ScannedRegionFile(object):
     """ Stores all the info for a scanned region file """
@@ -129,7 +129,7 @@ class ScannedRegionFile(object):
             an integer with the counter. """
         counter = 0
         for chunk in self.keys():
-            if self[chunk].status == problem or problem == None:
+            if self[chunk][5] == problem or problem == None:
                 counter += 1
         return counter
 
@@ -150,15 +150,15 @@ class ScannedRegionFile(object):
             data coords and status of every problematic chunk. """
         text = ""
         for c in self.keys():
-            if self[c].status == CHUNK_OK or self[c].status == CHUNK_NOT_CREATED: continue
-            status = self[c].status
-            g_coords = self[c].g_coords
-            h_coords = self[c].h_coords
-            d_coords = self[c].d_coords
+            if self[c][5] == CHUNK_OK or self[c][5] == CHUNK_NOT_CREATED: continue
+            status = self[c][5]
+            g_coords = self[c][3]
+            h_coords = self[c][1]
+            d_coords = self[c][2]
             text += " |-+-Chunk coords: {0}, global {1}, data {2}.\n".format(h_coords,g_coords,d_coords if d_coords != None else "N/A")
-            text += " | +-Status: {0}\n".format(STATUS_TEXT[self[c].status])
+            text += " | +-Status: {0}\n".format(STATUS_TEXT[status])
             text += " | +-Error:\n"
-            text += " |   -{0}\n".format(self[c].status_text)
+            text += " |   -{0}\n".format(self[c][6])
             text += " |\n"
         
         return text

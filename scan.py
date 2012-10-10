@@ -155,19 +155,22 @@ def scan_region_file(to_scan_region_file):
         try:
             for x in range(32):
                 for z in range(32):
-                    c = world.ScannedChunk((x,z))
+                    #~ c = world.ScannedChunk((x,z))
+                    #~ r.chunks[(x,z)] = c
+                    
+                    chunk, c = scan_chunk(region_file, (x,z), o)
                     r.chunks[(x,z)] = c
-                    chunk = scan_and_fill_chunk(region_file, c, o)
-                    if c.status != world.CHUNK_NOT_CREATED: chunk_count += 1
-                    if c.status == world.CHUNK_OK:
+                    if c[5] != world.CHUNK_NOT_CREATED: chunk_count += 1
+                    if c[5] == world.CHUNK_OK:
                         continue
-                    elif c.status == world.CHUNK_TOO_MUCH_ENTITIES:
+                    elif c[5] == world.CHUNK_TOO_MUCH_ENTITIES:
                         # deleting entities is in here because parsing a chunk with thousands of wrong entities
                         # takes a long time, and once detected is better to fix it at once.
                         if delete_entities:
                             world.delete_entities(region_file, x, z)
                             print "Deleted {0} entities in chunk ({1},{2}) of the region file: {3}".format(c.num_entities, x, z, r.filename)
                             c.num_entities = 0
+                            r.chunks[(x,z)] = (c[0], c[1], c[3], c[4],0, c[6], c[7], c[8], c[9])
 
                         else:
                             entities_prob += 1
@@ -178,9 +181,9 @@ def scan_region_file(to_scan_region_file):
                             #~ archivo = open(name,'w')
                             #~ archivo.write(pretty_tree)
 
-                    elif c.status == world.CHUNK_CORRUPTED:
+                    elif c[5] == world.CHUNK_CORRUPTED:
                         corrupted += 1
-                    elif c.status == world.CHUNK_WRONG_LOCATED:
+                    elif c[5] == world.CHUNK_WRONG_LOCATED:
                         wrong += 1
 
         except KeyboardInterrupt:
@@ -269,8 +272,8 @@ def scan_chunk(region_file, coords, options):
         global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
         num_entities = None
     
-    return chunk, region_file, coords, data_coords, global_coords,\
-            num_entities, status, status_text, scan_time, region_file.filename
+    return chunk, (region_file, coords, data_coords, global_coords,\
+            num_entities, status, status_text, scan_time, region_file.filename)
     
 def scan_and_fill_chunk(region_file, scanned_chunk_obj, options):
     """ Takes a RegionFile obj and a ScannedChunk obj as inputs, 
