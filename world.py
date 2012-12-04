@@ -228,20 +228,33 @@ class ScannedRegionFile(object):
         """ Updates the status of all the chunks in the region file when
             the the option entity limit is changed. """
         for c in self.keys():
-            # for security reasons use a temporary list to generate the
+            # for safety reasons use a temporary list to generate the
             # new tuple
             t = [0,0]
-            if self[c][TUPLE_NUM_ENTITIES] >= options.entity_limit:
-                t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
-                t[TUPLE_STATUS] = CHUNK_TOO_MANY_ENTITIES
+            if self[c][TUPLE_STATUS] in (CHUNK_TOO_MANY_ENTITIES, CHUNK_OK):
+                # only touch the ok chunks and the too many entities chunk
+                if self[c][TUPLE_NUM_ENTITIES] >= options.entity_limit:
+                    # now it's a too many entities problem
+                    t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
+                    t[TUPLE_STATUS] = CHUNK_TOO_MANY_ENTITIES
                 
-            else:
-                # TODO: warning! if a chunk has two problems, in here we
-                # rewrite the other problem
-                t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
-                t[TUPLE_STATUS] = CHUNK_OK
+                elif self[c][TUPLE_NUM_ENTITIES] < options.entity_limit and self[c][TUPLE_STATUS] != None:
+                    # the new limit says it's a normal chunk
+                    t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
+                    t[TUPLE_STATUS] = CHUNK_OK
+                    
+                self[c] = tuple(t)
+            # else, do nothing, maybe there's other problem
             
-            self[c] = tuple(t)
+            #~ else:
+                #~ # the chunk is corrupted or orther status
+                #~ 
+                #~ # TODO: warning! if a chunk has two problems, in here we
+                #~ # rewrite the other problem
+                #~ t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
+                #~ t[TUPLE_STATUS] = self[c][TUPLE_STATUS]
+            #~ 
+            
 
 class RegionSet(object):
     """Stores an arbitrary number of region files and the scan results.
