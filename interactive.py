@@ -160,8 +160,8 @@ class interactive_loop(Cmd):
                         n = self.current.count_chunks(world.CHUNK_WRONG_LOCATED)
                         print "Wrong located: {0} (total = {1})".format(n,total)
                     if arg in ('entities', 'all'):
-                        n = self.current.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
-                        print "Too much entities: {0}  (entity limit = {1}, total = {2})".format(n, self.options.entity_limit, total)
+                        n = self.current.count_chunks(world.CHUNK_TOO_MANY_ENTITIES)
+                        print "Too many entities: {0}  (entity limit = {1}, total = {2})".format(n, self.options.entity_limit, total)
                 else:
                     print "Unknown counter."
         else:
@@ -239,7 +239,7 @@ class interactive_loop(Cmd):
                     print "WARNING: This will delete all the CHUNKS that have more entities than entity-limit, make sure you know what this means!.\nNote: you need to rescan your world if you change entity-limit.\nAre you sure you want to continue? (yes/no):"
                     answer = raw_input()
                     if answer == 'yes':
-                        counter = self.current.remove_problematic_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
+                        counter = self.current.remove_problematic_chunks(world.CHUNK_TOO_MANY_ENTITIES)
                         print "Done! Removed {0} chunks".format(counter)
                     elif answer == 'no':
                         print "Ok!"
@@ -248,7 +248,7 @@ class interactive_loop(Cmd):
                 elif arg == "all":
                     counter = self.current.remove_problematic_chunks(world.CHUNK_CORRUPTED)
                     counter += self.current.remove_problematic_chunks(world.CHUNK_WRONG_LOCATED)
-                    counter += self.current.remove_problematic_chunks(world.CHUNK_TOO_MUCH_ENTITIES)
+                    counter += self.current.remove_problematic_chunks(world.CHUNK_TOO_MANY_ENTITIES)
                     print "Done! Removed {0} chunks".format(counter)
                 else:
                     print "Unknown argumen."
@@ -275,16 +275,16 @@ class interactive_loop(Cmd):
                     else:
                         print "No wrong located chunks to replace!"
                 elif arg == "entities":
-                    if self.current.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES):
-                        counter = self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_TOO_MUCH_ENTITIES, self.options)
+                    if self.current.count_chunks(world.CHUNK_TOO_MANY_ENTITIES):
+                        counter = self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_TOO_MANY_ENTITIES, self.options)
                         if counter != 0: self.current.scanned = False
                         print "Done! Replaced {0} chunks".format(counter)
                     else:
-                        print "No chunks with too much entities problems to replace!"
+                        print "No chunks with too many entities problems to replace!"
                 elif arg == "all":
                     counter = self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_CORRUPTED, self.options)
                     counter += self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_WRONG_LOCATED, self.options)
-                    counter += self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_TOO_MUCH_ENTITIES, self.options)
+                    counter += self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_TOO_MANY_ENTITIES, self.options)
                     if counter != 0: self.current.scanned = False
                     print "Done! Replaced {0} chunks".format(counter)
                 else:
@@ -309,7 +309,7 @@ class interactive_loop(Cmd):
         l = []
         for arg in possible_args:
             if text in arg and arg.find(text) == 0:
-                l.append(arg)
+                l.append(arg + " ")
         return l
 
     def complete_set(self, text, line, begidx, endidx):
@@ -359,7 +359,7 @@ class interactive_loop(Cmd):
     def help_remove_entities(self):
         print "\nRemove all the entities in chunks that have more than entity-limit entities.\n"
     def help_remove_chunks(self):
-        print "\nRemoves bad chunks with the given problem. Problems are: corrupted, wrong, entities. Please, be careful, when used with the too much entities problem this will remove the chunks with too much entities problems, not the entities.\nUsage: \"remove_chunks c\"\nthis will remove the corrupted chunks.\n"
+        print "\nRemoves bad chunks with the given problem. Problems are: corrupted, wrong, entities. Please, be careful, when used with the too many entities problem this will remove the chunks with too many entities problems, not the entities.\nUsage: \"remove_chunks c\"\nthis will remove the corrupted chunks.\n"
     def help_replace_chunks(self):
         print "\nReplaces bad chunks with the given problem, using the backups directories. Problems are: corrupted, wrong, entities or all.\nUsage: \"replace_chunks corrupted\"\nthis will replace the corrupted chunks with the given backups.\n\nNote: after replacing any chunks you have to rescan the world.\n"
     def help_summary(self):

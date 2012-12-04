@@ -165,7 +165,7 @@ def scan_region_file(to_scan_region_file):
                     else: continue
                     if c[TUPLE_STATUS] == world.CHUNK_OK:
                         continue
-                    elif c[TUPLE_STATUS] == world.CHUNK_TOO_MUCH_ENTITIES:
+                    elif c[TUPLE_STATUS] == world.CHUNK_TOO_MANY_ENTITIES:
                         # deleting entities is in here because parsing a chunk with thousands of wrong entities
                         # takes a long time, and once detected is better to fix it at once.
                         if delete_entities:
@@ -230,8 +230,8 @@ def scan_chunk(region_file, coords, options):
                 status_text = "Mismatched coordinates (wrong located chunk)."
                 scan_time = time.time()
             elif num_entities > options.entity_limit:
-                status = world.CHUNK_TOO_MUCH_ENTITIES
-                status_text = "The chunks has too much entities (it has {0}, and it's more than the limit {1})".format(num_entities, options.entity_limit)
+                status = world.CHUNK_TOO_MANY_ENTITIES
+                status_text = "The chunks has too many entities (it has {0}, and it's more than the limit {1})".format(num_entities, options.entity_limit)
                 scan_time = time.time()
             else:
                 status = world.CHUNK_OK

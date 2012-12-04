@@ -33,8 +33,8 @@ CHUNK_NOT_CREATED = -1
 CHUNK_OK = 0
 CHUNK_CORRUPTED = 1
 CHUNK_WRONG_LOCATED = 2
-CHUNK_TOO_MUCH_ENTITIES = 3
-STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created", CHUNK_OK:"OK", CHUNK_CORRUPTED:"Corrupted", CHUNK_WRONG_LOCATED:"Wrong located", CHUNK_TOO_MUCH_ENTITIES:"Too much entities"}
+CHUNK_TOO_MANY_ENTITIES = 3
+STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created", CHUNK_OK:"OK", CHUNK_CORRUPTED:"Corrupted", CHUNK_WRONG_LOCATED:"Wrong located", CHUNK_TOO_MANY_ENTITIES:"Too many entities"}
 
 #~ TUPLE_COORDS = 0
 #~ TUPLE_DATA_COORDS = 0
@@ -84,8 +84,8 @@ class ScannedDatFile(object):
         #~ """ Updates the status of the chunk when the the option
             #~ entity limit is changed. """
         #~ if self.num_entities >= options.entity_limit:
-            #~ self.status = CHUNK_TOO_MUCH_ENTITIES
-            #~ self.status_text = STATUS_TEXT[CHUNK_TOO_MUCH_ENTITIES]
+            #~ self.status = CHUNK_TOO_MANY_ENTITIES
+            #~ self.status_text = STATUS_TEXT[CHUNK_TOO_MANY_ENTITIES]
         #~ else:
             #~ self.status = CHUNK_OK
             #~ self.status_text = STATUS_TEXT[CHUNK_OK]
@@ -195,9 +195,9 @@ class ScannedRegionFile(object):
     
     def remove_entities(self):
         """ Removes all the entities in chunks with the problematic
-            status CHUNK_TOO_MUCH_ENTITIES that are in this region file.
+            status CHUNK_TOO_MANY_ENTITIES that are in this region file.
             Returns a counter of all the removed entities. """
-        problem = CHUNK_TOO_MUCH_ENTITIES
+        problem = CHUNK_TOO_MANY_ENTITIES
         counter = 0
         bad_chunks = self.list_chunks(problem)
         for c in bad_chunks:
@@ -233,7 +233,7 @@ class ScannedRegionFile(object):
             t = [0,0]
             if self[c][TUPLE_NUM_ENTITIES] >= options.entity_limit:
                 t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
-                t[TUPLE_STATUS] = CHUNK_TOO_MUCH_ENTITIES
+                t[TUPLE_STATUS] = CHUNK_TOO_MANY_ENTITIES
                 
             else:
                 # TODO: warning! if a chunk has two problems, in here we
@@ -319,7 +319,7 @@ class RegionSet(object):
             and status. """
         text = ""
         for r in self.keys():
-            if not (self[r].count_chunks(CHUNK_CORRUPTED) or self[r].count_chunks(CHUNK_TOO_MUCH_ENTITIES) or self[r].count_chunks(CHUNK_WRONG_LOCATED)):
+            if not (self[r].count_chunks(CHUNK_CORRUPTED) or self[r].count_chunks(CHUNK_TOO_MANY_ENTITIES) or self[r].count_chunks(CHUNK_WRONG_LOCATED)):
                 continue
             text += "Region file: {0}\n".format(self[r].filename)
             text += self[r].summary()
