@@ -159,18 +159,21 @@ def scan_region_file(to_scan_region_file):
                     #~ r.chunks[(x,z)] = c
                     
                     chunk, c = scan_chunk(region_file, (x,z), o)
-                    r.chunks[(x,z)] = c
-                    if c[5] != world.CHUNK_NOT_CREATED: chunk_count += 1
-                    if c[5] == world.CHUNK_OK:
+                    if c != None:
+                        r.chunks[(x,z)] = c
+                        chunk_count += 1
+                    else: continue
+                    if c[TUPLE_STATUS] == world.CHUNK_OK:
                         continue
-                    elif c[5] == world.CHUNK_TOO_MUCH_ENTITIES:
+                    elif c[TUPLE_STATUS] == world.CHUNK_TOO_MUCH_ENTITIES:
                         # deleting entities is in here because parsing a chunk with thousands of wrong entities
                         # takes a long time, and once detected is better to fix it at once.
                         if delete_entities:
                             world.delete_entities(region_file, x, z)
                             print "Deleted {0} entities in chunk ({1},{2}) of the region file: {3}".format(c.num_entities, x, z, r.filename)
                             c.num_entities = 0
-                            r.chunks[(x,z)] = (c[0], c[1], c[3], c[4],0, c[6], c[7], c[8], c[9])
+                            #~ r.chunks[(x,z)] = (c[TUPLE_STATUS], c[TUPLE_COORDS], c[TUPLE_DATA_COORDS],c[TUPLE_GLOBAL_COORDS],c[TUPLE_NUM_ENTITIES], c[TUPLE_STATUS])
+                            r.chunks[(x,z)] = (c[TUPLE_STATUS], c[TUPLE_COORDS], c[TUPLE_DATA_COORDS],c[TUPLE_NUM_ENTITIES], c[TUPLE_STATUS])
 
                         else:
                             entities_prob += 1
@@ -181,9 +184,9 @@ def scan_region_file(to_scan_region_file):
                             #~ archivo = open(name,'w')
                             #~ archivo.write(pretty_tree)
 
-                    elif c[5] == world.CHUNK_CORRUPTED:
+                    elif c[TUPLE_STATUS] == world.CHUNK_CORRUPTED:
                         corrupted += 1
-                    elif c[5] == world.CHUNK_WRONG_LOCATED:
+                    elif c[TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
                         wrong += 1
 
         except KeyboardInterrupt:
@@ -272,17 +275,22 @@ def scan_chunk(region_file, coords, options):
         global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
         num_entities = None
     
-    return chunk, (region_file, coords, data_coords, global_coords,\
-            num_entities, status, status_text, scan_time, region_file.filename)
-    
-def scan_and_fill_chunk(region_file, scanned_chunk_obj, options):
-    """ Takes a RegionFile obj and a ScannedChunk obj as inputs, 
-        scans the chunk, fills the ScannedChunk obj and returns the chunk
-        as a NBT object."""
+    return chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
 
-    c = scanned_chunk_obj
-    chunk, region_file, c.h_coords, c.d_coords, c.g_coords, c.num_entities, c.status, c.status_text, c.scan_time, c.region_path = scan_chunk(region_file, c.h_coords, options)
-    return chunk
+#~ TUPLE_COORDS = 0
+#~ TUPLE_DATA_COORDS = 0
+#~ TUPLE_GLOBAL_COORDS = 2
+TUPLE_NUM_ENTITIES = 0
+TUPLE_STATUS = 1
+
+#~ def scan_and_fill_chunk(region_file, scanned_chunk_obj, options):
+    #~ """ Takes a RegionFile obj and a ScannedChunk obj as inputs, 
+        #~ scans the chunk, fills the ScannedChunk obj and returns the chunk
+        #~ as a NBT object."""
+#~ 
+    #~ c = scanned_chunk_obj
+    #~ chunk, region_file, c.h_coords, c.d_coords, c.g_coords, c.num_entities, c.status, c.status_text, c.scan_time, c.region_path = scan_chunk(region_file, c.h_coords, options)
+    #~ return chunk
 
 def _mp_pool_init(regionset,options,q):
     """ Function to initialize the multiprocessing in scan_all_mca_files.

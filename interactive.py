@@ -74,7 +74,7 @@ class interactive_loop(Cmd):
                 if len(args) == 1:
                     if self.current:
                         print "Current workload:\n{0}\n".format(self.current.__str__())
-                    print "List of possible worlds and region-sets:"
+                    print "List of possible worlds and region-sets (determined by the command used to run region-fixer):"
                     number = 1
                     for w in self.world_list:
                         print "   ### world{0} ###".format(number)
@@ -275,7 +275,7 @@ class interactive_loop(Cmd):
                     else:
                         print "No wrong located chunks to replace!"
                 elif arg == "entities":
-                    if self.current.count_chunks(world.CHUNK_WRONG_LOCATED):
+                    if self.current.count_chunks(world.CHUNK_TOO_MUCH_ENTITIES):
                         counter = self.current.replace_problematic_chunks(self.backup_worlds, world.CHUNK_TOO_MUCH_ENTITIES, self.options)
                         if counter != 0: self.current.scanned = False
                         print "Done! Replaced {0} chunks".format(counter)
@@ -338,7 +338,7 @@ class interactive_loop(Cmd):
     # TODO sería una buena idea poner un artículo de ayuda de como usar el programa en un caso típico.
     # TODO: the help texts need a normalize
     def help_set(self):
-        print "\nSets some variables used for the scan in interactive mode. If you run this command without variable you can see the current state. You can set:"
+        print "\nSets some variables used for the scan in interactive mode. If you run this command without an argument for a variable you can see the current state of the variable. You can set:"
         print "   verbose" 
         print "If True prints a line per scanned region file instead of showing a progress bar."
         print "\n   entity-limit"
@@ -350,7 +350,7 @@ class interactive_loop(Cmd):
     def help_current_workload(self):
         print "\nPrints information of the current region-set/world. This will be the region-set/world to scan and fix.\n"
     def help_scan(self):
-        print "\nScans the world set or the region set choosen when region-fixer is ran.\n"
+        print "\nScans the current world set or the region set.\n"
     def help_count(self):
         print "\n   Prints out the number of chunks with that error. For example "
         print "\'count corrupted\' prints the number of corrupted chunks in the world."
@@ -361,12 +361,14 @@ class interactive_loop(Cmd):
     def help_remove_chunks(self):
         print "\nRemoves bad chunks with the given problem. Problems are: corrupted, wrong, entities. Please, be careful, when used with the too much entities problem this will remove the chunks with too much entities problems, not the entities.\nUsage: \"remove_chunks c\"\nthis will remove the corrupted chunks.\n"
     def help_replace_chunks(self):
-        print "\nReplaces bad chunks with the given problem, using the backups directories. Problems are: corrupted, wrong, entities or all.\nUsage: \"replace_chunks corrupted\"\nthis will replace the corrupted chunks with the given backups.\n\nNote: after replacing any chunks you have to scan the world.\n"
+        print "\nReplaces bad chunks with the given problem, using the backups directories. Problems are: corrupted, wrong, entities or all.\nUsage: \"replace_chunks corrupted\"\nthis will replace the corrupted chunks with the given backups.\n\nNote: after replacing any chunks you have to rescan the world.\n"
     def help_summary(self):
-        print "\nPrints a summary of all the problems found in region files.\n"
+        print "\nPrints a summary of all the problems found in the current workload.\n"
     def help_quit(self):
-        print "\nQuits interactive mode, exits region-fixer.\n"
+        print "\nQuits interactive mode, exits region-fixer. Same as \'EOF\' and \'exit\' commands.\n"
     def help_EOF(self):
-        print "\nQuits interactive mode, exits region-fixer.\n"
+        print "\nQuits interactive mode, exits region-fixer. Same as \'quit\' and \'exit\' commands\n"
+    def help_exit(self):
+        print "\nQuits interactive mode, exits region-fixer. Same as \'quit\' and \'EOF\' commands\n"
     def help_help(self):
         print "Prints help help."

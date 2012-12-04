@@ -36,6 +36,13 @@ CHUNK_WRONG_LOCATED = 2
 CHUNK_TOO_MUCH_ENTITIES = 3
 STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created", CHUNK_OK:"OK", CHUNK_CORRUPTED:"Corrupted", CHUNK_WRONG_LOCATED:"Wrong located", CHUNK_TOO_MUCH_ENTITIES:"Too much entities"}
 
+#~ TUPLE_COORDS = 0
+#~ TUPLE_DATA_COORDS = 0
+#~ TUPLE_GLOBAL_COORDS = 2
+TUPLE_NUM_ENTITIES = 0
+TUPLE_STATUS = 1
+
+
 class ScannedDatFile(object):
     def __init__(self, path = None, readable = None, status_text = None):
         self.path = path
@@ -94,6 +101,7 @@ class ScannedRegionFile(object):
 
         # en el caso de wrong located podría almacenar la dirección real
         # donde se encuentra y donde dice que está los datos almacenados
+        # TODO better comment all this
         self.chunks = {}
         
         # quizás estos deberían ser contadores
@@ -128,8 +136,8 @@ class ScannedRegionFile(object):
             If problem is omited or None, counts all the chunks. Returns
             an integer with the counter. """
         counter = 0
-        for chunk in self.keys():
-            if self[chunk][5] == problem or problem == None:
+        for coords in self.keys():
+            if self[coords] and (self[coords][TUPLE_STATUS] == problem or problem == None):
                 counter += 1
         return counter
 
@@ -140,8 +148,11 @@ class ScannedRegionFile(object):
         
         l = []
         for c in self.keys():
-            if status == self[c].status: l.append(self[c])
-            elif status == None: l.append(self[c])
+            t = self[c]
+            if status == t[TUPLE_STATUS]:
+                l.append((get_global_chunk_coords(self.filename, *c),t))
+            elif status == None:
+                l.append((get_global_chunk_coords(self.filename, *c),t))
         return l
 
     def summary(self):
@@ -150,19 +161,19 @@ class ScannedRegionFile(object):
             data coords and status of every problematic chunk. """
         text = ""
         for c in self.keys():
-            if self[c][5] == CHUNK_OK or self[c][5] == CHUNK_NOT_CREATED: continue
-            status = self[c][5]
-            g_coords = self[c][3]
-            h_coords = self[c][1]
-            d_coords = self[c][2]
+            if self[c][TUPLE_STATUS] == CHUNK_OK or self[c][TUPLE_STATUS] == CHUNK_NOT_CREATED: continue
+            status = self[c][TUPLE_STATUS]
+            g_coords = None
+            h_coords = c
+            d_coords = None
             text += " |-+-Chunk coords: {0}, global {1}, data {2}.\n".format(h_coords,g_coords,d_coords if d_coords != None else "N/A")
             text += " | +-Status: {0}\n".format(STATUS_TEXT[status])
             text += " | +-Error:\n"
-            text += " |   -{0}\n".format(self[c][6])
+            text += " |   -{0}\n".format(None)
             text += " |\n"
         
         return text
-            
+
     def remove_problematic_chunks(self, problem):
         """ Removes all the chunks with the given problem, returns a 
             counter with the number of deleted chunks. """
@@ -170,12 +181,15 @@ class ScannedRegionFile(object):
         counter = 0
         bad_chunks = self.list_chunks(problem)
         for c in bad_chunks:
-            local_coords = get_local_chunk_coords(*c.g_coords)
+            global_coords = c[0]
+            status_tuple = c[1]
+            local_coords = get_local_chunk_coords(*global_coords)
             region_file = region.RegionFile(self.path)
             region_file.unlink_chunk(*local_coords)
             counter += 1
-            # fill up the new ScannedChunk obj
-            self[local_coords] = ScannedChunk(local_coords, c.g_coords, None, CHUNK_NOT_CREATED, None, time.time(), region_file.filename)
+            # create the new status tuple
+            #                    (num_entities, chunk status)
+            self[local_coords] = (0           , CHUNK_NOT_CREATED)
             
         return counter
     
@@ -187,12 +201,17 @@ class ScannedRegionFile(object):
         counter = 0
         bad_chunks = self.list_chunks(problem)
         for c in bad_chunks:
-            local_coords = get_local_chunk_coords(*c.g_coords)
+            global_coords = c[0]
+            status_tuple = c[1]
+            local_coords = get_local_chunk_coords(*global_coords)
             counter += self.remove_chunk_entities(*local_coords)
-            c.num_entities = 0
+            # create new status tuple:
+            #                    (num_entities, chunk status)
+            self[local_coords] = (0           , CHUNK_OK)
         return counter
 
     def remove_chunk_entities(self, x, z):
+        # TODO: update comment!
         """ Takes a region file object and the chunk local coordinates.
             Deletes all the entities in that chunk. Returns an integer
             with the number of deleted entities. """
@@ -209,8 +228,20 @@ class ScannedRegionFile(object):
         """ Updates the status of all the chunks in the region file when
             the the option entity limit is changed. """
         for c in self.keys():
-            self[c].rescan_entities(options)
-
+            # for security reasons use a temporary list to generate the
+            # new tuple
+            t = [0,0]
+            if self[c][TUPLE_NUM_ENTITIES] >= options.entity_limit:
+                t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
+                t[TUPLE_STATUS] = CHUNK_TOO_MUCH_ENTITIES
+                
+            else:
+                # TODO: warning! if a chunk has two problems, in here we
+                # rewrite the other problem
+                t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
+                t[TUPLE_STATUS] = CHUNK_OK
+            
+            self[c] = tuple(t)
 
 class RegionSet(object):
     """Stores an arbitrary number of region files and the scan results.
@@ -467,7 +498,9 @@ class World(object):
                 
                 bad_chunks = regionset.list_chunks(problem)
                 for c in bad_chunks:
-                    global_coords = c.g_coords
+                    global_coords = c[0]
+                    status_tuple = c[1]
+                    local_coords = get_local_chunk_coords(*global_coords)
                     print "\n{0:-^60}".format(' New chunk to replace! Coords {0} '.format(global_coords))
 
                     # search for the region file
@@ -478,9 +511,10 @@ class World(object):
 
                         # get the chunk
                         from scan import scan_chunk
-                        backup_region_file = region.RegionFile(backup_region_path)                        
-                        working_chunk, region_file, _,_,_,_, status, status_text, _,_ = \
-                            scan_chunk(backup_region_file, local_coords, options)
+                        backup_region_file = region.RegionFile(backup_region_path)    
+                        # chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None                    
+                        working_chunk, status_tuple = scan_chunk(backup_region_file, local_coords, options)
+                        status = status_tuple[TUPLE_STATUS]
 
                         if status == CHUNK_OK:
                             print "Replacing..."

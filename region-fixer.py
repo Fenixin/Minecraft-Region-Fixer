@@ -179,7 +179,7 @@ def main():
         parser.error("Can't use the options --replace-* , --delete-* and --summary with --interactive.")
     
     else:
-        if options.backups:
+        if options.backups and not options.backups:
             # TODO: check if there are backups in there
             if not (options.replace_corrupted or options.replace_wrong_located):
                 parser.error("The option --backups needs one of the --replace-* options")
