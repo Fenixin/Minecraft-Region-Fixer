@@ -137,6 +137,9 @@ def main():
     parser.add_option('--replace-wrong-located','--rw', help = 'Tries to replace the wrong located chunks using the backup directories. This option can be only used scanning one world.',\
         default = False, dest = 'replace_wrong_located', action='store_true')
 
+    parser.add_option('--replace-entities','--re    ', help = 'Tries to replace the chunks with too many entities using the backup directories. This option can be only used scanning one world.',\
+        default = False, dest = 'replace_entities', action='store_true')
+
     parser.add_option('--delete-corrupted', '--dc', help = '[WARNING!] This option deletes! This option will delete all the corrupted chunks. Used with --replace-corrupted or --replace-wrong-located it will delete all the non-replaced chunks.',\
         action = 'store_true', default = False)
 
@@ -173,25 +176,23 @@ def main():
         print ("Error: No worlds or region files to scan!")
         sys.exit(1)
 
-    # Check basic options incompatibilities
-    # TODO: with interactive mode this needs a good revision
-    if options.interactive and (options.replace_corrupted or options.replace_wrong_located or options.delete_corrupted or options.delete_wrong_located or options.summary):
-        parser.error("Can't use the options --replace-* , --delete-* and --summary with --interactive.")
-    
-    else:
-        if options.backups and not options.backups:
-            # TODO: check if there are backups in there
-            if not (options.replace_corrupted or options.replace_wrong_located):
-                parser.error("The option --backups needs one of the --replace-* options")
-                #~ pass
+    # Check basic options compatibilities
+    if options.interactive:
+        if (options.replace_corrupted or options.replace_wrong_located or options.delete_corrupted or options.delete_wrong_located or options.summary):
+            parser.error("Can't use the options --replace-* , --delete-* and --summary with --interactive.")
+
+    else: # not options.interactive
+        if options.backups:
+            if not (options.replace_corrupted or options.replace_wrong_located or options.replace_entities):
+                parser.error("The option --backups needs at least one of the --replace-* options")
             else:
                 if (len(region_list.regions) > 0):
                     parser.error("The input should be only one world and you intruduced {0} individual region files.".format(len(region_list.regions)))
                 elif (len(world_list) > 1):
                     parser.error("The input should be only one world and you intruduced {0} worlds.".format(len(world_list)))
         
-        #~ if not options.backups and (options.replace_corrupted or options.replace_wrong_located):
-            #~ parser.error("The options --replace-* need the --backups option")
+        if not options.backups and (options.replace_corrupted or options.replace_wrong_located):
+            parser.error("The options --replace-* need the --backups option")
 
     if options.entity_limit < 0:
         parser.error("The entity limit must be at least 0!")
@@ -208,8 +209,7 @@ def main():
 
     # The program starts
     if options.interactive:
-        #~ import readline # interactive prompt with history 
-        # TODO: WARNING, NEEDS CHANGES FOR WINDOWS
+        # TODO: WARNING, NEEDS CHANGES FOR WINDOWS. check while making the windows exe
         c = interactive_loop(world_list, region_list, options, backup_worlds)
         c.cmdloop()
 
@@ -226,7 +226,6 @@ def main():
             wrong_located = region_list.count_chunks(world.CHUNK_WRONG_LOCATED)
             entities_prob = region_list.count_chunks(world.CHUNK_TOO_MANY_ENTITIES)
             total = region_list.count_chunks()
-            # TODO: this needs a delete_corrupted and delte_wrong_located
 
             print "\nFound {0} corrupted, {1} wrong located chunks and {2} chunks with too many entities of a total of {3}\n".format(
                 corrupted, wrong_located, entities_prob, total)
@@ -246,22 +245,32 @@ def main():
 
             print "\nFound {0} corrupted, {1} wrong located chunks and {2} chunks with too many entities of a total of {3}\n".format(
                 corrupted, wrong_located, entities_prob, total)
-            
-            # Try to replace bad chunks with a backup copy
-            if options.replace_corrupted or options.replace_wrong_located:
-                if world_obj.count_chunks(world.CHUNK_CORRUPTED):
-                    if options.replace_corrupted:
-                        print "{0:#^60}".format(' Trying to replace corrupted chunks ')
-                        fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_CORRUPTED, options)
-                        print "\n{0} replaced chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
-                else: print "No corrupted chunks to replace!"
-                
-                if world_obj.count_chunks(world.CHUNK_WRONG_LOCATED):
-                    if options.replace_wrong_located:
-                        print "{0:#^60}".format(' Trying to replace wrong located chunks ')
-                        fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_WRONG_LOCATED, options)
-                        print "\n{0} replaced chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
-                else: print "No wrong located chuns to replace!"
+            if backup_worlds:
+                # Try to replace bad chunks with a backup copy
+                if options.replace_corrupted or options.replace_wrong_located:
+                    if world_obj.count_chunks(world.CHUNK_CORRUPTED):
+                        if options.replace_corrupted:
+                            print "{0:#^60}".format(' Trying to replace corrupted chunks ')
+                            fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_CORRUPTED, options)
+                            print "\n{0} replaced chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
+                    else: print "No corrupted chunks to replace!"
+                    
+                    if world_obj.count_chunks(world.CHUNK_WRONG_LOCATED):
+                        if options.replace_wrong_located:
+                            print "{0:#^60}".format(' Trying to replace wrong located chunks ')
+                            fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_WRONG_LOCATED, options)
+                            print "\n{0} replaced chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
+                    else: print "No wrong located chunks to replace!"
+
+                    if world_obj.count_chunks(world.CHUNK_TOO_MANY_ENTITIES):
+                        if options.replace_entities:
+                            print "{0:#^60}".format(' Trying to replace chunks with too many entities ')
+                            fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_TOO_MANY_ENTITIES, options)
+                            print "\n{0} replaced chunks of a total of {1} chunks with too many entities".format(fixed, entities_prob)
+                    else: print "No chunks with too many entities to replace!"
+
+            elif options.replace_corrupted or options.replace_wrong_located: # and not options.backups:
+                print "No backup worlds found, won't replace any chunks!"
 
             # delete bad chunks!
             if options.delete_corrupted:
@@ -290,7 +299,7 @@ def main():
             
             # print a summary for this world
             if options.summary:
-                # TODO: Add an option to save the log to a file?
+                # TODO: Add an option to save the log to a file
                 print world_obj.summary()
 
 

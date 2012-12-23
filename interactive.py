@@ -193,6 +193,7 @@ class interactive_loop(Cmd):
 
     def do_scan(self, arg):
         # TODO: what about scanning while deleting entities as done in non-interactive mode?
+        # this would need an option to choose which of the two methods use
         """ Scans the current workload. """
         if len(arg.split()) > 0:
             print "Error: too many parameters."
@@ -342,7 +343,7 @@ class interactive_loop(Cmd):
         print "   verbose" 
         print "If True prints a line per scanned region file instead of showing a progress bar."
         print "\n   entity-limit"
-        print "If a chunk has more than this number of entities it will be added to the list of chunks with too-much-entities problem."
+        print "If a chunk has more than this number of entities it will be added to the list of chunks with too many entities problem."
         print "\n   processes"
         print "Number of cores used while scanning the world."
         print "\n   workload"

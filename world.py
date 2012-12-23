@@ -61,7 +61,7 @@ class ScannedDatFile(object):
 #~ class ScannedChunk(object):
     #~ def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None, region_path = None):
         #~ # TODO: what happens if a chunk has two erros? For example:
-        #~ #   too-much-entities and wrong-located.
+        #~ #   too-many-entities and wrong-located.
         #~ self.h_coords = header_coords
         #~ self.g_coords = global_coords
         #~ self.d_coords = data_coords
@@ -101,7 +101,7 @@ class ScannedRegionFile(object):
 
         # en el caso de wrong located podría almacenar la dirección real
         # donde se encuentra y donde dice que está los datos almacenados
-        # TODO better comment all this
+        # TODO better comment all this and all the objects in this file
         self.chunks = {}
         
         # quizás estos deberían ser contadores
@@ -251,6 +251,7 @@ class ScannedRegionFile(object):
                 #~ 
                 #~ # TODO: warning! if a chunk has two problems, in here we
                 #~ # rewrite the other problem
+                # This TODo seems to be fixed... give it a look later
                 #~ t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
                 #~ t[TUPLE_STATUS] = self[c][TUPLE_STATUS]
             #~ 
@@ -362,7 +363,7 @@ class RegionSet(object):
     
     def remove_entities(self):
         """ Removes entities in chunks with the status
-            TOO_MUCH_ENTITIES. """
+            TOO_MANY_ENTITIES. """
         counter = 0
         for r in self.regions.keys():
             counter += self.regions[r].remove_entities()
