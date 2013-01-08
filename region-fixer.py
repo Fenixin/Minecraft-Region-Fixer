@@ -161,8 +161,8 @@ def main():
     parser.add_option('--interactive', '-i',help='Enter in interactive mode, where you can scan, see the problems, and fix them in a terminal like mode',\
         dest = 'interactive',default = False, action='store_true',)
 
-    parser.add_option('--summary', '-s',help='Prints a summary for each world or regionset scanned with all the problems found.',\
-        action='store_true', default = False)
+    parser.add_option('--log', '-l',help='Saves a log of all the problems found in the spicifyed file. The log file contains all the problems found with this information: region file, chunk coordinates and problem. Use \'-\' as name to show the log at the end of the scan.',\
+        type = str, default = None, dest = 'summary')
 
     (options, args) = parser.parse_args()
 
@@ -207,18 +207,22 @@ def main():
     else:
         backup_worlds = []
 
+    
     # The program starts
     if options.interactive:
         # TODO: WARNING, NEEDS CHANGES FOR WINDOWS. check while making the windows exe
         c = interactive_loop(world_list, region_list, options, backup_worlds)
         c.cmdloop()
 
-
+    
     else:
+        summary_text = ""
+        
+        # scan the separate region files
         if len(region_list.regions) > 0:
             print "\n"
             print "{0:#^60}".format('')
-            print "{0:#^60}".format(' Scanning region files ')
+            print "{0:#^60}".format(' Scanning separate region files ')
             print "{0:#^60}".format('')
             scan_regionset(region_list, options)
             
@@ -230,6 +234,20 @@ def main():
             print "\nFound {0} corrupted, {1} wrong located chunks and {2} chunks with too many entities of a total of {3}\n".format(
                 corrupted, wrong_located, entities_prob, total)
 
+            if options.summary:
+                summary_text += "\n"
+                summary_text += "{0:#^60}\n".format('')
+                summary_text += "{0:#^60}\n".format(" Separate region files ")
+                summary_text += "{0:#^60}\n".format('')
+                summary_text += "\n"
+                t = region_list.summary()
+                if t:
+                    summary_text += t
+                else:
+                    summary_text += "No problems found.\n\n"
+
+
+        # scan all the world folders
         for world_obj in world_list:
             print "\n"
             print "{0:#^60}".format('')
@@ -299,8 +317,19 @@ def main():
             
             # print a summary for this world
             if options.summary:
-                # TODO: Add an option to save the log to a file
-                print world_obj.summary()
+                summary_text += world_obj.summary()
+
+        if options.summary == '-':
+            print summary_text
+        else:
+            try:
+                f = open(options.summary, 'w')
+                f.write(summary_text)
+                f.write('\n')
+                f.close()
+                print "Log file saved in \'{0}\'.".format(options.summary)
+            except:
+                print "Something went wrong while saving the log file!"
 
 
 if __name__ == '__main__':

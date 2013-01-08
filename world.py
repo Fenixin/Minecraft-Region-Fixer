@@ -58,59 +58,64 @@ class ScannedDatFile(object):
         text += "\tReadable:" + str(self.readable) + "\n"
         return text
 
-#~ class ScannedChunk(object):
-    #~ def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None, region_path = None):
-        #~ # TODO: what happens if a chunk has two erros? For example:
-        #~ #   too-many-entities and wrong-located.
-        #~ self.h_coords = header_coords
-        #~ self.g_coords = global_coords
-        #~ self.d_coords = data_coords
-        #~ self.status = status
-        #~ self.status_text = None
-        #~ self.num_entities = num_entities
-        #~ self.scan_time = scan_time
-        #~ self.region_path = region_path
-#~ 
-    #~ def __str__(self):
-        #~ text = "Chunk with header coordinates:" + str(self.h_coords) + "\n"
-        #~ text += "\tData coordinates:" + str(self.d_coords) + "\n"
-        #~ text +="\tGlobal coordinates:" + str(self.g_coords) + "\n"
-        #~ text += "\tStatus:" + str(self.status_text) + "\n"
-        #~ text += "\tNumber of entities:" + str(self.num_entities) + "\n"
-        #~ text += "\tScan time:" + time.ctime(self.scan_time) + "\n"
-        #~ return text
-#~ 
-    #~ def rescan_entities(self, options):
-        #~ """ Updates the status of the chunk when the the option
-            #~ entity limit is changed. """
-        #~ if self.num_entities >= options.entity_limit:
-            #~ self.status = CHUNK_TOO_MANY_ENTITIES
-            #~ self.status_text = STATUS_TEXT[CHUNK_TOO_MANY_ENTITIES]
-        #~ else:
-            #~ self.status = CHUNK_OK
-            #~ self.status_text = STATUS_TEXT[CHUNK_OK]
+class ScannedChunk(object):
+    """ Stores all the results of the scan. Not used at the moment, it
+        prette nice but takes an huge amount of memory. """
+        # WARNING: not used at the moment, it probably has bugs ans is 
+        # outdated
+    def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None, region_path = None):
+        """ Inits the object with all the scan information. """
+        self.h_coords = header_coords
+        self.g_coords = global_coords
+        self.d_coords = data_coords
+        self.status = status
+        self.status_text = None
+        self.num_entities = num_entities
+        self.scan_time = scan_time
+        self.region_path = region_path
+
+    def __str__(self):
+        text = "Chunk with header coordinates:" + str(self.h_coords) + "\n"
+        text += "\tData coordinates:" + str(self.d_coords) + "\n"
+        text +="\tGlobal coordinates:" + str(self.g_coords) + "\n"
+        text += "\tStatus:" + str(self.status_text) + "\n"
+        text += "\tNumber of entities:" + str(self.num_entities) + "\n"
+        text += "\tScan time:" + time.ctime(self.scan_time) + "\n"
+        return text
+
+    def rescan_entities(self, options):
+        """ Updates the status of the chunk when the the option
+            entity limit is changed. """
+        if self.num_entities >= options.entity_limit:
+            self.status = CHUNK_TOO_MANY_ENTITIES
+            self.status_text = STATUS_TEXT[CHUNK_TOO_MANY_ENTITIES]
+        else:
+            self.status = CHUNK_OK
+            self.status_text = STATUS_TEXT[CHUNK_OK]
 
 class ScannedRegionFile(object):
-    """ Stores all the info for a scanned region file """
+    """ Stores all the scan information for a region file """
     def __init__(self, filename, corrupted = None, wrong = None, entities_prob = None, chunks = None, time = None):
+        # general region file info
         self.path = filename
         self.filename = split(filename)[1]
         self.folder = split(filename)[0]
         self.x, self.z = get_region_coords(filename)
         self.coords = (self.x, self.z)
 
-        # en el caso de wrong located podría almacenar la dirección real
-        # donde se encuentra y donde dice que está los datos almacenados
         # TODO better comment all this and all the objects in this file
+        # dictionary storing all the state tuples of all the chunks
+        # in the region file
         self.chunks = {}
         
-        # quizás estos deberían ser contadores
+        # TODO: update this values when count_problems is called
+        # counters with the number of chunks
         self.corrupted_chunks = corrupted
         self.wrong_located_chunks = wrong
         self.entities_prob = entities_prob
         self.chunk_count = chunks
         
-        # time when the scan finished
+        # time when the scan for this file finished
         self.scan_time = time
 
     def __str__(self):
@@ -163,13 +168,10 @@ class ScannedRegionFile(object):
         for c in self.keys():
             if self[c][TUPLE_STATUS] == CHUNK_OK or self[c][TUPLE_STATUS] == CHUNK_NOT_CREATED: continue
             status = self[c][TUPLE_STATUS]
-            g_coords = None
             h_coords = c
-            d_coords = None
-            text += " |-+-Chunk coords: {0}, global {1}, data {2}.\n".format(h_coords,g_coords,d_coords if d_coords != None else "N/A")
+            g_coords = get_global_chunk_coords(self.filename, *h_coords)
+            text += " |-+-Chunk coords: header {0}, global {1}.\n".format(h_coords, g_coords)
             text += " | +-Status: {0}\n".format(STATUS_TEXT[status])
-            text += " | +-Error:\n"
-            text += " |   -{0}\n".format(None)
             text += " |\n"
         
         return text
@@ -244,17 +246,6 @@ class ScannedRegionFile(object):
                     t[TUPLE_STATUS] = CHUNK_OK
                     
                 self[c] = tuple(t)
-            # else, do nothing, maybe there's other problem
-            
-            #~ else:
-                #~ # the chunk is corrupted or orther status
-                #~ 
-                #~ # TODO: warning! if a chunk has two problems, in here we
-                #~ # rewrite the other problem
-                # This TODo seems to be fixed... give it a look later
-                #~ t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
-                #~ t[TUPLE_STATUS] = self[c][TUPLE_STATUS]
-            #~ 
             
 
 class RegionSet(object):
@@ -438,12 +429,18 @@ class World(object):
         """ Returns a text string with a summary of all the problems 
             found."""
         final = ""
+
+        # intro with the world name
+        final += "{0:#^60}\n".format('')
+        final += "{0:#^60}\n".format(" World name: {0} ".format(self.name))
+        final += "{0:#^60}\n".format('')
+
         # dat files info
         final += "\nlevel.dat:\n"
         if self.scanned_level.readable:
-            final += "\t-\'level.dat\' is readable\n"
+            final += "\t\'level.dat\' is readable\n"
         else:
-            final += "\t-[WARNING]: \'leve.dat\' isn't readable, error: {0}\n".format(self.scanned_level.status_text)
+            final += "\t[WARNING]: \'leve.dat\' isn't readable, error: {0}\n".format(self.scanned_level.status_text)
         
         all_ok = True
         final += "\nPlayer files:\n"
@@ -452,7 +449,7 @@ class World(object):
                 all_ok = False
                 final += "\t-[WARNING]: Player file {0} has problems.\n\t\tError: {1}\n\n".format(self.players[name].filename, self.players[name].status_text)
         if all_ok:
-            final += "All player files are readable.\n\n"
+            final += "\tAll player files are readable.\n\n"
         
         # chunk info
         chunk_info = ""
