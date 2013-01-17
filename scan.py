@@ -168,7 +168,8 @@ def scan_region_file(to_scan_region_file):
                         if delete_entities:
                             world.delete_entities(region_file, x, z)
                             print "Deleted {0} entities in chunk ({1},{2}) of the region file: {3}".format(c[TUPLE_NUM_ENTITIES], x, z, r.filename)
-                            r.chunks[(x,z)] = (c[TUPLE_NUM_ENTITIES], c[TUPLE_STATUS])
+                            # entities removed, change chunk status to OK
+                            r.chunks[(x,z)] = (0, world.CHUNK_OK)
 
                         else:
                             entities_prob += 1
