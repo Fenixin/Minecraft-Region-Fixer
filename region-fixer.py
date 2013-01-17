@@ -293,8 +293,6 @@ def main():
             if options.delete_corrupted:
                 if corrupted:
                     print "{0:#^60}".format(' Deleting  corrupted chunks ')
-
-                    print "... ",
                     counter = world_obj.remove_problematic_chunks(world.CHUNK_CORRUPTED)
                     print "Done!"
                     
@@ -305,8 +303,6 @@ def main():
             if options.delete_wrong_located:
                 if wrong_located:
                     print "{0:#^60}".format(' Deleting wrong located chunks ')
-                    
-                    print "... ",
                     counter = world_obj.remove_problematic_chunks(world.CHUNK_WRONG_LOCATED)
                     print "Done!"
                     

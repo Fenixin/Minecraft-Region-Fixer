@@ -346,10 +346,12 @@ class RegionSet(object):
             counter with the number of deleted chunks. """
 
         counter = 0
-        print ' Deleting chunks in region set \"{0}\":'.format(self.path),
-        for r in self.regions.keys():
-            counter += self.regions[r].remove_problematic_chunks(problem)
-        print "Done! Removed {0} chunks".format(counter)
+        if self.count_chunks():
+            print ' Deleting chunks in region set \"{0}\":'.format(self.path),
+            for r in self.regions.keys():
+                counter += self.regions[r].remove_problematic_chunks(problem)
+            print "Done! Removed {0} chunks".format(counter)
+        
         return counter
     
     def remove_entities(self):
