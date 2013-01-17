@@ -66,7 +66,7 @@ def scan_world(world_obj, options):
     if not w.nether_region_files:
         print "Info: No nether dimension in the world directory."
     if not w.aether_region_files:
-        print "Info: No aether dimension in the world directory."
+        print "Info: No end dimension in the world directory."
     if w.players:
         print "There are {0} region files and {1} player files in the world directory.".format(\
             len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files), len(w.players))
