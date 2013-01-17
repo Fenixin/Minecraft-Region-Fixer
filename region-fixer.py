@@ -220,7 +220,7 @@ def main():
         
         # scan the separate region files
         if len(region_list.regions) > 0:
-            print "\n"
+            print ""
             print "{0:#^60}".format('')
             print "{0:#^60}".format(' Scanning separate region files ')
             print "{0:#^60}".format('')
@@ -249,7 +249,7 @@ def main():
 
         # scan all the world folders
         for world_obj in world_list:
-            print "\n"
+            print ""
             print "{0:#^60}".format('')
             print "{0:#^60}".format(' Scanning world: {0} '.format(world_obj.get_name()))
             print "{0:#^60}".format('')
@@ -265,29 +265,28 @@ def main():
                 corrupted, wrong_located, entities_prob, total)
             if backup_worlds:
                 # Try to replace bad chunks with a backup copy
-                if options.replace_corrupted or options.replace_wrong_located:
+                if options.replace_corrupted:
                     if world_obj.count_chunks(world.CHUNK_CORRUPTED):
-                        if options.replace_corrupted:
-                            print "{0:#^60}".format(' Trying to replace corrupted chunks ')
-                            fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_CORRUPTED, options)
-                            print "\n{0} replaced chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
+                        print "{0:#^60}".format(' Trying to replace corrupted chunks ')
+                        fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_CORRUPTED, options)
+                        print "\n{0} replaced chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
                     else: print "No corrupted chunks to replace!"
-                    
+                
+                if options.replace_wrong_located:
                     if world_obj.count_chunks(world.CHUNK_WRONG_LOCATED):
-                        if options.replace_wrong_located:
-                            print "{0:#^60}".format(' Trying to replace wrong located chunks ')
-                            fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_WRONG_LOCATED, options)
-                            print "\n{0} replaced chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
+                        print "{0:#^60}".format(' Trying to replace wrong located chunks ')
+                        fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_WRONG_LOCATED, options)
+                        print "\n{0} replaced chunks of a total of {1} wrong located chunks".format(fixed, wrong_located)
                     else: print "No wrong located chunks to replace!"
 
+                if options.replace_entities:
                     if world_obj.count_chunks(world.CHUNK_TOO_MANY_ENTITIES):
-                        if options.replace_entities:
-                            print "{0:#^60}".format(' Trying to replace chunks with too many entities ')
-                            fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_TOO_MANY_ENTITIES, options)
-                            print "\n{0} replaced chunks of a total of {1} chunks with too many entities".format(fixed, entities_prob)
+                        print "{0:#^60}".format(' Trying to replace chunks with too many entities ')
+                        fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_TOO_MANY_ENTITIES, options)
+                        print "\n{0} replaced chunks of a total of {1} chunks with too many entities".format(fixed, entities_prob)
                     else: print "No chunks with too many entities to replace!"
 
-            elif options.replace_corrupted or options.replace_wrong_located: # and not options.backups:
+            elif options.replace_corrupted or options.replace_wrong_located or options.replace_entities: # and not options.backups:
                 print "No backup worlds found, won't replace any chunks!"
 
             # delete bad chunks!
@@ -321,7 +320,7 @@ def main():
 
         if options.summary == '-':
             print summary_text
-        else:
+        elif options.summary != None:
             try:
                 f = open(options.summary, 'w')
                 f.write(summary_text)

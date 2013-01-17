@@ -63,6 +63,7 @@ class ScannedChunk(object):
         prette nice but takes an huge amount of memory. """
         # WARNING: not used at the moment, it probably has bugs ans is 
         # outdated
+        # The problem with it was it took too much memory.
     def __init__(self, header_coords, global_coords = None, data_coords = None, status = None, num_entities = None, scan_time = None, region_path = None):
         """ Inits the object with all the scan information. """
         self.h_coords = header_coords
@@ -103,12 +104,12 @@ class ScannedRegionFile(object):
         self.x, self.z = get_region_coords(filename)
         self.coords = (self.x, self.z)
 
-        # TODO better comment all this and all the objects in this file
         # dictionary storing all the state tuples of all the chunks
         # in the region file
         self.chunks = {}
         
-        # TODO: update this values when count_problems is called
+        # TODO: these values aren't really used.
+        # count_chunks is used instead.
         # counters with the number of chunks
         self.corrupted_chunks = corrupted
         self.wrong_located_chunks = wrong
@@ -144,6 +145,7 @@ class ScannedRegionFile(object):
         for coords in self.keys():
             if self[coords] and (self[coords][TUPLE_STATUS] == problem or problem == None):
                 counter += 1
+
         return counter
 
     def list_chunks(self, status = None):
@@ -163,7 +165,7 @@ class ScannedRegionFile(object):
     def summary(self):
         """ Returns a summary of the problematic chunks. The summary
             is a string with region file, global coords, local coords,
-            data coords and status of every problematic chunk. """
+            and status of every problematic chunk. """
         text = ""
         for c in self.keys():
             if self[c][TUPLE_STATUS] == CHUNK_OK or self[c][TUPLE_STATUS] == CHUNK_NOT_CREATED: continue
@@ -213,10 +215,9 @@ class ScannedRegionFile(object):
         return counter
 
     def remove_chunk_entities(self, x, z):
-        # TODO: update comment!
-        """ Takes a region file object and the chunk local coordinates.
-            Deletes all the entities in that chunk. Returns an integer
-            with the number of deleted entities. """
+        """ Takes a chunk coordinates, opens the chunk and removes all
+            the entities in it. Return an integer with the number of
+            entities removed"""
         region_file = region.RegionFile(self.path)
         chunk = region_file.get_chunk(x,z)
         counter = len(chunk['Level']['Entities'])
@@ -253,7 +254,6 @@ class RegionSet(object):
         Inits with a list of region files. The regions dict is filled
         while scanning with ScannedRegionFiles and ScannedChunks."""
     def __init__(self, regionset_path = None, region_list = []):
-        # note: this self.path is not used anywhere for the moment
         if regionset_path:
             self.path = regionset_path
             self.region_list = glob(join(self.path, "r.*.*.mca"))
@@ -382,7 +382,7 @@ class World(object):
         
         self.dimensions = (self.normal_region_files, self.nether_region_files, self.aether_region_files)
 
-        # for level.dat
+        # level.dat
         # let's scan level.dat here so we can extracta the world name
         # right now
         level_dat_path = join(self.world_path, "level.dat")
@@ -400,7 +400,7 @@ class World(object):
             self.name = None
             self.scanned_level = ScannedDatFile(None, False, "The file doesn't exist")        
 
-        # for player files
+        # player files
         player_paths = glob(join(join(self.world_path, "players"), "*.dat"))
         self.players = {}
         for path in player_paths:
