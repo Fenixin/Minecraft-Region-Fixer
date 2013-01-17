@@ -175,7 +175,7 @@ class ScannedRegionFile(object):
             text += " |-+-Chunk coords: header {0}, global {1}.\n".format(h_coords, g_coords)
             text += " | +-Status: {0}\n".format(STATUS_TEXT[status])
             if self[c][TUPLE_STATUS] == CHUNK_TOO_MANY_ENTITIES:
-                text += " | +-Nº entities: {0}\n".format(c[TUPLE_NUM_ENTITIES])
+                text += " | +-Nº entities: {0}\n".format(self[c][TUPLE_NUM_ENTITIES])
             text += " |\n"
         
         return text
@@ -238,12 +238,12 @@ class ScannedRegionFile(object):
             t = [0,0]
             if self[c][TUPLE_STATUS] in (CHUNK_TOO_MANY_ENTITIES, CHUNK_OK):
                 # only touch the ok chunks and the too many entities chunk
-                if self[c][TUPLE_NUM_ENTITIES] >= options.entity_limit:
+                if self[c][TUPLE_NUM_ENTITIES] > options.entity_limit:
                     # now it's a too many entities problem
                     t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
                     t[TUPLE_STATUS] = CHUNK_TOO_MANY_ENTITIES
                 
-                elif self[c][TUPLE_NUM_ENTITIES] < options.entity_limit and self[c][TUPLE_STATUS] != None:
+                elif self[c][TUPLE_NUM_ENTITIES] <= options.entity_limit:
                     # the new limit says it's a normal chunk
                     t[TUPLE_NUM_ENTITIES] = self[c][TUPLE_NUM_ENTITIES]
                     t[TUPLE_STATUS] = CHUNK_OK
