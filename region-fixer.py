@@ -179,7 +179,7 @@ def main():
     # Check basic options compatibilities
     if options.interactive:
         if (options.replace_corrupted or options.replace_wrong_located or options.delete_corrupted or options.delete_wrong_located or options.summary):
-            parser.error("Can't use the options --replace-* , --delete-* and --summary with --interactive.")
+            parser.error("Can't use the options --replace-* , --delete-* and --log with --interactive.")
 
     else: # not options.interactive
         if options.backups:

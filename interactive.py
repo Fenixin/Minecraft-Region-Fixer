@@ -358,11 +358,27 @@ class interactive_loop(Cmd):
         print 
         print "Possible counters are: corrupted, wrong, entities or all\n"
     def help_remove_entities(self):
-        print "\nRemove all the entities in chunks that have more than entity-limit entities.\n"
+        print "\nRemove all the entities in chunks that have more than entity-limit entities."
+        print 
+        print "This chunks are the ones flagged as \'too many entities\' chunks.\n"
     def help_remove_chunks(self):
-        print "\nRemoves bad chunks with the given problem. Problems are: corrupted, wrong, entities. Please, be careful, when used with the too many entities problem this will remove the chunks with too many entities problems, not the entities.\nUsage: \"remove_chunks c\"\nthis will remove the corrupted chunks.\n"
+        print "\nRemoves bad chunks with the given problem. Problems are:"
+        print "corrupted, wrong, entities"
+        print
+        print "Please, be careful, when used with the too many entities problem this will REMOVE THE CHUNKS with too many entities problems, not the entities (see remove_entities instead)."
+        print
+        print "Usage: \'remove_chunks c\'\/\'remove_chunks corrupted\'"
+        print
+        print "this will remove the corrupted chunks.\n"
     def help_replace_chunks(self):
-        print "\nReplaces bad chunks with the given problem, using the backups directories. Problems are: corrupted, wrong, entities or all.\nUsage: \"replace_chunks corrupted\"\nthis will replace the corrupted chunks with the given backups.\n\nNote: after replacing any chunks you have to rescan the world.\n"
+        print "\nReplaces bad chunks with the given problem using the backups directories. Problems are:"
+        print "corrupted, wrong, entities or all."
+        print
+        print "Usage: \"replace_chunks corrupted\""
+        print
+        print "this will replace the corrupted chunks with the given backups."
+        print
+        print "Note: after replacing any chunks you have to rescan the world in order to do more stuff.\n"
     def help_summary(self):
         print "\nPrints a summary of all the problems found in the current workload.\n"
     def help_quit(self):
