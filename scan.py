@@ -155,11 +155,8 @@ def scan_region_file(to_scan_region_file):
         try:
             for x in range(32):
                 for z in range(32):
-                    #~ c = world.ScannedChunk((x,z))
-                    #~ r.chunks[(x,z)] = c
-                    
                     chunk, c = scan_chunk(region_file, (x,z), o)
-                    if c != None:
+                    if c != None: # chunk not created
                         r.chunks[(x,z)] = c
                         chunk_count += 1
                     else: continue
@@ -170,10 +167,8 @@ def scan_region_file(to_scan_region_file):
                         # takes a long time, and once detected is better to fix it at once.
                         if delete_entities:
                             world.delete_entities(region_file, x, z)
-                            print "Deleted {0} entities in chunk ({1},{2}) of the region file: {3}".format(c.num_entities, x, z, r.filename)
-                            c.num_entities = 0
-                            #~ r.chunks[(x,z)] = (c[TUPLE_STATUS], c[TUPLE_COORDS], c[TUPLE_DATA_COORDS],c[TUPLE_GLOBAL_COORDS],c[TUPLE_NUM_ENTITIES], c[TUPLE_STATUS])
-                            r.chunks[(x,z)] = (c[TUPLE_STATUS], c[TUPLE_COORDS], c[TUPLE_DATA_COORDS],c[TUPLE_NUM_ENTITIES], c[TUPLE_STATUS])
+                            print "Deleted {0} entities in chunk ({1},{2}) of the region file: {3}".format(c[TUPLE_NUM_ENTITIES], x, z, r.filename)
+                            r.chunks[(x,z)] = (c[TUPLE_NUM_ENTITIES], c[TUPLE_STATUS])
 
                         else:
                             entities_prob += 1
