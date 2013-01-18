@@ -81,7 +81,7 @@ def scan_world(world_obj, options):
         print "[WARNING!] \'level.dat\' doesn't exist!"
     else:
         if w.scanned_level.readable == True:
-            print "\'level.dat\' is redable"
+            print "\'level.dat\' is readable"
         else:
             print "[WARNING!]: \'level.dat\' is corrupted with the following error/s:"
             print "\t {0}".format(w.scanned_level.status_text)

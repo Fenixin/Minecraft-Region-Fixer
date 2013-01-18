@@ -42,7 +42,7 @@ class interactive_loop(Cmd):
         self.options = options
         self.backup_worlds = backup_worlds
         self.prompt = "#-> "
-        self.intro = "Minecraft Region-Fixer interactive mode.\n(Use tab to autocomplete. Type help for a list of commands.)\n"
+        self.intro = "Minecraft Region-Fixer interactive mode.\n(Use tab to autocomplete. Autocomplete doens't work on Windows. Type help for a list of commands.)\n"
     
     # do
     def do_set(self,arg):
