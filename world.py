@@ -529,7 +529,10 @@ class World(object):
                         backup_region_file = region.RegionFile(backup_region_path)    
                         # chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None                    
                         working_chunk, status_tuple = scan_chunk(backup_region_file, local_coords, options)
-                        status = status_tuple[TUPLE_STATUS]
+                        if status_tuple != None:
+                            status = status_tuple[TUPLE_STATUS]
+                        else:
+                            status = CHUNK_NOT_CREATED
 
                         if status == CHUNK_OK:
                             print "Replacing..."
