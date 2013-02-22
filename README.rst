@@ -11,7 +11,7 @@ Tries to fix corrupted chunks in region files using old backup copies
 of the Minecraft world. If you don't have a copy, you can eliminate the
 corrupted chunks making Minecraft recreate them.
 
-It also scans the 'level.dat' file and the player '*.dat' and tries to 
+It also scans the 'level.dat' file and the player '\*.dat' and tries to 
 read them. If there are any problems it prints warnings. At the moment
 it doesn't fix any problem in these files.
 
@@ -62,7 +62,7 @@ Here are some examples:
 From v0.1.0 Region-Fixer can scan single region files and arbitrary 
 region sets. For example, if you know where the problem is you could 
 scan a single region file instead of scanning the whole world. You 
-can also scan a few region files from different locations. Example:
+can also scan a few region files from different locations. Example::
 
     $ python region-fixer.py ~/.minecraft/saves/World1/region/r.0.0.mca 
 
@@ -317,13 +317,15 @@ For more info: “python region-fixer.py --help”
 
 Bugs, suggestions, feedback, questions
 ======================================
-Suggestions and bugs should go to the github page::
+Suggestions and bugs should go to the github page:
 
 https://github.com/Fenixin/Minecraft-Region-Fixer
 
-Feedback and questions should go preferably to the forums posts::
+Feedback and questions should go preferably to the forums posts:
+
 (server administration)
 http://www.minecraftforum.net/topic/275730-tool-minecraft-region-fixer/
+
 (mapping and modding)
 http://www.minecraftforum.net/topic/302380-tool-minecraft-region-fixer/
 
