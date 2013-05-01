@@ -12,6 +12,11 @@ from io import BytesIO
 import math, time
 from os.path import getsize
 
+class NoRegionHeader(Exception):
+	"""The size of the region file is too small to contain a header."""
+	def __init__(self, msg):
+		self.msg = msg
+
 class RegionHeaderError(Exception):
 	"""Error in the header of the region file for a given chunk."""
 	def __init__(self, msg):
@@ -94,6 +99,8 @@ class RegionFile(object):
 				# Minecraft handle them without problems. Take them
 				# as empty region files.
 				self.init_header()
+			elif self.size < 8192:
+				raise NoRegionHeader('The region file is too small in size to have a header.')
 			else:
 				self.parse_header()
 		else:
@@ -274,50 +281,64 @@ class RegionFile(object):
 			return None
 
 	def write_chunk(self, x, z, nbt_file):
-		"""A smart chunk writer that uses extents to trade off between fragmentation and cpu time."""
+		""" A simple chunk writer. """
 		data = BytesIO()
 		nbt_file.write_file(buffer = data) #render to buffer; uncompressed
 
 		compressed = zlib.compress(data.getvalue()) #use zlib compression, rather than Gzip
 		data = BytesIO(compressed)
 
-		nsectors = int(math.ceil((len(data.getvalue())+0.001)/4096))
+		nsectors = int(math.ceil(len(data.getvalue())/4096.))
 
-		#if it will fit back in it's original slot:
+		# search for a place where to write the chunk:
 		offset, length, timestamp, status = self.header[x, z]
 		pad_end = False
-		if status in (self.STATUS_CHUNK_NOT_CREATED, self.STATUS_CHUNK_OUT_OF_FILE, self.STATUS_CHUNK_IN_HEADER):
-			# don't trust bad headers, write at the end.
-			# This chunk hasn't been generated yet, or the header is wrong
+
+		if status in (self.STATUS_CHUNK_OUT_OF_FILE, self.STATUS_CHUNK_IN_HEADER,
+                  self.STATUS_CHUNK_ZERO_LENGTH, self.STATUS_CHUNK_MISMATCHED_LENGTHS):
+			# don't trust bad headers, this chunk hasn't been generated yet, or the header is wrong
 			# This chunk should just be appended to the end of the file
 			self.file.seek(0,2) # go to the end of the file
 			file_length = self.file.tell()-1 # current offset is file length
 			total_sectors = file_length/4096
 			sector = total_sectors+1
 			pad_end = True
-		elif status == self.STATUS_CHUNK_OK:
-			# TODO TODO TODO Check if chunk_status says that the lengths are incompatible (status = self.STATUS_CHUNK_ZERO_LENGTH)
+		elif status in (self.STATUS_CHUNK_NOT_CREATED, self.STATUS_CHUNK_OK):
+      # a not created chunk has zero length
 			if nsectors <= length:
 				sector = offset
 			else:
-				#traverse extents to find first-fit
-				sector= 2 #start at sector 2, first sector after header
-				while 1:
-					#check if extent is used, else move foward in extent list by extent length
-					# leave this like this or update to use self.header?
-					self.file.seek(0)
-					found = True
-					for intersect_offset, intersect_len in ( (extent_offset, extent_len)
-						for extent_offset, extent_len in (unpack(">IB", b"\0"+self.file.read(4)) for block in xrange(1024))
-							if extent_offset != 0 and ( sector >= extent_offset < (sector+nsectors))):
-								#move foward to end of intersect
-								sector = intersect_offset + intersect_len
-								found = False
-								break
-					if found:
+        # let's find a free place for this chunk
+				found = False
+        # sort the chunk tuples by offset
+				l = sorted(list(self.header.values()))
+
+				if l[0][0] != 2:
+					# there is space between the header and the first
+					# used sector, insert a false tuple to check that
+					# space too
+					l.insert(0,(2,0))
+
+        # iterate chunks by offset and search free space
+				for i in range(len(l) - 1):
+					# first item in the tuple is offset, second length
+					current_chunk = l[i]
+					next_chunk = l[i+1]
+					# calculate free_space beween chunks and break if enough
+					free_space = next_chunk[0] - (current_chunk[0] + current_chunk[1])
+					if free_space >= nsectors:
+						sector = current_chunk[0] + current_chunk[1]
+						found  = True
 						break
 
-		#write out chunk to region
+				if not found: # append chunk to the end of the file
+					self.file.seek(0,2) # go to the end of the file
+					file_length = self.file.tell()-1 # current offset is file length
+					total_sectors = file_length/4096
+					sector = total_sectors+1
+					pad_end = True
+
+		# write out chunk to region
 		self.file.seek(sector*4096)
 		self.file.write(pack(">I", len(data.getvalue())+1)) #length field
 		self.file.write(pack(">B", 2)) #compression field
@@ -335,6 +356,9 @@ class RegionFile(object):
 		self.file.seek(4096+4*(x+z*32))
 		timestamp = int(time.time())
 		self.file.write(pack(">I", timestamp))
+
+		#update header information
+		self.parse_header()
 
 
 	def unlink_chunk(self, x, z):
