@@ -57,7 +57,7 @@ def parse_paths(args):
         else:
             print "Warning: The region file {0} doesn't exists. Skipping it and scanning the rest.".format(f)
     region_list = region_list_tmp
-    
+
     # init the world objects
     world_list = parse_world_list(world_list)
 
@@ -79,9 +79,9 @@ def parse_world_list(world_path_list):
             print "Warning: The folder {0} doesn't exist. I'll skip it.".format(d)
     return tmp
 
-    
+
 def parse_backup_list(world_backup_dirs):
-    """ Generates a list with the input of backup dirs containing the 
+    """ Generates a list with the input of backup dirs containing the
     world objects of valid world directories."""
 
     directories = world_backup_dirs.split(',')
@@ -91,7 +91,7 @@ def parse_backup_list(world_backup_dirs):
 
 def parse_chunk_list(chunk_list, world_obj):
     """ Generate a list of chunks to use with world.delete_chunk_list.
-    
+
     It takes a list of global chunk coordinates and generates a list of
     tuples containing:
 
@@ -116,8 +116,55 @@ def parse_chunk_list(chunk_list, world_obj):
     return parsed_list
 
 
+def table(columns):
+    """ Gets a list with lists in which each list is a column,
+        returns a text string with a table. """
+
+    def get_max_len(l):
+        """ Takes a list and returns the length of the biggest
+            element """
+        m = 0
+        for e in l:
+            if len(str(e)) > m:
+                m = len(e)
+        return m
+
+    text = ""
+    # stores the size of the biggest element in that column
+    ml = []
+    # fill up ml
+    for c in columns:
+        m = 0
+        t = get_max_len(c)
+        if t > m:
+            m = t
+        ml.append(m)
+    # get the total width of the table:
+    ml_total = 0
+    for i in range(len(ml)):
+        ml_total += ml[i] + 2 # size of each word + 2 spaces
+    ml_total += 1 + 2# +1 for the separator | and +2 for the borders
+    text += "-"*ml_total + "\n"
+    # all the columns have the same number of rows
+    row = get_max_len(columns)
+    for r in range(row):
+        line = "|"
+        # put all the elements in this row together with spaces
+        for i in range(len(columns)):
+            line += "{0: ^{width}}".format(columns[i][r],width = ml[i] + 2)
+            # add a separator for the first column
+            if i == 0:
+                line += "|"
+
+        text += line + "|" + "\n"
+        if r == 0:
+            text += "-"*ml_total + "\n"
+    text += "-"*ml_total
+    return text
+
+
 def main():
-    
+
     usage = 'usage: %prog [options] <world-path> <other-world-path> ... <region-files> ...'
     epilog = 'Copyright (C) 2011  Alejandro Aguilera (Fenixin) \
     https://github.com/Fenixin/Minecraft-Region-Fixer                                        \
@@ -152,8 +199,11 @@ def main():
     parser.add_option('--entity-limit', '--el', help = 'Specify the limit for the --delete-entities option (default = 300).',\
         dest = 'entity_limit', default = 300, action = 'store', type = int)
 
+    parser.add_option('--delete-too-small', '--dt', help = 'Removes any region files found to be too small to really be a region file.',\
+                      dest ='delete_too_small', default = False, action = 'store_true')
+
     parser.add_option('--processes', '-p',  help = 'Set the number of workers to use for scanning. (defaulta = 1, not use multiprocessing at all)',\
-        action = 'store', type = int, default = 1)
+                      action = 'store', type = int, default = 1)
 
     parser.add_option('--verbose', '-v', help='Don\'t use a progress bar, instead print a line per scanned region file with results information. The letters mean c: corrupted; w: wrong located; t: total of chunksm; tme: too many entities problem',\
         action='store_true', default = False)
@@ -171,7 +221,7 @@ def main():
         parser.error("No world paths or region files specified! Use --help for a complete list of options.")
 
     world_list, region_list = parse_paths(args)
-    
+
     if not (world_list or region_list):
         print ("Error: No worlds or region files to scan!")
         sys.exit(1)
@@ -190,7 +240,7 @@ def main():
                     parser.error("The input should be only one world and you intruduced {0} individual region files.".format(len(region_list.regions)))
                 elif (len(world_list) > 1):
                     parser.error("The input should be only one world and you intruduced {0} worlds.".format(len(world_list)))
-        
+
         if not options.backups and (options.replace_corrupted or options.replace_wrong_located):
             parser.error("The options --replace-* need the --backups option")
 
@@ -207,17 +257,17 @@ def main():
     else:
         backup_worlds = []
 
-    
+
     # The program starts
     if options.interactive:
         # TODO: WARNING, NEEDS CHANGES FOR WINDOWS. check while making the windows exe
         c = interactive_loop(world_list, region_list, options, backup_worlds)
         c.cmdloop()
 
-    
+
     else:
         summary_text = ""
-        
+
         # scan the separate region files
         if len(region_list.regions) > 0:
             print ""
@@ -225,14 +275,39 @@ def main():
             print "{0:#^60}".format(' Scanning separate region files ')
             print "{0:#^60}".format('')
             scan_regionset(region_list, options)
-            
+
             corrupted = region_list.count_chunks(world.CHUNK_CORRUPTED)
             wrong_located = region_list.count_chunks(world.CHUNK_WRONG_LOCATED)
             entities_prob = region_list.count_chunks(world.CHUNK_TOO_MANY_ENTITIES)
-            total = region_list.count_chunks()
+            total_chunks = region_list.count_chunks()
 
-            print "\nFound {0} corrupted, {1} wrong located chunks and {2} chunks with too many entities of a total of {3}\n".format(
-                corrupted, wrong_located, entities_prob, total)
+            too_small_region = region_list.count_regions(world.REGION_TOO_SMALL)
+            unreadable_region = region_list.count_regions(world.REGION_UNREADABLE)
+            total_regions = region_list.count_regions()
+
+            # Print all this info in a table format
+            chunk_errors = ("Problem","Corrupted","Wrong located","Etities problems","Total chunks")
+            chunk_counters = ("Counts",corrupted, wrong_located, entities_prob, total_chunks)
+            table_data = []
+            for i, j in zip(chunk_errors, chunk_counters):
+                table_data.append([i,j])
+            print "\nChunk problems:"
+            if corrupted or wrong_located or entities_prob:
+                print table(table_data)
+            else:
+                print "No problems found."
+
+            print "\nRegion problems:"
+            region_errors = ("Problem","Too small","Unreadable","Total regions")
+            region_counters = ("Counts", too_small_region,unreadable_region, total_regions)
+            table_data = []
+            # compose the columns for the table
+            for i, j in zip(region_errors, region_counters):
+                table_data.append([i,j])
+            if too_small_region:
+                print table(table_data)
+            else:
+                print "No problems found."
 
             if options.summary:
                 summary_text += "\n"
@@ -253,16 +328,40 @@ def main():
             print "{0:#^60}".format('')
             print "{0:#^60}".format(' Scanning world: {0} '.format(world_obj.get_name()))
             print "{0:#^60}".format('')
-            
+
             scan_world(world_obj, options)
 
             corrupted = world_obj.count_chunks(world.CHUNK_CORRUPTED)
             wrong_located = world_obj.count_chunks(world.CHUNK_WRONG_LOCATED)
             entities_prob = world_obj.count_chunks(world.CHUNK_TOO_MANY_ENTITIES)
-            total = world_obj.count_chunks()
+            total_chunks = world_obj.count_chunks()
 
-            print "\nFound {0} corrupted, {1} wrong located chunks and {2} chunks with too many entities of a total of {3}\n".format(
-                corrupted, wrong_located, entities_prob, total)
+            too_small_region = world_obj.count_regions(world.REGION_TOO_SMALL)
+            total_regions = world_obj.count_regions()
+
+            # Print all this info in a table format
+            chunk_errors = ("Problem","Corrupted","Wrong located","Etities problems","Total chunks")
+            chunk_counters = ("Counts",corrupted, wrong_located, entities_prob, total_chunks)
+            table_data = []
+            for i, j in zip(chunk_errors, chunk_counters):
+                table_data.append([i,j])
+            print "\nChunk problems:"
+            if corrupted or wrong_located or entities_prob:
+                print table(table_data)
+            else:
+                print "No problems found."
+
+            print "\nRegion problems:"
+            chunk_errors = ("Problem","Too small", "Total regions")
+            chunk_counters = ("Counts", too_small_region, total_regions)
+            table_data = []
+            for i, j in zip(chunk_errors, chunk_counters):
+                table_data.append([i,j])
+            if too_small_region:
+                print table(table_data)
+            else:
+                print "No problems found."
+
             if backup_worlds:
                 # Try to replace bad chunks with a backup copy
                 if options.replace_corrupted:
@@ -271,7 +370,7 @@ def main():
                         fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_CORRUPTED, options)
                         print "\n{0} replaced chunks of a total of {1} corrupted chunks".format(fixed, corrupted)
                     else: print "No corrupted chunks to replace!"
-                
+
                 if options.replace_wrong_located:
                     if world_obj.count_chunks(world.CHUNK_WRONG_LOCATED):
                         print "{0:#^60}".format(' Trying to replace wrong located chunks ')
@@ -295,21 +394,32 @@ def main():
                     print "{0:#^60}".format(' Deleting  corrupted chunks ')
                     counter = world_obj.remove_problematic_chunks(world.CHUNK_CORRUPTED)
                     print "Done!"
-                    
+
                     print "Deleted {0} corrupted chunks".format(counter)
                 else:
                     print "No corrupted chunks to delete!"
-            
+
             if options.delete_wrong_located:
                 if wrong_located:
                     print "{0:#^60}".format(' Deleting wrong located chunks ')
                     counter = world_obj.remove_problematic_chunks(world.CHUNK_WRONG_LOCATED)
                     print "Done!"
-                    
+
                     print "Deleted {0} wrong located chunks".format(counter)
                 else:
                     print "No wrong located chunks to delete!"
-            
+
+            if options.delete_too_small:
+                if too_small_region:
+                    print "{0:#^60}".format(' Deleting too small region files ')
+                    counter = world_obj.remove_problematic_regions(world.WORLD_REGION_TOO_SMALL)
+                    print "Done!"
+
+                    print "Deleted {0} too small region files".format(counter)
+                else:
+                    print "No wrong located chunks to delete!"
+
+
             # print a summary for this world
             if options.summary:
                 summary_text += world_obj.summary()
