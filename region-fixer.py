@@ -187,11 +187,14 @@ def main():
     parser.add_option('--replace-entities','--re    ', help = 'Tries to replace the chunks with too many entities using the backup directories. This option can be only used scanning one world.',\
         default = False, dest = 'replace_entities', action='store_true')
 
+    parser.add_option('--replace-too-small','--rt    ', help = 'Tries to replace the region files that are too small to be actually be a region file using the backup directories. This option can be only used scanning one world.',\
+        default = False, dest = 'replace_too_small', action='store_true')
+
     parser.add_option('--delete-corrupted', '--dc', help = '[WARNING!] This option deletes! This option will delete all the corrupted chunks. Used with --replace-corrupted or --replace-wrong-located it will delete all the non-replaced chunks.',\
         action = 'store_true', default = False)
 
     parser.add_option('--delete-wrong-located', '--dw', help = '[WARNING!] This option deletes! The same as --delete-corrupted but for wrong located chunks',\
-        action = 'store_true', default = False)
+        action = 'store_true', default = False, dest='delete_wrong_located')
 
     parser.add_option('--delete-entities', '--de', help = '[WARNING!] This option deletes! This option deletes ALL the entities in chunks with more entities than --entity-limit (300 by default). In a Minecraft entities are mostly mobs and items dropped in the grond, items in chests and other stuff won\'t be touched. Read the README for more info. Region-Fixer will delete the entities while scanning so you can stop and resume the process',\
         action = 'store_true', default = False, dest = 'delete_entities')
@@ -199,7 +202,7 @@ def main():
     parser.add_option('--entity-limit', '--el', help = 'Specify the limit for the --delete-entities option (default = 300).',\
         dest = 'entity_limit', default = 300, action = 'store', type = int)
 
-    parser.add_option('--delete-too-small', '--dt', help = 'Removes any region files found to be too small to really be a region file.',\
+    parser.add_option('--delete-too-small', '--dt', help = 'Removes any region files found to be too small to actually be a region file.',\
                       dest ='delete_too_small', default = False, action = 'store_true')
 
     parser.add_option('--processes', '-p',  help = 'Set the number of workers to use for scanning. (defaulta = 1, not use multiprocessing at all)',\
@@ -233,7 +236,7 @@ def main():
 
     else: # not options.interactive
         if options.backups:
-            if not (options.replace_corrupted or options.replace_wrong_located or options.replace_entities):
+            if not (options.replace_corrupted or options.replace_wrong_located or options.replace_entities or options.replace_too_small):
                 parser.error("The option --backups needs at least one of the --replace-* options")
             else:
                 if (len(region_list.regions) > 0):
@@ -241,7 +244,7 @@ def main():
                 elif (len(world_list) > 1):
                     parser.error("The input should be only one world and you intruduced {0} worlds.".format(len(world_list)))
 
-        if not options.backups and (options.replace_corrupted or options.replace_wrong_located):
+        if not options.backups and (options.replace_corrupted or options.replace_wrong_located or options.replace_entities or options.replace_too_small):
             parser.error("The options --replace-* need the --backups option")
 
     if options.entity_limit < 0:
@@ -384,9 +387,17 @@ def main():
                         fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_TOO_MANY_ENTITIES, options)
                         print "\n{0} replaced chunks of a total of {1} chunks with too many entities".format(fixed, entities_prob)
                     else: print "No chunks with too many entities to replace!"
-
-            elif options.replace_corrupted or options.replace_wrong_located or options.replace_entities: # and not options.backups:
-                print "No backup worlds found, won't replace any chunks!"
+                
+                if options.replace_too_small:
+                    print "Hay en total {0} regiones pequeñas".format(world_obj.count_regions(world.REGION_TOO_SMALL))
+                    if world_obj.count_regions(world.REGION_TOO_SMALL):
+                        print "{0:#^60}".format(' Trying to replace too small region files ')
+                        fixed = world_obj.replace_problematic_regions(backup_worlds, world.REGION_TOO_SMALL, options)
+                        print "\n{0} replaced regions of a total of {1} too small regions files.".format(fixed, too_small_region)
+                    else: print "No too small region files to replace!"
+                
+            elif options.replace_corrupted or options.replace_wrong_located or options.replace_entities or options.replace_too_small: # and not options.backups:
+                print "No backup worlds found, won't replace any chunks/region files!"
 
             # delete bad chunks!
             if options.delete_corrupted:
@@ -412,13 +423,12 @@ def main():
             if options.delete_too_small:
                 if too_small_region:
                     print "{0:#^60}".format(' Deleting too small region files ')
-                    counter = world_obj.remove_problematic_regions(world.WORLD_REGION_TOO_SMALL)
+                    counter = world_obj.remove_problematic_regions(world.REGION_TOO_SMALL)
                     print "Done!"
 
                     print "Deleted {0} too small region files".format(counter)
                 else:
-                    print "No wrong located chunks to delete!"
-
+                    print "No too small region files to delete!"
 
             # print a summary for this world
             if options.summary:

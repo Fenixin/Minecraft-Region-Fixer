@@ -61,18 +61,21 @@ def scan_world(world_obj, options):
 
     if not w.scanned_level.path:
         print "Warning: No \'level.dat\' file found!"
-    if not w.normal_region_files:
-        print "Warning: No region files found in the \"region\" directory!"
-    if not w.nether_region_files:
-        print "Info: No nether dimension in the world directory."
-    if not w.aether_region_files:
-        print "Info: No end dimension in the world directory."
+    # TODO update this to something beautiful with the new regionsets dictionary
+    #~ for r in w.regionsets:
+        #~ r
+    #~ if not w.normal_region_files:
+        #~ print "Warning: No region files found in the \"region\" directory!"
+    #~ if not w.nether_region_files:
+        #~ print "Info: No nether dimension in the world directory."
+    #~ if not w.aether_region_files:
+        #~ print "Info: No end dimension in the world directory."
     if w.players:
         print "There are {0} region files and {1} player files in the world directory.".format(\
-            len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files), len(w.players))
+            w.get_number_regions(), len(w.players))
     else:
         print "There are {0} region files in the world directory.".format(\
-            len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files))
+            w.get_number_regions())
 
     # check the level.dat file and the *.dat files in players directory
     print "\n{0:-^60}".format(' Checking level.dat ')
@@ -87,7 +90,8 @@ def scan_world(world_obj, options):
             print "\t {0}".format(w.scanned_level.status_text)
 
     print "\n{0:-^60}".format(' Checking player files ')
-
+    # TODO multiprocessing!
+    # Probably, create a scanner object with a nice buffer of logger for text and logs and debugs
     if not w.players:
         print "Info: No player files to scan."
     else:
@@ -101,19 +105,13 @@ def scan_world(world_obj, options):
             print "All player files are readable."
 
     # SCAN ALL THE CHUNKS!
-    if len(w.normal_region_files) + len(w.nether_region_files) + len(w.aether_region_files) == 0:
+    if w.get_number_regions == 0:
         print "No region files to scan!"
     else:
-        if w.normal_region_files.regions:
-            print "\n{0:-^60}".format(' Scanning the overworld ')
-            scan_regionset(w.normal_region_files, options)
-        if w.nether_region_files.regions:
-            print "\n{0:-^60}".format(' Scanning the nether ')
-            scan_regionset(w.nether_region_files, options)
-        if w.aether_region_files.regions:
-            print "\n{0:-^60}".format(' Scanning the end ')
-            scan_regionset(w.aether_region_files, options)
-
+        for r in w.regionsets:
+            if r.regions:
+                print "\n{0:-^60}".format(' Scanning the {0} '.format(r.get_name()))
+                scan_regionset(r, options)
     w.scanned = True
 
 
@@ -137,11 +135,11 @@ def scan_all_players(world_obj):
         scan_player(world_obj.players[name])
 
 
-def scan_region_file(to_scan_region_file):
+def scan_region_file(region_file):
     """ Scans a region file and fills a ScannedRegionFile obj.
     """
     try:
-        r = to_scan_region_file
+        r = region_file
         o = scan_region_file.options
         delete_entities = o.delete_entities
         entity_limit = o.entity_limit
@@ -166,7 +164,8 @@ def scan_region_file(to_scan_region_file):
         try:
             for x in range(32):
                 for z in range(32):
-                    chunk, c = scan_chunk(region_file, (x,z), o)
+                    g_coords = r.get_global_chunk_coords(x, z)
+                    chunk, c = scan_chunk(region_file, (x,z), g_coords, o)
                     if c != None: # chunk not created
                         r.chunks[(x,z)] = c
                         chunk_count += 1
@@ -227,14 +226,13 @@ def scan_region_file(to_scan_region_file):
         scan_region_file.q.put((except_type, except_class, traceback.extract_tb(tb)))
         return
 
-def scan_chunk(region_file, coords, options):
+def scan_chunk(region_file, coords, global_coords, options):
     """ Takes a RegionFile obj and the local coordinatesof the chunk as
         inputs, then scans the chunk and returns all the data."""
     try:
         chunk = region_file.get_chunk(*coords)
         if chunk:
             data_coords = world.get_chunk_data_coords(chunk)
-            global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
             num_entities = len(chunk["Level"]["Entities"])
             if data_coords != global_coords:
                 status = world.CHUNK_WRONG_LOCATED
@@ -250,7 +248,6 @@ def scan_chunk(region_file, coords, options):
                 scan_time = time.time()
         else:
             data_coords = None
-            global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
             num_entities = None
             status = world.CHUNK_NOT_CREATED
             status_text = "The chunk doesn't exist"
@@ -355,7 +352,7 @@ def scan_regionset(regionset, options):
             else:
                 scanned_regionfile, filename, corrupted, wrong, entities_prob, num_chunks = r
                 # the obj returned is a copy, overwrite it in regionset
-                regionset[world.get_region_coords(filename)] = scanned_regionfile
+                regionset[scanned_regionfile.get_coords()] = scanned_regionfile
                 corrupted_total += corrupted
                 wrong_total += wrong
                 total_chunks += num_chunks
