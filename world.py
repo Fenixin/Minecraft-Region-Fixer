@@ -37,13 +37,13 @@ CHUNK_OK = 0
 CHUNK_CORRUPTED = 1
 CHUNK_WRONG_LOCATED = 2
 CHUNK_TOO_MANY_ENTITIES = 3
-STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created", CHUNK_OK:"OK", CHUNK_CORRUPTED:"Corrupted", CHUNK_WRONG_LOCATED:"Wrong located", CHUNK_TOO_MANY_ENTITIES:"Too many entities"}
+CHUNK_STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created", CHUNK_OK:"OK", CHUNK_CORRUPTED:"Corrupted", CHUNK_WRONG_LOCATED:"Wrong located", CHUNK_TOO_MANY_ENTITIES:"Too many entities"}
 
 # Used to mark the status of region files:
 REGION_OK = 0
 REGION_TOO_SMALL = 1
 REGION_UNREADABLE = 2
-# TODO: add a status for not readable region files!
+REGION_STATUS_TEXT = {REGION_OK: "Ok", REGION_TOO_SMALL: "Too small", REGION_UNREADABLE: "Unreadable"}
 
 # Used to know where to look in a chunk status tuple
 #~ TUPLE_COORDS = 0

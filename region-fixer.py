@@ -24,12 +24,32 @@
 from multiprocessing import freeze_support
 from optparse import OptionParser, OptionGroup
 from os.path import join, split, exists, isfile
+from getpass import getpass
 import sys
 
 import world
 from scan import scan_regionset, scan_world
 from interactive import interactive_loop
+import platform
 
+# stolen from minecraft overviewer 
+# https://github.com/overviewer/Minecraft-Overviewer/
+def is_bare_console():
+    """Returns true if Overviewer is running in a bare console in
+    Windows, that is, if overviewer wasn't started in a cmd.exe
+    session.
+    """
+    if platform.system() == 'Windows':
+        try:
+            import ctypes
+            GetConsoleProcessList = ctypes.windll.kernel32.GetConsoleProcessList
+            num = GetConsoleProcessList(ctypes.byref(ctypes.c_int(0)), ctypes.c_int(1))
+            if (num == 1):
+                return True
+                
+        except Exception:
+            pass
+    return False
 
 def parse_paths(args):
     # parese the list of region files and worlds paths
@@ -219,6 +239,14 @@ def main():
 
     (options, args) = parser.parse_args()
 
+    if is_bare_console():
+        print
+        print "Minecraft Region Fixer is a command line aplication, if you want to run it"
+        print "you need to open a command line (cmd.exe in the start menu in windows 7)."
+        print 
+        getpass("Press enter to continue:")
+        return 1
+
     # Args are world_paths and region files
     if not args:
         parser.error("No world paths or region files specified! Use --help for a complete list of options.")
@@ -227,7 +255,7 @@ def main():
 
     if not (world_list or region_list):
         print ("Error: No worlds or region files to scan!")
-        sys.exit(1)
+        return 1
 
     # Check basic options compatibilities
     if options.interactive:
@@ -446,7 +474,10 @@ def main():
             except:
                 print "Something went wrong while saving the log file!"
 
+    return 0
+
 
 if __name__ == '__main__':
     freeze_support()
-    main()
+    value = main()
+    sys.exit(value)
