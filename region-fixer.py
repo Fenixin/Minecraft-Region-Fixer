@@ -51,6 +51,17 @@ def is_bare_console():
             pass
     return False
 
+def entitle(text, level = 0):
+    # print simple titles
+    t = ''
+    if level == 0:
+        t += "\n"
+        t += "{0:#^60}\n".format('')
+        t += "{0:#^60}\n".format(' ' + text + ' ')
+        t += "{0:#^60}\n".format('')
+    return t
+        
+
 def parse_paths(args):
     # parese the list of region files and worlds paths
     world_list = []
@@ -207,6 +218,9 @@ def main():
     parser.add_option('--replace-entities','--re    ', help = 'Tries to replace the chunks with too many entities using the backup directories. This option can be only used scanning one world.',\
         default = False, dest = 'replace_entities', action='store_true')
 
+    parser.add_option('--replace-shared-offset','--rs    ', help = 'Tries to replace the chunks with a shared offset using the backup directories. This option can be only used scanning one world.',\
+        default = False, dest = 'replace_shared_offset', action='store_true')
+
     parser.add_option('--replace-too-small','--rt    ', help = 'Tries to replace the region files that are too small to be actually be a region file using the backup directories. This option can be only used scanning one world.',\
         default = False, dest = 'replace_too_small', action='store_true')
 
@@ -219,14 +233,17 @@ def main():
     parser.add_option('--delete-entities', '--de', help = '[WARNING!] This option deletes! This option deletes ALL the entities in chunks with more entities than --entity-limit (300 by default). In a Minecraft entities are mostly mobs and items dropped in the grond, items in chests and other stuff won\'t be touched. Read the README for more info. Region-Fixer will delete the entities while scanning so you can stop and resume the process',\
         action = 'store_true', default = False, dest = 'delete_entities')
 
+    parser.add_option('--delete-shared-offset', '--fo', help = 'This option will delete all the chunk with status shared offset. It will remove the region header for the false chunk, note that you don\'t loos any chunk doing this.',\
+        action = 'store_true', default = False, dest = 'delete_shared_offset')
+
     parser.add_option('--entity-limit', '--el', help = 'Specify the limit for the --delete-entities option (default = 300).',\
         dest = 'entity_limit', default = 300, action = 'store', type = int)
 
     parser.add_option('--delete-too-small', '--dt', help = 'Removes any region files found to be too small to actually be a region file.',\
-                      dest ='delete_too_small', default = False, action = 'store_true')
+        dest ='delete_too_small', default = False, action = 'store_true')
 
     parser.add_option('--processes', '-p',  help = 'Set the number of workers to use for scanning. (defaulta = 1, not use multiprocessing at all)',\
-                      action = 'store', type = int, default = 1)
+        action = 'store', type = int, default = 1)
 
     parser.add_option('--verbose', '-v', help='Don\'t use a progress bar, instead print a line per scanned region file with results information. The letters mean c: corrupted; w: wrong located; t: total of chunksm; tme: too many entities problem',\
         action='store_true', default = False)
@@ -258,13 +275,14 @@ def main():
         return 1
 
     # Check basic options compatibilities
-    if options.interactive:
-        if (options.replace_corrupted or options.replace_wrong_located or options.delete_corrupted or options.delete_wrong_located or options.summary):
+    any_replace_option = options.replace_corrupted or options.replace_wrong_located or options.delete_corrupted or options.delete_wrong_located or options.replace_shared_offset
+    if options.interactive or options.summary:
+        if any_replace_option:
             parser.error("Can't use the options --replace-* , --delete-* and --log with --interactive.")
 
     else: # not options.interactive
         if options.backups:
-            if not (options.replace_corrupted or options.replace_wrong_located or options.replace_entities or options.replace_too_small):
+            if not any_replace_option:
                 parser.error("The option --backups needs at least one of the --replace-* options")
             else:
                 if (len(region_list.regions) > 0):
@@ -272,7 +290,7 @@ def main():
                 elif (len(world_list) > 1):
                     parser.error("The input should be only one world and you intruduced {0} worlds.".format(len(world_list)))
 
-        if not options.backups and (options.replace_corrupted or options.replace_wrong_located or options.replace_entities or options.replace_too_small):
+        if not options.backups and any_replace_option:
             parser.error("The options --replace-* need the --backups option")
 
     if options.entity_limit < 0:
@@ -301,10 +319,7 @@ def main():
 
         # scan the separate region files
         if len(region_list.regions) > 0:
-            print ""
-            print "{0:#^60}".format('')
-            print "{0:#^60}".format(' Scanning separate region files ')
-            print "{0:#^60}".format('')
+            print entitle("Scanning separate region files", 0)
             scan_regionset(region_list, options)
 
             corrupted = region_list.count_chunks(world.CHUNK_CORRUPTED)
@@ -342,9 +357,7 @@ def main():
 
             if options.summary:
                 summary_text += "\n"
-                summary_text += "{0:#^60}\n".format('')
-                summary_text += "{0:#^60}\n".format(" Separate region files ")
-                summary_text += "{0:#^60}\n".format('')
+                summary_text += entitle("Separate region files")
                 summary_text += "\n"
                 t = region_list.summary()
                 if t:
@@ -355,24 +368,23 @@ def main():
 
         # scan all the world folders
         for world_obj in world_list:
-            print ""
-            print "{0:#^60}".format('')
-            print "{0:#^60}".format(' Scanning world: {0} '.format(world_obj.get_name()))
-            print "{0:#^60}".format('')
+            print world_obj.get_name()
+            print entitle(' Scanning world: {0} '.format(world_obj.get_name()),0)
 
             scan_world(world_obj, options)
 
             corrupted = world_obj.count_chunks(world.CHUNK_CORRUPTED)
             wrong_located = world_obj.count_chunks(world.CHUNK_WRONG_LOCATED)
             entities_prob = world_obj.count_chunks(world.CHUNK_TOO_MANY_ENTITIES)
+            shared_prob = world_obj.count_chunks(world.CHUNK_SHARED_OFFSET)
             total_chunks = world_obj.count_chunks()
 
             too_small_region = world_obj.count_regions(world.REGION_TOO_SMALL)
             total_regions = world_obj.count_regions()
 
             # Print all this info in a table format
-            chunk_errors = ("Problem","Corrupted","Wrong located","Etities problems","Total chunks")
-            chunk_counters = ("Counts",corrupted, wrong_located, entities_prob, total_chunks)
+            chunk_errors = ("Problem","Corrupted","Wrong located","Etities problems","Shared header", "Total chunks")
+            chunk_counters = ("Counts",corrupted, wrong_located, entities_prob, shared_prob, total_chunks)
             table_data = []
             for i, j in zip(chunk_errors, chunk_counters):
                 table_data.append([i,j])
@@ -415,6 +427,14 @@ def main():
                         fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_TOO_MANY_ENTITIES, options)
                         print "\n{0} replaced chunks of a total of {1} chunks with too many entities".format(fixed, entities_prob)
                     else: print "No chunks with too many entities to replace!"
+
+                if options.replace_shared_offset:
+                    if world_obj.count_chunks(world.CHUNK_SHARED_OFFSET):
+                        print "{0:#^60}".format(' Trying to replace chunks with shared offsets ')
+                        fixed = world_obj.replace_problematic_chunks(backup_worlds, world.CHUNK_SHARED_OFFSET, options)
+                        print "\n{0} replaced chunks of a total of {1} chunks with too many entities".format(fixed, shared_prob)
+                    else: print "No chunks with shared offsets to replace!"
+                # TODO: to replace this properly we have to scan the whole region file in the backup world
                 
                 if options.replace_too_small:
                     print "Hay en total {0} regiones pequeñas".format(world_obj.count_regions(world.REGION_TOO_SMALL))
@@ -423,8 +443,8 @@ def main():
                         fixed = world_obj.replace_problematic_regions(backup_worlds, world.REGION_TOO_SMALL, options)
                         print "\n{0} replaced regions of a total of {1} too small regions files.".format(fixed, too_small_region)
                     else: print "No too small region files to replace!"
-                
-            elif options.replace_corrupted or options.replace_wrong_located or options.replace_entities or options.replace_too_small: # and not options.backups:
+
+            elif any_replace_option: # and not options.backups:
                 print "No backup worlds found, won't replace any chunks/region files!"
 
             # delete bad chunks!
@@ -458,6 +478,16 @@ def main():
                 else:
                     print "No too small region files to delete!"
 
+            if options.delete_shared_offset:
+                if shared_prob:
+                    print "{0:#^60}".format(' Deleting chunks with shared offset ')
+                    counter = world_obj.remove_problematic_chunks(world.CHUNK_SHARED_OFFSET)
+                    print "Done!"
+
+                    print "Deleted {0} ".format(counter)
+                else:
+                    print "No shared offset chunks to delete!"
+            
             # print a summary for this world
             if options.summary:
                 summary_text += world_obj.summary()

@@ -37,7 +37,13 @@ CHUNK_OK = 0
 CHUNK_CORRUPTED = 1
 CHUNK_WRONG_LOCATED = 2
 CHUNK_TOO_MANY_ENTITIES = 3
-CHUNK_STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created", CHUNK_OK:"OK", CHUNK_CORRUPTED:"Corrupted", CHUNK_WRONG_LOCATED:"Wrong located", CHUNK_TOO_MANY_ENTITIES:"Too many entities"}
+CHUNK_SHARED_OFFSET = 4
+CHUNK_STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created",
+                    CHUNK_OK:"OK",
+                    CHUNK_CORRUPTED:"Corrupted",
+                    CHUNK_WRONG_LOCATED:"Wrong located",
+                    CHUNK_TOO_MANY_ENTITIES:"Too many entities",
+                    CHUNK_SHARED_OFFSET:"Two headers pointing this chunk"}
 
 # Used to mark the status of region files:
 REGION_OK = 0
@@ -113,7 +119,7 @@ class ScannedChunk(object):
 
 class ScannedRegionFile(object):
     """ Stores all the scan information for a region file """
-    def __init__(self, filename, corrupted = None, wrong = None, entities_prob = None, chunks = None, status = None, time = None):
+    def __init__(self, filename, corrupted = None, wrong = None, entities_prob = None, shared_offset = None, chunks = None, status = None, time = None):
         # general region file info
         self.path = filename
         self.filename = split(filename)[1]
@@ -132,6 +138,7 @@ class ScannedRegionFile(object):
         self.corrupted_chunks = corrupted
         self.wrong_located_chunks = wrong
         self.entities_prob = entities_prob
+        self.shared_offset = shared_offset
         self.chunk_count = chunks
 
         # time when the scan for this file finished
@@ -159,6 +166,12 @@ class ScannedRegionFile(object):
 
     def keys(self):
         return self.chunks.keys()
+
+    def get_counters(self):
+        """ Returns integers with all the problem counters in this
+            region file. The order is corrupted, wrong located, entities
+            shared header, total chunks """
+        return self.corrupted_chunks, self.wrong_located_chunks, self.entities_prob, self.shared_offset, self.count_chunks() 
 
     def get_path(self):
         """ Returns the path of the region file. """
@@ -220,7 +233,7 @@ class ScannedRegionFile(object):
         #TODO: This, and probably a lot of more functions, need a update
         # to work with the new region status.
         text = ""
-        if self.too_small:
+        if self.status == REGION_TOO_SMALL:
             text += " |- This region file is too small to actually be a region file!"
         else:
             for c in self.keys():
@@ -229,7 +242,7 @@ class ScannedRegionFile(object):
                 h_coords = c
                 g_coords = self.get_global_chunk_coords(*h_coords)
                 text += " |-+-Chunk coords: header {0}, global {1}.\n".format(h_coords, g_coords)
-                text += " | +-Status: {0}\n".format(STATUS_TEXT[status])
+                text += " | +-Status: {0}\n".format(CHUNK_STATUS_TEXT[status])
                 if self[c][TUPLE_STATUS] == CHUNK_TOO_MANY_ENTITIES:
                     text += " | +-Nº entities: {0}\n".format(self[c][TUPLE_NUM_ENTITIES])
                 text += " |\n"
@@ -321,13 +334,13 @@ class RegionSet(object):
         self.regions = {}
         for path in self.region_list:
             r = ScannedRegionFile(path)
-            self.regions[(r.x, r.z)] = r
+            self.regions[r.get_coords()] = r
         self.corrupted_chunks = 0
         self.wrong_located_chunks = 0
         self.entities_problems = 0
+        self.shared_header = 0
         self.bad_list = []
         self.scanned = False
-
 
     def get_name(self):
         """ Return a string with the name of the dimension, the
@@ -378,12 +391,18 @@ class RegionSet(object):
         """ Returns a list of all the ScannedRegionFile objects stored
             in the RegionSet with status. If status = None it returns
             all the objects."""
+
+        if status == None:
+            #~ print "Estamos tras pasar el if para status None"
+            #~ print "Los valores de el dict son:"
+            #~ print self.regions.values()
+            #~ print "El diccionario es si es:"
+            #~ print self.regions
+            return self.regions.values()
         t = []
         for coords in self.regions.keys():
             r = self.regions[coords]
-            if status == None:
-                t.append(r)
-            elif r.status == status:
+            if r.status == status:
                 t.append(r)
         return t
 
@@ -489,8 +508,8 @@ class World(object):
         self.regionsets = []
 
         self.regionsets.append(RegionSet(join(self.path, "region/")))
-        for directory in glob(join(self.path, "DIM*")):
-            regionsets.append(RegionSet(join(self.path, directory)))
+        for directory in glob(join(self.path, "DIM*/")):
+            self.regionsets.append(RegionSet(join(self.path, directory)))
 
         # level.dat
         # let's scan level.dat here so we can extract the world name
@@ -575,17 +594,10 @@ class World(object):
         # TODO: update this!
         # chunk info
         chunk_info = ""
-        for dimension in ["overworld", "nether", "end"]:
-
-            if dimension == "overworld":
-                regionset = self.normal_region_files
-                title = "Overworld:\n"
-            elif dimension == "nether":
-                regionset = self.nether_region_files
-                title =  "Nether:\n"
-            elif dimension == "end":
-                regionset = self.aether_region_files
-                title = "End:\n"
+        for regionset in self.regionsets:
+            
+            title = regionset.get_name()
+            
 
             # don't add text if there aren't broken chunks
             text = regionset.summary()
@@ -600,7 +612,10 @@ class World(object):
         if self.name:
             return self.name
         else:
-            return split(self.path)[1]
+            n = split(self.path) 
+            if n[1] == '':
+                n = split(n[0])[1]
+            return n
 
     def count_regions(self, status = None):
         """ Returns a number with the count of region files with
@@ -622,7 +637,8 @@ class World(object):
             to replace every chunk with that problem using a working
             chunk from the list of world objects. It uses the world
             objects in left to riht order. """
-
+    # TODO: switch to scan the whole region file always? slower, but 
+    # get all the problems always
         counter = 0
         for regionset in self.regionsets:
             for backup in backup_worlds:
@@ -647,10 +663,23 @@ class World(object):
                     if exists(backup_region_path):
                         print "Backup region file found in:\n  {0}".format(backup_region_path)
                         # get the chunk
-                        from scan import scan_chunk
-                        backup_region_file = region.RegionFile(backup_region_path)
-                        # chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
-                        working_chunk, status_tuple = scan_chunk(backup_region_file, local_coords, global_coords, options)
+                        if problem != CHUNK_SHARED_OFFSET:
+                            from scan import scan_chunk
+                            backup_region_file = region.RegionFile(backup_region_path)
+                            # chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
+                            working_chunk, status_tuple = scan_chunk(backup_region_file, local_coords, global_coords, options)
+                        else: # we need to scan the whole region file
+                            from scan import scan_region_file
+                            r = scan_region_file(ScannedRegionFile(backup_region_path),options)
+                            #~ print r
+                            #~ print r[local_coords]
+                            status_tuple = r[local_coords]
+                            if status_tuple[TUPLE_STATUS] == CHUNK_OK:
+                                backup_region_file = region.RegionFile(backup_region_path)
+                                print local_coords
+                                working_chunk = backup_region_file.get_chunk(local_coords[0],local_coords[1])
+                                print working_chunk.pretty_tree()
+
                         if status_tuple != None:
                             status = status_tuple[TUPLE_STATUS]
                         else:
@@ -660,6 +689,10 @@ class World(object):
                             print "Replacing..."
                             # the chunk exists and is healthy, fix it!
                             tofix_region_file = region.RegionFile(tofix_region_path)
+                            # unlinking the chunk is more secure and the only way to replace chunks with 
+                            # a shared offset
+                            # TODO test this carefully!
+                            tofix_region_file.unlink_chunk(*local_coords)
                             tofix_region_file.write_chunk(local_coords[0], local_coords[1],working_chunk)
                             counter += 1
                             print "Chunk replaced using backup dir: {0}".format(backup.path)

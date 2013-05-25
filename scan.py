@@ -135,35 +135,60 @@ def scan_all_players(world_obj):
         scan_player(world_obj.players[name])
 
 
-def scan_region_file(region_file):
-    """ Scans a region file and fills a ScannedRegionFile obj.
+def scan_region_file(scanned_regionfile_obj, options):
+    """ Given a scanned region file object with the information of a 
+        region files scans it and returns the same obj filled with the
+        results.
+        
+        If delete_entities is True it will delete entities while
+        scanning
+        
+        entiti_limit is the threshold tof entities to conisder a chunk
+        with too much entities problems.
     """
+    o = options
+    delete_entities = o.delete_entities
+    entity_limit = o.entity_limit
     try:
-        r = region_file
-        o = scan_region_file.options
-        delete_entities = o.delete_entities
-        entity_limit = o.entity_limit
-        regionset = scan_region_file.regionset
+        r = scanned_regionfile_obj
+        # counters of problems
         chunk_count = 0
         corrupted = 0
         wrong = 0
         entities_prob = 0
+        shared = 0
+        # used to detect chunks sharing headers
+        offsets = {}
         filename = r.filename
         # try to open the file and see if we can parse the header
         try:
             region_file = region.RegionFile(r.path)
-        except region.NoRegionHeader:
+        except region.NoRegionHeader: # the region has no header
             r.status = world.REGION_TOO_SMALL
-            scan_region_file.q.put((r, filename, corrupted, wrong, entities_prob, chunk_count))
-            return
-        except:
+            return r
+        except: # whatever else print an error and ignore for the scan
+                # not really sure if this is a good solution...
             print "The region file {0} had an error and couldn't be parsed as region file!\nError:{1}".format(split(r.path),sys.exc_info()[0])
             print "Note: this region file won't be scanned and won't be taken into acount in the summaries"
-            return
+            print "This may be a bug! Please, report it if you can!"
+            return None
 
-        try:
+        try:# starta the scanning of chunks
+            
+            
             for x in range(32):
                 for z in range(32):
+                    # for every chunk scanned store the offset it's 
+                    # using in the region file, we need to know if there
+                    # are two chunks sharing the same offset
+                    sharing_a_header = False
+                    offset = region_file.header[(x,z)][0] #see region.py
+                    #~ if offset not in offsets:
+                        #~ offsets[offset] = (x,z)
+                    #~ else:
+                        #~ sharing_a_header = True
+                    
+                    # start the actual chunk scanning
                     g_coords = r.get_global_chunk_coords(x, z)
                     chunk, c = scan_chunk(region_file, (x,z), g_coords, o)
                     if c != None: # chunk not created
@@ -193,11 +218,35 @@ def scan_region_file(region_file):
                     elif c[TUPLE_STATUS] == world.CHUNK_CORRUPTED:
                         corrupted += 1
                     elif c[TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
+                        # if the chunk seems to be wrong located and
+                        # is sharing offset with other chunk, mark it
+                        # as sharing an offset
+                        #~ if sharing_a_header:
+                            #~ c = (c[TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
+                            #~ r.chunks[(x,z)] = c
+                            #~ shared += 1
+                        #~ else:
                         wrong += 1
+            
+            # check for chunks sharing offsets
+            l = sorted(list(region_file.header.keys()))
+            # a header in region.py always contain all the possible entries
+            offsets = []
+            keys = []
+            bad_chunks_list = []
 
+            for i in range(len(l)):
+                for j in range(i + 1,len(l)):
+                    # TODO this is broken
+                    if region_file.header[l[i]][0] == region_file.header[l[j]][0]:
+                        if r[l[i]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
+                            r[l[i]] = (r[l[i]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
+                        if r[l[j]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
+                            r[l[j]] = (r[l[j]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
+            
         except KeyboardInterrupt:
             print "\nInterrupted by user\n"
-            # TODO this should't exit directly in the next verion...
+            # TODO this should't exit
             sys.exit(1)
 
         r.chunk_count = chunk_count
@@ -206,25 +255,41 @@ def scan_region_file(region_file):
         r.entities_prob = entities_prob
         r.scan_time = time.time()
         r.status = world.REGION_OK
-        scan_region_file.q.put((r, filename, corrupted, wrong, entities_prob, chunk_count))
+        return r 
 
-        return
-
-        # Fatal exceptions:
     except IOError, e:
         print "\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(filename,e)
         # TODO: Test this out.
         r.status = world.REGION_UNREADABLE
-        scan_region_file.q.put((r, filename, corrupted, wrong, entities_prob, chunk_count))
         # print "Note: this region file won't be scanned and won't be taken into acount in the summaries"
         # scan_region_file.q.put((r, filename, None))
-        return
+        return r
 
+        # Fatal exceptions:
     except:
         # anything else is a ChildProcessException
         except_type, except_class, tb = sys.exc_info()
-        scan_region_file.q.put((except_type, except_class, traceback.extract_tb(tb)))
-        return
+        return (except_type, except_class, traceback.extract_tb(tb))
+
+
+def multithread_scan_regionfile(region_file):
+    """ Does the multithread stuff for scan_region_file """
+    try:
+        r = region_file
+        o = multithread_scan_regionfile.options
+
+        # call the normal scan_region_file with this parameters
+        r = scan_region_file(r,o)
+
+        #scanned_regionfile, filename, corrupted, wrong, entities_prob, shared_header, num_chunks
+        if isinstance(r,world.ScannedRegionFile): # everything went well
+            multithread_scan_regionfile.q.put(r)
+        else: # something went wrong, return a tuple with the traceback
+            multithread_scan_regionfile.q.put(r)
+    except:
+        except_type, except_class, tb = sys.exc_info()
+        multithread_scan_regionfile.q.put((except_type, except_class, traceback.extract_tb(tb)))
+
 
 def scan_chunk(region_file, coords, global_coords, options):
     """ Takes a RegionFile obj and the local coordinatesof the chunk as
@@ -301,11 +366,11 @@ TUPLE_STATUS = 1
     #~ return chunk
 
 def _mp_pool_init(regionset,options,q):
-    """ Function to initialize the multiprocessing in scan_all_mca_files.
+    """ Function to initialize the multiprocessing in scan_regionset.
     Is used to pass values to the child process. """
-    scan_region_file.regionset = regionset
-    scan_region_file.q = q
-    scan_region_file.options = options
+    multithread_scan_regionfile.regionset = regionset
+    multithread_scan_regionfile.q = q
+    multithread_scan_regionfile.options = options
 
 
 def scan_regionset(regionset, options):
@@ -338,39 +403,43 @@ def scan_regionset(regionset, options):
     # Note to self: every child process has his own memory space,
     # that means every obj recived by them will be a copy of the
     # main obj
-    result = pool.map_async(scan_region_file, regionset.list_regions(None), max(1,total_regions//options.processes))
+    #~ print regionset.list_regions(None)
+    result = pool.map_async(multithread_scan_regionfile, regionset.list_regions(None), max(1,total_regions//options.processes))
 
     # printing status
-    counter = 0
+    region_counter = 0
 
     while not result.ready() or not q.empty():
+        #~ print result, "Ready?",result.ready()
+        #~ print q, "Empty?",q.empty()
         time.sleep(0.01)
         if not q.empty():
             r = q.get()
-            if len(r) == 3:
+            print r
+            if not isinstance(r,world.ScannedRegionFile):
                 raise ChildProcessException(r)
             else:
-                scanned_regionfile, filename, corrupted, wrong, entities_prob, num_chunks = r
+                corrupted, wrong, entities_prob, shared_header, num_chunks = r.get_counters()
+                filename = r.filename
                 # the obj returned is a copy, overwrite it in regionset
-                regionset[scanned_regionfile.get_coords()] = scanned_regionfile
+                regionset[r.get_coords()] = r
                 corrupted_total += corrupted
                 wrong_total += wrong
                 total_chunks += num_chunks
                 entities_total += entities_prob
-                if scanned_regionfile.status == world.REGION_TOO_SMALL:
+                if r.status == world.REGION_TOO_SMALL:
                     too_small_total += 1
-                counter += 1
+                region_counter += 1
                 if options.verbose:
-                  # TODO this needs update for the new region status
-                  if scanned_regionfile.status == world.REGION_OK:
+                  if r.status == world.REGION_OK:
                     stats = "(c: {0}, w: {1}, tme: {2}, t: {3})".format( corrupted, wrong, entities_prob, num_chunks)
-                  elif scanned_regionfile.status == world.REGION_TOO_SMALL:
+                  elif r.status == world.REGION_TOO_SMALL:
                     stats = "(Error: not a region file)"
-                  elif scanned_regionfile.status == world.REGION_UNREADABLE:
-                    stats = "(Error: REGION FILE UNREADABLE ALSDFJQÑOWIERJPOI2U3409832##)"
-                  print "Scanned {0: <15} {1:.<40} {2}/{3}".format(filename, stats, counter, total_regions)
+                  elif r.status == world.REGION_UNREADABLE:
+                    stats = "(Error: unreadable region file)"
+                  print "Scanned {0: <15} {1:.<40} {2}/{3}".format(filename, stats, region_counter, total_regions)
                 else:
-                    pbar.update(counter)
+                    pbar.update(region_counter)
 
     if not options.verbose: pbar.finish()
 
