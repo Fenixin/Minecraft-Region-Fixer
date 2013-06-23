@@ -119,7 +119,7 @@ class ScannedChunk(object):
 
 class ScannedRegionFile(object):
     """ Stores all the scan information for a region file """
-    def __init__(self, filename, corrupted = None, wrong = None, entities_prob = None, shared_offset = None, chunks = None, status = None, time = None):
+    def __init__(self, filename, corrupted = 0, wrong = 0, entities_prob = 0, shared_offset = 0, chunks = 0, status = 0, time = None):
         # general region file info
         self.path = filename
         self.filename = split(filename)[1]

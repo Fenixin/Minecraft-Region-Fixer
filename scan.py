@@ -169,7 +169,6 @@ def scan_region_file(scanned_regionfile_obj, options):
             region_file = region.RegionFile(r.path)
         except region.NoRegionHeader: # the region has no header
             r.status = world.REGION_TOO_SMALL
-            scan_region_file.q.put((r, filename, corrupted, wrong, entities_prob, chunk_count))
             return r
         except: # whatever else print an error and ignore for the scan
                 # not really sure if this is a good solution...
@@ -243,11 +242,12 @@ def scan_region_file(scanned_regionfile_obj, options):
             for i in range(len(l)):
                 for j in range(i + 1,len(l)):
                     # TODO this is broken
-                    if region_file.header[l[i]][0] == region_file.header[l[j]][0]:
-                        if r[l[i]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
-                            r[l[i]] = (r[l[i]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
-                        if r[l[j]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
-                            r[l[j]] = (r[l[j]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
+                    pass
+                    #~ if region_file.header[l[i]][0] == region_file.header[l[j]][0]:
+                        #~ if r[l[i]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
+                            #~ r[l[i]] = (r[l[i]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
+                        #~ if r[l[j]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
+                            #~ r[l[j]] = (r[l[j]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
             
         except KeyboardInterrupt:
             print "\nInterrupted by user\n"
@@ -274,27 +274,22 @@ def scan_region_file(scanned_regionfile_obj, options):
     except:
         # anything else is a ChildProcessException
         except_type, except_class, tb = sys.exc_info()
-        scan_region_file.q.put((r.path, r.coords, (except_type, except_class, traceback.extract_tb(tb))))
-        return (except_type, except_class, traceback.extract_tb(tb))
+        r = (r.path, r.coords, (except_type, except_class, traceback.extract_tb(tb)))
+        return r
 
 
 def multithread_scan_regionfile(region_file):
     """ Does the multithread stuff for scan_region_file """
-    try:
-        r = region_file
-        o = multithread_scan_regionfile.options
+    r = region_file
+    o = multithread_scan_regionfile.options
 
-        # call the normal scan_region_file with this parameters
-        r = scan_region_file(r,o)
+    # call the normal scan_region_file with this parameters
+    r = scan_region_file(r,o)
 
-        #scanned_regionfile, filename, corrupted, wrong, entities_prob, shared_header, num_chunks
-        if isinstance(r,world.ScannedRegionFile): # everything went well
-            multithread_scan_regionfile.q.put(r)
-        else: # something went wrong, return a tuple with the traceback
-            multithread_scan_regionfile.q.put(r)
-    except:
-        except_type, except_class, tb = sys.exc_info()
-        multithread_scan_regionfile.q.put((except_type, except_class, traceback.extract_tb(tb)))
+    # exceptions will be handled in scan_region_file which is in the
+    # single thread land
+    multithread_scan_regionfile.q.put(r)
+
 
 
 def scan_chunk(region_file, coords, global_coords, options):
@@ -421,7 +416,6 @@ def scan_regionset(regionset, options):
         time.sleep(0.01)
         if not q.empty():
             r = q.get()
-            print r
             if not isinstance(r,world.ScannedRegionFile):
                 raise ChildProcessException(r)
             else:
