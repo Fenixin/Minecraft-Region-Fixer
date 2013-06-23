@@ -36,12 +36,16 @@ import traceback
 class ChildProcessException(Exception):
     """Takes the child process traceback text and prints it as a
     real traceback with asterisks everywhere."""
-    def __init__(self, r):
+    def __init__(self, error):
         # Helps to see wich one is the child process traceback
+        traceback = error[2]
+        print "*"*10
+        print "*** Error while scanning:"
+        print "*** ", error[0]
         print "*"*10
         print "*** Printing the child's Traceback:"
-        print "*** Exception:", r[0], r[1]
-        for tb in r[2]:
+        print "*** Exception:", traceback[0], traceback[1]
+        for tb in traceback[2]:
             print "*"*10
             print "*** File {0}, line {1}, in {2} \n***   {3}".format(*tb)
         print "*"*10
@@ -165,6 +169,7 @@ def scan_region_file(scanned_regionfile_obj, options):
             region_file = region.RegionFile(r.path)
         except region.NoRegionHeader: # the region has no header
             r.status = world.REGION_TOO_SMALL
+            scan_region_file.q.put((r, filename, corrupted, wrong, entities_prob, chunk_count))
             return r
         except: # whatever else print an error and ignore for the scan
                 # not really sure if this is a good solution...
@@ -269,6 +274,7 @@ def scan_region_file(scanned_regionfile_obj, options):
     except:
         # anything else is a ChildProcessException
         except_type, except_class, tb = sys.exc_info()
+        scan_region_file.q.put((r.path, r.coords, (except_type, except_class, traceback.extract_tb(tb))))
         return (except_type, except_class, traceback.extract_tb(tb))
 
 
