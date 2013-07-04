@@ -196,6 +196,7 @@ def scan_region_file(scanned_regionfile_obj, options):
                     g_coords = r.get_global_chunk_coords(x, z)
                     chunk, c = scan_chunk(region_file, (x,z), g_coords, o)
                     if c != None: # chunk not created
+                        #~ print c
                         r.chunks[(x,z)] = c
                         chunk_count += 1
                     else: continue
@@ -238,17 +239,27 @@ def scan_region_file(scanned_regionfile_obj, options):
             offsets = []
             keys = []
             bad_chunks_list = []
+            shared_counter = 0
 
             for i in range(len(l)):
                 for j in range(i + 1,len(l)):
-                    # TODO this is broken
-                    pass
-                    #~ if region_file.header[l[i]][0] == region_file.header[l[j]][0]:
-                        #~ if r[l[i]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
-                            #~ r[l[i]] = (r[l[i]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
-                        #~ if r[l[j]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
-                            #~ r[l[j]] = (r[l[j]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
-            
+                    # there is an old header pointing to a non created chunk
+                    if  l[i] not in r.chunks:
+                        continue
+                    if region_file.header[l[i]][0] == region_file.header[l[j]][0]:
+                        # both chunk could be wrong located and therefore both sharing offset with other chunk
+                        # that's why the to separated if
+                        if r[l[i]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
+                            r[l[i]] = (r[l[i]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
+                            shared_counter += 1
+                            wrong -= 1
+                            bad_chunks_list.append([l[i],region_file.header[l[i]][0]])
+                        if r[l[j]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
+                            r[l[j]] = (r[l[j]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
+                            bad_chunks_list.append([l[j],region_file.header[l[j]][0]])
+                            wrong -= 1
+                            shared_counter += 1
+
         except KeyboardInterrupt:
             print "\nInterrupted by user\n"
             # TODO this should't exit
@@ -258,6 +269,7 @@ def scan_region_file(scanned_regionfile_obj, options):
         r.corrupted_chunks = corrupted
         r.wrong_located_chunks = wrong
         r.entities_prob = entities_prob
+        r.shared_offset = shared_counter
         r.scan_time = time.time()
         r.status = world.REGION_OK
         return r 
@@ -326,7 +338,7 @@ def scan_chunk(region_file, coords, global_coords, options):
         scan_time = time.time()
         chunk = None
         data_coords = None
-        global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
+        global_coords = world.get_global_chunk_coords(region_file.filename.split()[1], coords[0], coords[1])
         num_entities = None
 
     except region.ChunkDataError as e:
@@ -336,7 +348,7 @@ def scan_chunk(region_file, coords, global_coords, options):
         scan_time = time.time()
         chunk = None
         data_coords = None
-        global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
+        global_coords = world.get_global_chunk_coords(region_file.filename.split()[1], coords[0], coords[1])
         num_entities = None
 
     except region.ChunkHeaderError as e:
@@ -346,7 +358,7 @@ def scan_chunk(region_file, coords, global_coords, options):
         scan_time = time.time()
         chunk = None
         data_coords = None
-        global_coords = world.get_global_chunk_coords(region_file.filename, coords[0], coords[1])
+        global_coords = world.get_global_chunk_coords(region_file.filename.split()[1], coords[0], coords[1])
         num_entities = None
 
     return chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
@@ -419,7 +431,7 @@ def scan_regionset(regionset, options):
             if not isinstance(r,world.ScannedRegionFile):
                 raise ChildProcessException(r)
             else:
-                corrupted, wrong, entities_prob, shared_header, num_chunks = r.get_counters()
+                corrupted, wrong, entities_prob, shared_offset, num_chunks = r.get_counters()
                 filename = r.filename
                 # the obj returned is a copy, overwrite it in regionset
                 regionset[r.get_coords()] = r
@@ -432,12 +444,12 @@ def scan_regionset(regionset, options):
                 region_counter += 1
                 if options.verbose:
                   if r.status == world.REGION_OK:
-                    stats = "(c: {0}, w: {1}, tme: {2}, t: {3})".format( corrupted, wrong, entities_prob, num_chunks)
+                    stats = "(c: {0}, w: {1}, tme: {2}, so: {3}, t: {4})".format( corrupted, wrong, entities_prob, shared_offset, num_chunks)
                   elif r.status == world.REGION_TOO_SMALL:
                     stats = "(Error: not a region file)"
                   elif r.status == world.REGION_UNREADABLE:
                     stats = "(Error: unreadable region file)"
-                  print "Scanned {0: <15} {1:.<40} {2}/{3}".format(filename, stats, region_counter, total_regions)
+                  print "Scanned {0: <12} {1:.<43} {2}/{3}".format(filename, stats, region_counter, total_regions)
                 else:
                     pbar.update(region_counter)
 

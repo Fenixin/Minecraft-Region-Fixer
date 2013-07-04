@@ -91,9 +91,8 @@ class RegionFile(object):
 		- STATUS_CHUNK_NOT_CREATED
 		If the chunk is not defined, the tuple is (None, None, STATUS_CHUNK_NOT_CREATED)
 		"""
-		self.extents = None
 		if self.file:
-			self.size = getsize(self.filename)
+			self.size = self.get_size()
 			if self.size == 0:
 				# Some region files seems to have 0 bytes of size, and
 				# Minecraft handle them without problems. Take them
@@ -107,6 +106,11 @@ class RegionFile(object):
 			self.init_header()
 		self.parse_chunk_headers()
 
+	def get_size(self):
+		""" Returns the file object size. """
+		self.file.seek(0,2)
+		size = self.file.tell()
+		return size
 
 	def __del__(self):
 		if self.file:
@@ -119,6 +123,10 @@ class RegionFile(object):
 
 	def parse_header(self):
 		"""Read the region header and stores: offset, length and status."""
+		# update the file size, needed when parse_header is called after
+		# we have unlinked a chunk or writed a new one
+		self.size = self.get_size()
+
 		for index in range(0,4096,4):
 			self.file.seek(index)
 			offset, length = unpack(">IB", b"\0"+self.file.read(4))
@@ -304,30 +312,37 @@ class RegionFile(object):
 			sector = total_sectors+1
 			pad_end = True
 		elif status in (self.STATUS_CHUNK_NOT_CREATED, self.STATUS_CHUNK_OK):
-      # a not created chunk has zero length
+			# look up if the new chunk fits in the place of the old one,
+			# a no created chunk has 0 length, so can't be a problem
 			if nsectors <= length:
 				sector = offset
 			else:
-        # let's find a free place for this chunk
+				# let's find a free place for this chunk
 				found = False
-        # sort the chunk tuples by offset
-				l = sorted(list(self.header.values()))
+				# sort the chunk tuples by offset and ignore empty chunks
+				l = sorted([i for i in self.header.values() if i[0] != 0])
 
 				if l[0][0] != 2:
 					# there is space between the header and the first
 					# used sector, insert a false tuple to check that
 					# space too
-					l.insert(0,(2,0))
+					l.insert(0,(2,0,0,0))
 
-        # iterate chunks by offset and search free space
+				# iterate chunks by offset and search free space
 				for i in range(len(l) - 1):
 					# first item in the tuple is offset, second length
+					
 					current_chunk = l[i]
 					next_chunk = l[i+1]
 					# calculate free_space beween chunks and break if enough
 					free_space = next_chunk[0] - (current_chunk[0] + current_chunk[1])
 					if free_space >= nsectors:
 						sector = current_chunk[0] + current_chunk[1]
+						# a corrupted region header can contain random
+						# stuff, just in case check if we are trying to
+						# write in the header and skip if it's the case.
+						if sector <= 1:
+							continue
 						found  = True
 						break
 
@@ -363,10 +378,17 @@ class RegionFile(object):
 
 	def unlink_chunk(self, x, z):
 		"""
-		Remove a chunk from the header of the region file (write zeros in the offset of the chunk).
-		Using only this method leaves the chunk data intact, fragmenting the region file (unconfirmed).
-		This is an start to a better function remove_chunk
+		Remove a chunk from the header of the region file (write zeros
+		in the offset of the chunk). Fragmentation is not a problem,
+		Minecraft and this nbt library write chunks in old free spaces
+		when possible.
 		"""
 
+		# zero the region header for the chunk (offset length and time)
 		self.file.seek(4*(x+z*32))
 		self.file.write(pack(">IB", 0, 0)[1:])
+		self.file.seek(4096+4*(x+z*32))
+		self.file.write(pack(">I", 0))
+
+		# update the header
+		self.parse_header()

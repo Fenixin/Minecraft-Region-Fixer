@@ -433,13 +433,9 @@ class TAG_Compound(TAG, MutableMapping):
 
 	def __delitem__(self, key):
 		if isinstance(key, int):
-			self.tags = self.tags[:key] + self.tags[key:]
+			del(self.tags[key])
 		elif isinstance(key, basestring):
-			for i, tag in enumerate(self.tags):
-				if tag.name == key:
-					self.tags = self.tags[:i] + self.tags[i:]
-					return
-			raise KeyError("A tag with this name does not exist")
+			self.tags.remove(self.__getitem__(key))
 		else:
 			raise ValueError("key needs to be either name of tag, or index of tag")
 

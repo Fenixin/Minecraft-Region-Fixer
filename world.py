@@ -23,6 +23,8 @@
 
 import nbt.region as region
 import nbt.nbt as nbt
+from util import table
+
 from glob import glob
 from os.path import join, split, exists
 from os import remove
@@ -431,7 +433,6 @@ class RegionSet(object):
             chunks. """
         l = []
         for r in self.keys():
-            print r
             l.extend(self[r].list_chunks(status))
         return l
 
@@ -441,7 +442,7 @@ class RegionSet(object):
             and status. """
         text = ""
         for r in self.keys():
-            if not (self[r].count_chunks(CHUNK_CORRUPTED) or self[r].count_chunks(CHUNK_TOO_MANY_ENTITIES) or self[r].count_chunks(CHUNK_WRONG_LOCATED)):
+            if not (self[r].count_chunks(CHUNK_CORRUPTED) or self[r].count_chunks(CHUNK_TOO_MANY_ENTITIES) or self[r].count_chunks(CHUNK_WRONG_LOCATED) or self[r].count_chunks(CHUNK_SHARED_OFFSET)):
                 continue
             text += "Region file: {0}\n".format(self[r].filename)
             text += self[r].summary()
@@ -495,6 +496,49 @@ class RegionSet(object):
         for r in self.keys():
             self[r].rescan_entities(options)
 
+    def generate_report(self, standalone):
+        
+        # collect data
+        corrupted = self.count_chunks(CHUNK_CORRUPTED)
+        wrong_located = self.count_chunks(CHUNK_WRONG_LOCATED)
+        entities_prob = self.count_chunks(CHUNK_TOO_MANY_ENTITIES)
+        shared_prob = self.count_chunks(CHUNK_SHARED_OFFSET)
+        total_chunks = self.count_chunks()
+
+        too_small_region = self.count_regions(REGION_TOO_SMALL)
+        unreadable_region = self.count_regions(REGION_UNREADABLE)
+        total_regions = self.count_regions()
+        
+        if standalone:
+            text = ""
+        
+            # Print all this info in a table format
+            chunk_errors = ("Problem","Corrupted","Wrong l.","Etities","Shared o.", "Total chunks")
+            chunk_counters = ("Counts",corrupted, wrong_located, entities_prob, shared_prob, total_chunks)
+            table_data = []
+            for i, j in zip(chunk_errors, chunk_counters):
+                table_data.append([i,j])
+            text += "\nChunk problems:\n"
+            if corrupted or wrong_located or entities_prob or shared_prob:
+                text += table(table_data)
+            else:
+                text += "\nNo problems found.\n"
+
+            text += "\n\nRegion problems:\n"
+            region_errors = ("Problem","Too small","Unreadable","Total regions")
+            region_counters = ("Counts", too_small_region,unreadable_region, total_regions)
+            table_data = []
+            # compose the columns for the table
+            for i, j in zip(region_errors, region_counters):
+                table_data.append([i,j])
+            if too_small_region:
+                text += table(table_data)
+            else:
+                text += "No problems found."
+                
+            return text
+        else:
+            return corrupted, wrong_located, entities_prob, shared_prob, total_chunks, too_small_region, unreadable_region, total_regions
 
 class World(object):
     """ This class stores all the info needed of a world, and once
@@ -663,29 +707,34 @@ class World(object):
                     if exists(backup_region_path):
                         print "Backup region file found in:\n  {0}".format(backup_region_path)
                         # get the chunk
-                        if problem != CHUNK_SHARED_OFFSET:
-                            from scan import scan_chunk
-                            backup_region_file = region.RegionFile(backup_region_path)
-                            # chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
-                            working_chunk, status_tuple = scan_chunk(backup_region_file, local_coords, global_coords, options)
-                        else: # we need to scan the whole region file
-                            from scan import scan_region_file
-                            r = scan_region_file(ScannedRegionFile(backup_region_path),options)
-                            #~ print r
-                            #~ print r[local_coords]
-                            status_tuple = r[local_coords]
-                            if status_tuple[TUPLE_STATUS] == CHUNK_OK:
-                                backup_region_file = region.RegionFile(backup_region_path)
-                                print local_coords
-                                working_chunk = backup_region_file.get_chunk(local_coords[0],local_coords[1])
-                                print working_chunk.pretty_tree()
-
-                        if status_tuple != None:
-                            status = status_tuple[TUPLE_STATUS]
-                        else:
+                        #~ if problem != CHUNK_SHARED_OFFSET:
+                            #~ from scan import scan_chunk
+                            #~ backup_region_file = region.RegionFile(backup_region_path)
+                            #~ # chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
+                            #~ working_chunk, status_tuple = scan_chunk(backup_region_file, local_coords, global_coords, options)
+                        #~ else: # we need to scan the whole region file
+                        from scan import scan_region_file
+                        r = scan_region_file(ScannedRegionFile(backup_region_path),options)
+                        #~ print r
+                        #~ print r[local_coords]
+                        status_tuple = r[local_coords]
+                        # TODO this can make the status_tuple to be None
+                        
+                        # retrive the status from status_tuple
+                        if status_tuple == None:
                             status = CHUNK_NOT_CREATED
-
+                        else:
+                            status = status_tuple[TUPLE_STATUS]
+                        
                         if status == CHUNK_OK:
+                            backup_region_file = region.RegionFile(backup_region_path)
+                            working_chunk = backup_region_file.get_chunk(local_coords[0],local_coords[1])
+
+                        #~ if status_tuple != None:
+                            #~ status = status_tuple[TUPLE_STATUS]
+                        #~ else:
+                            #~ status = CHUNK_NOT_CREATED
+
                             print "Replacing..."
                             # the chunk exists and is healthy, fix it!
                             tofix_region_file = region.RegionFile(tofix_region_path)
@@ -785,6 +834,52 @@ class World(object):
             option entity limit is changed. """
         for regionset in self.dimensions:
             regionset.rescan_entities(options)
+    
+    def generate_report(self, standalone):
+        
+        # collect data
+        corrupted = self.count_chunks(CHUNK_CORRUPTED)
+        wrong_located = self.count_chunks(CHUNK_WRONG_LOCATED)
+        entities_prob = self.count_chunks(CHUNK_TOO_MANY_ENTITIES)
+        shared_prob = self.count_chunks(CHUNK_SHARED_OFFSET)
+        total_chunks = self.count_chunks()
+
+        too_small_region = self.count_regions(REGION_TOO_SMALL)
+        unreadable_region = self.count_regions(REGION_UNREADABLE)
+        total_regions = self.count_regions()
+        
+        if standalone:
+            text = ""
+        
+            # Print all this info in a table format
+            chunk_errors = ("Problem","Corrupted","Wrong l.","Etities","Shared o.", "Total chunks")
+            chunk_counters = ("Counts",corrupted, wrong_located, entities_prob, shared_prob, total_chunks)
+            table_data = []
+            for i, j in zip(chunk_errors, chunk_counters):
+                table_data.append([i,j])
+            text += "\nChunk problems:\n"
+            if corrupted or wrong_located or entities_prob or shared_prob:
+                text += table(table_data)
+            else:
+                text += "\nNo problems found.\n"
+
+            text += "\n\nRegion problems:\n"
+            region_errors = ("Problem","Too small","Unreadable","Total regions")
+            region_counters = ("Counts", too_small_region,unreadable_region, total_regions)
+            table_data = []
+            # compose the columns for the table
+            for i, j in zip(region_errors, region_counters):
+                table_data.append([i,j])
+            if too_small_region:
+                text += table(table_data)
+            else:
+                text += "No problems found."
+                
+            return text
+        else:
+            return corrupted, wrong_located, entities_prob, shared_prob, total_chunks, too_small_region, unreadable_region, total_regions
+
+
 
 def delete_entities(region_file, x, z):
     """ This function is used while scanning the world in scan.py! Takes
@@ -826,3 +921,25 @@ def get_chunk_data_coords(nbt_file):
     coordZ = level.__getitem__('zPos').value
 
     return coordX, coordZ
+
+def get_region_coords(filename):
+    """ Splits the region filename (full pathname or just filename)
+        and returns his region X and Z coordinates as integers. """
+
+    l = filename.split('.')
+    coordX = int(l[1])
+    coordZ = int(l[2])
+
+    return coordX, coordZ
+
+def get_global_chunk_coords(region_name, chunkX, chunkZ):
+    """ Takes the region filename and the chunk local
+        coords and returns the global chunkcoords as integerss. This 
+        version does exactly the same as the method in 
+        ScannedRegionFile. """
+
+    regionX, regionZ = get_region_coords(region_name)
+    chunkX += regionX*32
+    chunkZ += regionZ*32
+
+    return chunkX, chunkZ
