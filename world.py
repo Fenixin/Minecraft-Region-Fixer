@@ -45,7 +45,9 @@ CHUNK_STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created",
                     CHUNK_CORRUPTED:"Corrupted",
                     CHUNK_WRONG_LOCATED:"Wrong located",
                     CHUNK_TOO_MANY_ENTITIES:"Too many entities",
-                    CHUNK_SHARED_OFFSET:"Two headers pointing this chunk"}
+                    CHUNK_SHARED_OFFSET:"Sharing offset"}
+
+CHUNK_PROBLEMS = [CHUNK_CORRUPTED, CHUNK_WRONG_LOCATED, CHUNK_TOO_MANY_ENTITIES, CHUNK_SHARED_OFFSET]
 
 # Used to mark the status of region files:
 REGION_OK = 0
@@ -497,7 +499,10 @@ class RegionSet(object):
             self[r].rescan_entities(options)
 
     def generate_report(self, standalone):
-        
+        """ Generates a report of the last scan. If standalone is True
+        it will generate a report to print in a terminal. If it's False
+        it will returns the counters of every problem. """
+
         # collect data
         corrupted = self.count_chunks(CHUNK_CORRUPTED)
         wrong_located = self.count_chunks(CHUNK_WRONG_LOCATED)
@@ -513,17 +518,19 @@ class RegionSet(object):
             text = ""
         
             # Print all this info in a table format
+            # chunks
             chunk_errors = ("Problem","Corrupted","Wrong l.","Etities","Shared o.", "Total chunks")
             chunk_counters = ("Counts",corrupted, wrong_located, entities_prob, shared_prob, total_chunks)
             table_data = []
             for i, j in zip(chunk_errors, chunk_counters):
                 table_data.append([i,j])
-            text += "\nChunk problems:\n"
+            text += "\nChunk problems:"
             if corrupted or wrong_located or entities_prob or shared_prob:
                 text += table(table_data)
             else:
                 text += "\nNo problems found.\n"
 
+            # regions
             text += "\n\nRegion problems:\n"
             region_errors = ("Problem","Too small","Unreadable","Total regions")
             region_counters = ("Counts", too_small_region,unreadable_region, total_regions)
@@ -597,7 +604,7 @@ class World(object):
         text = "World information:\n"
         text += "   World path: {0}\n".format(self.path)
         text += "   World name: {0}\n".format(self.name)
-        text += "   Region files: {0}\n".format(get_number_regions())
+        text += "   Region files: {0}\n".format(self.get_number_regions())
         text += "   Scanned: {0}".format(str(self.scanned))
         return text
 
@@ -673,7 +680,8 @@ class World(object):
         """ Counts problems  """
         counter = 0
         for r in self.regionsets:
-            counter += r.count_chunks(status)
+            count = r.count_chunks(status)
+            counter += count
         return counter
 
     def replace_problematic_chunks(self, backup_worlds, problem, options):
@@ -825,14 +833,14 @@ class World(object):
         """ Delete all the entities in the chunks that have more than
             entity-limit entities. """
         counter = 0
-        for regionset in self.dimensions:
+        for regionset in self.regionsets:
             counter += regionset.remove_entities()
         return counter
 
     def rescan_entities(self, options):
         """ Updates the status of all the chunks in the world when the
             option entity limit is changed. """
-        for regionset in self.dimensions:
+        for regionset in self.regionsets:
             regionset.rescan_entities(options)
     
     def generate_report(self, standalone):
@@ -861,7 +869,7 @@ class World(object):
             if corrupted or wrong_located or entities_prob or shared_prob:
                 text += table(table_data)
             else:
-                text += "\nNo problems found.\n"
+                text += "No problems found.\n"
 
             text += "\n\nRegion problems:\n"
             region_errors = ("Problem","Too small","Unreadable","Total regions")

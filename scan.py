@@ -175,6 +175,7 @@ def scan_region_file(scanned_regionfile_obj, options):
             print "The region file {0} had an error and couldn't be parsed as region file!\nError:{1}".format(split(r.path),sys.exc_info()[0])
             print "Note: this region file won't be scanned and won't be taken into acount in the summaries"
             print "This may be a bug! Please, report it if you can!"
+            # TODO All this is prited even when the user iterrupts the scan using ctrl+c, and it shouldn't!
             return None
 
         try:# starta the scanning of chunks
