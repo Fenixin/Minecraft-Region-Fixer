@@ -32,9 +32,9 @@ from interactive import interactive_loop
 from util import entitle, is_bare_console, parse_world_list, parse_paths, parse_backup_list
 
 def delete_bad_chunks(options, scanned_obj):
-    """ Takes an object (world object or regionset object) and deletes
-    all the chunks with problems iterating trough all the possible 
-    problems. """
+    """ Takes a scanned object (world object or regionset object) and 
+    the options given to region-fixer, it deletes all the chunks with
+    problems iterating through all the possible problems. """
     print # a blank line
     options_delete = [options.delete_corrupted, options.delete_wrong_located, options.delete_entities, options.delete_shared_offset]
     deleting = zip(options_delete, world.CHUNK_PROBLEMS)
@@ -52,6 +52,26 @@ def delete_bad_chunks(options, scanned_obj):
             else:
                 print "No chunks to delete with status: {0}".format(status)
 
+def delete_bad_regions(options, scanned_obj):
+    """ Takes an scanned object (world object or regionset object) and 
+    the options give to region-fixer, it deletes all the region files
+    with problems iterating through all the possible problems. """
+    print # a blank line
+    options_delete = [options.delete_too_small]
+    deleting = zip(options_delete, world.REGION_PROBLEMS)
+    for delete, problem in deleting:
+        status = world.REGION_STATUS_TEXT[problem]
+        total = scanned_obj.count_regions(problem)
+        if delete:
+            if total:
+                text = ' Deleting regions with status: {0} '.format(status)
+                print "{0:#^60}".format(text)
+                counter = scanned_obj.remove_problematic_regions(problem)
+                print "Done!"
+
+                print "Deleted {0} regions with status: {1}".format(counter,status)
+            else:
+                print "No regions to delete with status: {0}".format(status)
 
 def main():
 
@@ -146,9 +166,9 @@ def main():
                 parser.error("The option --backups needs at least one of the --replace-* options")
             else:
                 if (len(region_list.regions) > 0):
-                    parser.error("The input should be only one world and you intruduced {0} individual region files.".format(len(region_list.regions)))
+                    parser.error("You can't use the replace options while scanning sparate region files. The input should be only one world and you intruduced {0} individual region files.".format(len(region_list.regions)))
                 elif (len(world_list) > 1):
-                    parser.error("The input should be only one world and you intruduced {0} worlds.".format(len(world_list)))
+                    parser.error("You can't use the replace options while scanning multiple worlds. The input should be only one world and you intruduced {0} worlds.".format(len(world_list)))
 
         if not options.backups and any_replace_option:
             parser.error("The options --replace-* need the --backups option")
@@ -157,6 +177,7 @@ def main():
         parser.error("The entity limit must be at least 0!")
 
     print "\nWelcome to Region Fixer!"
+    print "(version: {0})".format(parser.version)
 
     # do things with the option options args
     if options.backups: # create a list of worlds containing the backups of the region files
@@ -182,8 +203,11 @@ def main():
 
             print region_list.generate_report(True)
             
-            
+            # delete chunks
             delete_bad_chunks(options, region_list)
+
+            # delete region files
+            delete_bad_regions(options, region_list)
 
             # verbose log
             if options.summary:
@@ -228,8 +252,14 @@ def main():
                 print "Info: Won't replace any chunk."
                 print "Can't use the replace options while scanning more than one world!"
 
+            # TODO replace region files
+            
+
             # delete chunks
             delete_bad_chunks(options, world_obj)
+            
+            # delete region files
+            delete_bad_regions(options, world_obj)
 
             # print a summary for this world
             if options.summary:

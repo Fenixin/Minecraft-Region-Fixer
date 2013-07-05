@@ -50,10 +50,12 @@ CHUNK_STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created",
 CHUNK_PROBLEMS = [CHUNK_CORRUPTED, CHUNK_WRONG_LOCATED, CHUNK_TOO_MANY_ENTITIES, CHUNK_SHARED_OFFSET]
 
 # Used to mark the status of region files:
-REGION_OK = 0
-REGION_TOO_SMALL = 1
-REGION_UNREADABLE = 2
+REGION_OK = 10
+REGION_TOO_SMALL = 11
+REGION_UNREADABLE = 12
 REGION_STATUS_TEXT = {REGION_OK: "Ok", REGION_TOO_SMALL: "Too small", REGION_UNREADABLE: "Unreadable"}
+
+REGION_PROBLEMS = [REGION_TOO_SMALL]
 
 # Used to know where to look in a chunk status tuple
 #~ TUPLE_COORDS = 0
@@ -547,6 +549,16 @@ class RegionSet(object):
         else:
             return corrupted, wrong_located, entities_prob, shared_prob, total_chunks, too_small_region, unreadable_region, total_regions
 
+    def remove_problematic_regions(self, problem):
+        """ Removes all the regions files with the given problem.
+            This is NOT the same as removing chunks, this WILL DELETE
+            the region files from the hard drive. """
+        counter = 0
+        for r in self.list_regions(problem):
+            remove(r.get_path())
+            counter += 1
+        return counter
+
 class World(object):
     """ This class stores all the info needed of a world, and once
     scanned, stores all the problems found. It also has all the tools
@@ -824,9 +836,7 @@ class World(object):
             the region files from the hard drive. """
         counter = 0
         for regionset in self.regionsets:
-            for r in regionset.list_regions(problem):
-                remove(r.get_path())
-                counter += 1
+            counter += regionset.remove_problematic_regions(problem)
         return counter
 
     def remove_entities(self):
