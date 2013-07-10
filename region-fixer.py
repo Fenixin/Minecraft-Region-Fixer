@@ -154,15 +154,18 @@ def main():
         return 1
 
     # Check basic options compatibilities
-    any_replace_option = options.replace_corrupted or options.replace_wrong_located or options.replace_entities or options.replace_shared_offset
-    any_delete_option = options.delete_corrupted or options.delete_wrong_located or options.delete_entities or options.delete_shared_offset
+    any_chunk_replace_option = options.replace_corrupted or options.replace_wrong_located or options.replace_entities or options.replace_shared_offset
+    any_chunk_delete_option = options.delete_corrupted or options.delete_wrong_located or options.delete_entities or options.delete_shared_offset
+    any_region_replace_option = options.replace_too_small
+    any_region_delete_option = options.delete_too_small
+
     if options.interactive or options.summary:
-        if any_replace_option:
-            parser.error("Can't use the options --replace-* , --delete-* and --log with --interactive.")
+        if any_chunk_replace_option or any_region_replace_option:
+            parser.error("Can't use the options --replace-* , --delete-* and --log with --interactive. You can choose all this while in the interactive mode.")
 
     else: # not options.interactive
         if options.backups:
-            if not any_replace_option:
+            if not any_chunk_replace_option and not any_region_replace_option:
                 parser.error("The option --backups needs at least one of the --replace-* options")
             else:
                 if (len(region_list.regions) > 0):
@@ -170,7 +173,7 @@ def main():
                 elif (len(world_list) > 1):
                     parser.error("You can't use the replace options while scanning multiple worlds. The input should be only one world and you intruduced {0} worlds.".format(len(world_list)))
 
-        if not options.backups and any_replace_option:
+        if not options.backups and any_chunk_replace_option:
             parser.error("The options --replace-* need the --backups option")
 
     if options.entity_limit < 0:
@@ -245,15 +248,35 @@ def main():
                             print "\n{0} replaced of a total of {1} chunks with status: {2}".format(fixed, total, status)
                         else: print "No chunks to replace with status: {0}".format(status)
 
-            elif any_replace_option and not backup_worlds:
+            elif any_chunk_replace_option and not backup_worlds:
                 print "Info: Won't replace any chunk."
                 print "No backup worlds found, won't replace any chunks/region files!"
-            elif any_replace_option and backup_worlds and len(world_list) > 1:
+            elif any_chunk_replace_option and backup_worlds and len(world_list) > 1:
                 print "Info: Won't replace any chunk."
                 print "Can't use the replace options while scanning more than one world!"
 
-            # TODO replace region files
-            
+            # replace region files
+            if backup_worlds and not len(world_list) > 1:
+                options_replace = [options.replace_too_small]
+                replacing = zip(options_replace, world.REGION_PROBLEMS)
+                for replace, problem in replacing:
+                    if replace:
+                        total = world_obj.count_regions(problem)
+                        status = world.REGION_STATUS_TEXT[problem]
+                        if total:
+                            text = " Replacing regions with status: {0} ".format(status)
+                            print "{0:#^60}".format(text)
+                            fixed = world_obj.replace_problematic_regions(backup_worlds, problem, options)
+                            print "\n{0} replaced of a total of {1} regions with status: {2}".format(fixed, total, status)
+                        else: print "No region to replace with status: {0}".format(status)
+
+            elif any_region_replace_option and not backup_worlds:
+                print "Info: Won't replace any regions."
+                print "No valid backup worlds found, won't replace any chunks/region files!"
+                print "Note: You probably inserted some backup worlds with the backup option but they are probably no valid worlds, the most common issue is wrong path."
+            elif any_region_replace_option and backup_worlds and len(world_list) > 1:
+                print "Info: Won't replace any regions."
+                print "Can't use the replace options while scanning more than one world!"
 
             # delete chunks
             delete_bad_chunks(options, world_obj)

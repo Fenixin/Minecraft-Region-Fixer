@@ -236,11 +236,9 @@ class ScannedRegionFile(object):
         """ Returns a summary of the problematic chunks. The summary
             is a string with region file, global coords, local coords,
             and status of every problematic chunk. """
-        #TODO: This, and probably a lot of more functions, need a update
-        # to work with the new region status.
         text = ""
         if self.status == REGION_TOO_SMALL:
-            text += " |- This region file is too small to actually be a region file!"
+            text += " |- This region file is too small in size to actually be a region file.\n"
         else:
             for c in self.keys():
                 if self[c][TUPLE_STATUS] == CHUNK_OK or self[c][TUPLE_STATUS] == CHUNK_NOT_CREATED: continue
@@ -441,12 +439,12 @@ class RegionSet(object):
         return l
 
     def summary(self):
-        """ Returns a summary of the problematic chunks. The summary
-            is a string with global coords, local coords, data coords
-            and status. """
+        """ Returns a summary of the problematic chunks in this 
+            regionset. The summary is a string with global coords,
+            local coords, data coords and status. """
         text = ""
         for r in self.keys():
-            if not (self[r].count_chunks(CHUNK_CORRUPTED) or self[r].count_chunks(CHUNK_TOO_MANY_ENTITIES) or self[r].count_chunks(CHUNK_WRONG_LOCATED) or self[r].count_chunks(CHUNK_SHARED_OFFSET)):
+            if not (self[r].count_chunks(CHUNK_CORRUPTED) or self[r].count_chunks(CHUNK_TOO_MANY_ENTITIES) or self[r].count_chunks(CHUNK_WRONG_LOCATED) or self[r].count_chunks(CHUNK_SHARED_OFFSET) or self[r].status == REGION_TOO_SMALL):
                 continue
             text += "Region file: {0}\n".format(self[r].filename)
             text += self[r].summary()
@@ -630,7 +628,7 @@ class World(object):
 
     def summary(self):
         """ Returns a text string with a summary of all the problems
-            found."""
+            found in the world object."""
         final = ""
 
         # intro with the world name
@@ -654,14 +652,12 @@ class World(object):
         if all_ok:
             final += "\tAll player files are readable.\n\n"
 
-        # TODO: update this!
         # chunk info
         chunk_info = ""
         for regionset in self.regionsets:
             
             title = regionset.get_name()
             
-
             # don't add text if there aren't broken chunks
             text = regionset.summary()
             chunk_info += (title + text) if text else ""
