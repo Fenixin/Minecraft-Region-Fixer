@@ -236,11 +236,10 @@ def main():
             # replace chunks
             if backup_worlds and not len(world_list) > 1:
                 options_replace = [options.replace_corrupted, options.replace_wrong_located, options.replace_entities, options.replace_shared_offset]
-                replacing = zip(options_replace, world.CHUNK_PROBLEMS)
-                for replace, problem in replacing:
+                replacing = zip(options_replace, world.CHUNK_PROBLEMS_ITERATOR)
+                for replace, (problem, status, arg) in replacing:
                     if replace:
                         total = world_obj.count_chunks(problem)
-                        status = world.CHUNK_STATUS_TEXT[problem]
                         if total:
                             text = " Replacing chunks with status: {0} ".format(status)
                             print "{0:#^60}".format(text)
@@ -258,11 +257,10 @@ def main():
             # replace region files
             if backup_worlds and not len(world_list) > 1:
                 options_replace = [options.replace_too_small]
-                replacing = zip(options_replace, world.REGION_PROBLEMS)
-                for replace, problem in replacing:
+                replacing = zip(options_replace, world.REGION_PROBLEMS_ITERATOR)
+                for replace, (problem, status, arg) in replacing:
                     if replace:
                         total = world_obj.count_regions(problem)
-                        status = world.REGION_STATUS_TEXT[problem]
                         if total:
                             text = " Replacing regions with status: {0} ".format(status)
                             print "{0:#^60}".format(text)

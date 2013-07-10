@@ -49,6 +49,14 @@ CHUNK_STATUS_TEXT = {CHUNK_NOT_CREATED:"Not created",
 
 CHUNK_PROBLEMS = [CHUNK_CORRUPTED, CHUNK_WRONG_LOCATED, CHUNK_TOO_MANY_ENTITIES, CHUNK_SHARED_OFFSET]
 
+CHUNK_PROBLEMS_ARGS = {CHUNK_CORRUPTED:'corrupted',CHUNK_WRONG_LOCATED:'wrong',CHUNK_TOO_MANY_ENTITIES:'entities',CHUNK_SHARED_OFFSET:'sharing'}
+# list with problem status-text tuples
+CHUNK_PROBLEMS_ITERATOR = []
+for problem in CHUNK_PROBLEMS:
+    CHUNK_PROBLEMS_ITERATOR.append((problem, CHUNK_STATUS_TEXT[problem], CHUNK_PROBLEMS_ARGS[problem]))
+
+
+
 # Used to mark the status of region files:
 REGION_OK = 10
 REGION_TOO_SMALL = 11
@@ -56,6 +64,17 @@ REGION_UNREADABLE = 12
 REGION_STATUS_TEXT = {REGION_OK: "Ok", REGION_TOO_SMALL: "Too small", REGION_UNREADABLE: "Unreadable"}
 
 REGION_PROBLEMS = [REGION_TOO_SMALL]
+REGION_PROBLEMS_ARGS = {REGION_TOO_SMALL: 'too-small'}
+
+# list with problem status-text tuples
+REGION_PROBLEMS_ITERATOR = []
+for problem in REGION_PROBLEMS:
+    try:
+        REGION_PROBLEMS_ITERATOR.append((problem, REGION_STATUS_TEXT[problem], REGION_PROBLEMS_ARGS[problem]))
+    except KeyError:
+        pass
+
+REGION_PROBLEMS_ARGS = {REGION_TOO_SMALL:'too-small'}
 
 # Used to know where to look in a chunk status tuple
 #~ TUPLE_COORDS = 0
