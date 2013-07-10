@@ -23,7 +23,7 @@
 
 import nbt.region as region
 import nbt.nbt as nbt
-from os.path import split
+from os.path import split, join
 import progressbar
 import multiprocessing
 from multiprocessing import queues
@@ -59,21 +59,15 @@ class FractionWidget(progressbar.ProgressBarWidget):
         return '%2d%s%2d' % (pbar.currval, self.sep, pbar.maxval)
 
 def scan_world(world_obj, options):
+    """ Scans a world folder including players, region folders and
+        level.dat. While scanning prints status messages. """
     w = world_obj
     # scan the world dir
     print "Scanning directory..."
 
     if not w.scanned_level.path:
         print "Warning: No \'level.dat\' file found!"
-    # TODO update this to something beautiful with the new regionsets dictionary
-    #~ for r in w.regionsets:
-        #~ r
-    #~ if not w.normal_region_files:
-        #~ print "Warning: No region files found in the \"region\" directory!"
-    #~ if not w.nether_region_files:
-        #~ print "Info: No nether dimension in the world directory."
-    #~ if not w.aether_region_files:
-        #~ print "Info: No end dimension in the world directory."
+
     if w.players:
         print "There are {0} region files and {1} player files in the world directory.".format(\
             w.get_number_regions(), len(w.players))
@@ -170,34 +164,29 @@ def scan_region_file(scanned_regionfile_obj, options):
         except region.NoRegionHeader: # the region has no header
             r.status = world.REGION_TOO_SMALL
             return r
+        except IOError, e:
+            print "\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(filename,e)
+            r.status = world.REGION_UNREADABLE
+            r.scan_time = time.time()
+            print "Note: this region file won't be scanned and won't be taken into acount in the summaries"
+            # TODO count also this region files
+            return r
         except: # whatever else print an error and ignore for the scan
                 # not really sure if this is a good solution...
-            print "The region file {0} had an error and couldn't be parsed as region file!\nError:{1}".format(split(r.path),sys.exc_info()[0])
-            print "Note: this region file won't be scanned and won't be taken into acount in the summaries"
-            print "This may be a bug! Please, report it if you can!"
-            # TODO All this is prited even when the user iterrupts the scan using ctrl+c, and it shouldn't!
+            print "\nWARNING: The region file \'{0}\' had an error and couldn't be parsed as region file!\nError:{1}\n".format(join(split(split(r.path)[0])[1], split(r.path)[1]),sys.exc_info()[0])
+            print "Note: this region file won't be scanned and won't be taken into acount."
+            print "Also, this may be a bug. Please, report it if you have the time.\n"
             return None
 
-        try:# starta the scanning of chunks
-            
+        try:# start the scanning of chunks
             
             for x in range(32):
                 for z in range(32):
-                    # for every chunk scanned store the offset it's 
-                    # using in the region file, we need to know if there
-                    # are two chunks sharing the same offset
-                    sharing_a_header = False
-                    offset = region_file.header[(x,z)][0] #see region.py
-                    #~ if offset not in offsets:
-                        #~ offsets[offset] = (x,z)
-                    #~ else:
-                        #~ sharing_a_header = True
-                    
+
                     # start the actual chunk scanning
                     g_coords = r.get_global_chunk_coords(x, z)
                     chunk, c = scan_chunk(region_file, (x,z), g_coords, o)
                     if c != None: # chunk not created
-                        #~ print c
                         r.chunks[(x,z)] = c
                         chunk_count += 1
                     else: continue
@@ -224,17 +213,10 @@ def scan_region_file(scanned_regionfile_obj, options):
                     elif c[TUPLE_STATUS] == world.CHUNK_CORRUPTED:
                         corrupted += 1
                     elif c[TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
-                        # if the chunk seems to be wrong located and
-                        # is sharing offset with other chunk, mark it
-                        # as sharing an offset
-                        #~ if sharing_a_header:
-                            #~ c = (c[TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
-                            #~ r.chunks[(x,z)] = c
-                            #~ shared += 1
-                        #~ else:
                         wrong += 1
             
-            # check for chunks sharing offsets
+            # now check for chunks sharing offsets
+            # TODO: check how much does this slow down the scan process
             l = sorted(list(region_file.header.keys()))
             # a header in region.py always contain all the possible entries
             offsets = []
@@ -242,14 +224,15 @@ def scan_region_file(scanned_regionfile_obj, options):
             bad_chunks_list = []
             shared_counter = 0
 
-            for i in range(len(l)):
+            for i in range(len(l)): # this is anything but efficient, but works
                 for j in range(i + 1,len(l)):
-                    # there is an old header pointing to a non created chunk
+                    # there is an old header pointing to a non created chunk, skip it
                     if  l[i] not in r.chunks:
                         continue
                     if region_file.header[l[i]][0] == region_file.header[l[j]][0]:
+                        # if both chunks share offset the wrong located one will be the bad one.
                         # both chunk could be wrong located and therefore both sharing offset with other chunk
-                        # that's why the to separated if
+                        # that's why the two if statements
                         if r[l[i]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
                             r[l[i]] = (r[l[i]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
                             shared_counter += 1
@@ -275,13 +258,7 @@ def scan_region_file(scanned_regionfile_obj, options):
         r.status = world.REGION_OK
         return r 
 
-    except IOError, e:
-        print "\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(filename,e)
-        # TODO: Test this out.
-        r.status = world.REGION_UNREADABLE
-        # print "Note: this region file won't be scanned and won't be taken into acount in the summaries"
-        # scan_region_file.q.put((r, filename, None))
-        return r
+
 
         # Fatal exceptions:
     except:
@@ -398,6 +375,7 @@ def scan_regionset(regionset, options):
     wrong_total = 0
     entities_total = 0
     too_small_total = 0
+    unreadable = 0
 
     # init progress bar
     if not options.verbose:
@@ -417,18 +395,19 @@ def scan_regionset(regionset, options):
     # Note to self: every child process has his own memory space,
     # that means every obj recived by them will be a copy of the
     # main obj
-    #~ print regionset.list_regions(None)
     result = pool.map_async(multithread_scan_regionfile, regionset.list_regions(None), max(1,total_regions//options.processes))
 
     # printing status
     region_counter = 0
 
     while not result.ready() or not q.empty():
-        #~ print result, "Ready?",result.ready()
-        #~ print q, "Empty?",q.empty()
         time.sleep(0.01)
         if not q.empty():
             r = q.get()
+            if r == None: # something went wrong scanning this region file
+                          # probably a bug... don't know if it's a good
+                          # idea to skip it
+                continue
             if not isinstance(r,world.ScannedRegionFile):
                 raise ChildProcessException(r)
             else:
@@ -442,6 +421,8 @@ def scan_regionset(regionset, options):
                 entities_total += entities_prob
                 if r.status == world.REGION_TOO_SMALL:
                     too_small_total += 1
+                elif r.status == world.REGION_UNREADABLE:
+                    unreadable += 1
                 region_counter += 1
                 if options.verbose:
                   if r.status == world.REGION_OK:
