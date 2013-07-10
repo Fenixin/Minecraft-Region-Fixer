@@ -45,7 +45,7 @@ def is_bare_console():
     return False
 
 def entitle(text, level = 0):
-    # print simple titles
+    """ Put the text in a title with lot's of hashes everywhere. """
     t = ''
     if level == 0:
         t += "\n"
@@ -129,6 +129,9 @@ def parse_chunk_list(chunk_list, world_obj):
     return parsed_list
 
 def parse_paths(args):
+    """ Parse the list of args passed to region-fixer.py and returns a 
+    RegionSet object with the list of regions and a list of World 
+    objects. """
     # parese the list of region files and worlds paths
     world_list = []
     region_list = []
@@ -162,9 +165,8 @@ def parse_paths(args):
 
 def parse_world_list(world_path_list):
     """ Parses a world list checking if they exists and are a minecraft
-        world folders """
+        world folders. Returns a list of World objects. """
     
-    # TODO expand bash folders
     tmp = []
     for d in world_path_list:
         if exists(d):
