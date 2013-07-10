@@ -697,8 +697,7 @@ class World(object):
             to replace every chunk with that problem using a working
             chunk from the list of world objects. It uses the world
             objects in left to riht order. """
-    # TODO: switch to scan the whole region file always? slower, but 
-    # get all the problems always
+
         counter = 0
         for regionset in self.regionsets:
             for backup in backup_worlds:
@@ -709,32 +708,25 @@ class World(object):
                         b_regionset = temp_regionset
                         break
                 
+                # this don't need to be aware of region status, it just
+                # iterates the list returned by list_chunks()
                 bad_chunks = regionset.list_chunks(problem)
                 for c in bad_chunks:
                     global_coords = c[0]
                     status_tuple = c[1]
                     local_coords = _get_local_chunk_coords(*global_coords)
-                    print "\n{0:-^60}".format(' New chunk to replace! Coords {0} '.format(global_coords))
+                    print "\n{0:-^60}".format(' New chunk to replace. Coords: x = {0}; z = {1} '.format(*global_coords))
 
                     # search for the region file
-                    # TODO update this to take into acount the bad region status
                     backup_region_path, local_coords = b_regionset.locate_chunk(global_coords)
                     tofix_region_path, _ = regionset.locate_chunk(global_coords)
                     if exists(backup_region_path):
                         print "Backup region file found in:\n  {0}".format(backup_region_path)
-                        # get the chunk
-                        #~ if problem != CHUNK_SHARED_OFFSET:
-                            #~ from scan import scan_chunk
-                            #~ backup_region_file = region.RegionFile(backup_region_path)
-                            #~ # chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
-                            #~ working_chunk, status_tuple = scan_chunk(backup_region_file, local_coords, global_coords, options)
-                        #~ else: # we need to scan the whole region file
+                        
+                        # scan the whole region file, pretty slow, but completely needed to detec sharing offset chunks
                         from scan import scan_region_file
                         r = scan_region_file(ScannedRegionFile(backup_region_path),options)
-                        #~ print r
-                        #~ print r[local_coords]
                         status_tuple = r[local_coords]
-                        # TODO this can make the status_tuple to be None
                         
                         # retrive the status from status_tuple
                         if status_tuple == None:
@@ -746,17 +738,12 @@ class World(object):
                             backup_region_file = region.RegionFile(backup_region_path)
                             working_chunk = backup_region_file.get_chunk(local_coords[0],local_coords[1])
 
-                        #~ if status_tuple != None:
-                            #~ status = status_tuple[TUPLE_STATUS]
-                        #~ else:
-                            #~ status = CHUNK_NOT_CREATED
-
                             print "Replacing..."
                             # the chunk exists and is healthy, fix it!
                             tofix_region_file = region.RegionFile(tofix_region_path)
+                            # first unlink the chunk, second write the chunk.
                             # unlinking the chunk is more secure and the only way to replace chunks with 
-                            # a shared offset
-                            # TODO test this carefully!
+                            # a shared offset withou overwriting the good chunk
                             tofix_region_file.unlink_chunk(*local_coords)
                             tofix_region_file.write_chunk(local_coords[0], local_coords[1],working_chunk)
                             counter += 1
@@ -803,19 +790,17 @@ class World(object):
                     except:
                         backup_region_path = None
                     tofix_region_path = r.get_path()
-                    #~ print backup_region_path
-                    #~ print tofix_region_path
+                    
                     if backup_region_path != None and exists(backup_region_path):
                         print "Backup region file found in:\n  {0}".format(backup_region_path)
                         # check the region file, just open it.
                         try:
-                            # TODO update this, bad regions!
                             backup_region_file = region.RegionFile(backup_region_path)
                         except region.NoRegionHeader as e:
                             print "Can't use this backup directory, the error while opening the region file: {0}".format(e)
                             continue
-                        except:
-                            print "Can't use this backup directory, unknown error."
+                        except Exception as e:
+                            print "Can't use this backup directory, unknown error: {0}".format(e)
                             continue
                         copy(backup_region_path, tofix_region_path)
                         print "Region file replaced!"
