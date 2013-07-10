@@ -250,7 +250,7 @@ class interactive_loop(Cmd):
             print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
 
     def do_count_all(self, arg):
-        """ Print all the counters: chunks and regions. """
+        """ Print all the counters for chunks and regions. """
         if self.current and self.current.scanned:
             if len(arg.split()) > 0:
                 print "This command doesn't requiere any arguments"
@@ -359,7 +359,6 @@ class interactive_loop(Cmd):
             print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
         pass
 
-
     def do_quit(self, arg):
         print "Quitting."
         return True
@@ -394,16 +393,16 @@ class interactive_loop(Cmd):
         possible_args = world.CHUNK_PROBLEMS_ARGS.values() + ['all']
         return self.complete_arg(text, possible_args)
 
-    def complete_count_regions(self, text, line, begidx, endidx):
-        possible_args = world.REGION_PROBLEMS_ARGS.values() + ['all']
-        return self.complete_arg(text, possible_args)
-
     def complete_remove_chunks(self, text, line, begidx, endidx):
         possible_args = world.CHUNK_PROBLEMS_ARGS.values() + ['all']
         return self.complete_arg(text, possible_args)
 
     def complete_replace_chunks(self, text, line, begidx, endidx):
         possible_args = world.CHUNK_PROBLEMS_ARGS.values() + ['all']
+        return self.complete_arg(text, possible_args)
+
+    def complete_count_regions(self, text, line, begidx, endidx):
+        possible_args = world.REGION_PROBLEMS_ARGS.values() + ['all']
         return self.complete_arg(text, possible_args)
 
     def complete_remove_regions(self, text, line, begidx, endidx):
@@ -431,33 +430,65 @@ class interactive_loop(Cmd):
         print "\nPrints information of the current region-set/world. This will be the region-set/world to scan and fix.\n"
     def help_scan(self):
         print "\nScans the current world set or the region set.\n"
+
     def help_count_chunks(self):
-        print "\n   Prints out the number of chunks with that error. For example "
+        print "\n   Prints out the number of chunks with the given status. For example:"
         print "\'count corrupted\' prints the number of corrupted chunks in the world."
         print 
-        print "Possible counters are: corrupted, wrong, entities or all\n"
+        print "Possible status are: {0}\n".format(self.possible_chunk_args_text)
     def help_remove_entities(self):
         print "\nRemove all the entities in chunks that have more than entity-limit entities."
         print 
         print "This chunks are the ones flagged as \'too many entities\' chunks.\n"
     def help_remove_chunks(self):
-        print "\nRemoves bad chunks with the given problem. Problems are:"
-        print "corrupted, wrong, entities"
+        print "\nRemoves bad chunks with the given problem."
         print
-        print "Please, be careful, when used with the too many entities problem this will REMOVE THE CHUNKS with too many entities problems, not the entities (see remove_entities instead)."
+        print "Please, be careful, when used with the too many entities problem this will REMOVE THE CHUNKS "
+        print "with too many entities problems, not the entities (see remove_entities instead)."
         print
-        print "Usage: \'remove_chunks c\'\/\'remove_chunks corrupted\'"
+        print "Example: \'remove_chunks c\'\/\'remove_chunks corrupted\'"
+        print
+        print "Possible status are: {0}\n".format(self.possible_chunk_args_text)
         print
         print "this will remove the corrupted chunks.\n"
     def help_replace_chunks(self):
-        print "\nReplaces bad chunks with the given problem using the backups directories. Problems are:"
-        print "corrupted, wrong, entities or all."
+        print "\nReplaces bad chunks with the given status using the backups directories."
         print
-        print "Usage: \"replace_chunks corrupted\""
+        print "Exampe: \"replace_chunks corrupted\""
         print
         print "this will replace the corrupted chunks with the given backups."
         print
+        print "Possible status are: {0}\n".format(self.possible_chunk_args_text)
+        print
         print "Note: after replacing any chunks you have to rescan the world in order to do more stuff.\n"
+
+    def help_count_regions(self):
+        print "\n   Prints out the number of regions with the given status. For example "
+        print "\'count_regions too-small\' prints the number of region with \'too-small\' status."
+        print 
+        print "Possible status are: {0}\n".format(self.possible_region_args_text)
+    def help_remove_regions(self):
+        print "\nRemoves regions with the given status."
+        print
+        print "Example: \'remove_regions too-small\'"
+        print
+        print "this will remove the region files with status \'too-small\'."
+        print
+        print "Possible status are: {0}\n".format(self.possible_region_args_text)
+        print
+        print "Note: after replacing any regions you have to rescan the world in order to do more stuff.\n"
+    def help_replace_regions(self):
+        print "\nReplaces regions with the given status."
+        print
+        print "Example: \"replace_regions too-small\""
+        print
+        print "this will try to replace the region files with stats \'too-small\'"
+        print "with the given backups."
+        print
+        print "Possible status are: {0}\n".format(self.possible_region_args_text)
+        print
+        print "Note: after replacing any regions you have to rescan the world in order to do more stuff.\n"
+
     def help_summary(self):
         print "\nPrints a summary of all the problems found in the current workload.\n"
     def help_quit(self):
