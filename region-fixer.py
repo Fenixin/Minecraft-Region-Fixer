@@ -81,7 +81,7 @@ def main():
     This program comes with ABSOLUTELY NO WARRANTY; for details see COPYING.txt. This is free software, and you are welcome to redistribute it under certain conditions; see COPYING.txt for details.'
 
     parser = OptionParser(description='Script to check the integrity of Minecraft worlds and fix them when possible. It uses NBT by twoolie. Author: Alejandro Aguilera (Fenixin)',\
-    prog = 'region-fixer', version='0.1.0', usage=usage, epilog=epilog)
+    prog = 'region-fixer', version='0.1.1', usage=usage, epilog=epilog)
 
     parser.add_option('--backups', '-b', help = 'List of backup directories of the Minecraft world to use to fix corrupted chunks and/or wrong located chunks. Warning! Region-Fixer is not going to check if it\'s the same world, be careful! This argument can be a comma separated list (but never with spaces between elements!). This option can be only used scanning one world.',\
         metavar = '<backups>', type = str, dest = 'backups', default = None)
