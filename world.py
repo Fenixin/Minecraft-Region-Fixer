@@ -496,10 +496,10 @@ class RegionSet(object):
 
         counter = 0
         if self.count_chunks():
-            print ' Deleting chunks in region set \"{0}\":'.format(self.path)
+            print ' Deleting chunks in region set \"{0}\":'.format(self._get_dimension_directory())
             for r in self.regions.keys():
                 counter += self.regions[r].remove_problematic_chunks(problem)
-            print "Removed {0} chunks in this regionset.".format(counter)
+            print "Removed {0} chunks in this regionset.\n".format(counter)
 
         return counter
 
