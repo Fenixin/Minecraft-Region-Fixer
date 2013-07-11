@@ -137,10 +137,10 @@ class ScannedChunk(object):
             entity limit is changed. """
         if self.num_entities >= options.entity_limit:
             self.status = CHUNK_TOO_MANY_ENTITIES
-            self.status_text = STATUS_TEXT[CHUNK_TOO_MANY_ENTITIES]
+            self.status_text = CHUNK_STATUS_TEXT[CHUNK_TOO_MANY_ENTITIES]
         else:
             self.status = CHUNK_OK
-            self.status_text = STATUS_TEXT[CHUNK_OK]
+            self.status_text = CHUNK_STATUS_TEXT[CHUNK_OK]
 
 class ScannedRegionFile(object):
     """ Stores all the scan information for a region file """
@@ -496,10 +496,10 @@ class RegionSet(object):
 
         counter = 0
         if self.count_chunks():
-            print ' Deleting chunks in region set \"{0}\":'.format(self.path),
+            print ' Deleting chunks in region set \"{0}\":'.format(self.path)
             for r in self.regions.keys():
                 counter += self.regions[r].remove_problematic_chunks(problem)
-            print "Done! Removed {0} chunks".format(counter)
+            print "Removed {0} chunks in this regionset.".format(counter)
 
         return counter
 
@@ -745,7 +745,10 @@ class World(object):
                         # scan the whole region file, pretty slow, but completely needed to detec sharing offset chunks
                         from scan import scan_region_file
                         r = scan_region_file(ScannedRegionFile(backup_region_path),options)
-                        status_tuple = r[local_coords]
+                        try:
+                            status_tuple = r[local_coords]
+                        except KeyError:
+                            status_tuple = None
                         
                         # retrive the status from status_tuple
                         if status_tuple == None:
@@ -769,7 +772,7 @@ class World(object):
                             print "Chunk replaced using backup dir: {0}".format(backup.path)
 
                         else:
-                            print "Can't use this backup directory, the chunk has the status: {0}".format(STATUS_TEXT[status])
+                            print "Can't use this backup directory, the chunk has the status: {0}".format(CHUNK_STATUS_TEXT[status])
                             continue
 
                     else:

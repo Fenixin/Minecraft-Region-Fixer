@@ -46,9 +46,8 @@ def delete_bad_chunks(options, scanned_obj):
                 text = ' Deleting chunks with status: {0} '.format(status)
                 print "{0:#^60}".format(text)
                 counter = scanned_obj.remove_problematic_chunks(problem)
-                print "Done!"
 
-                print "Deleted {0} chunks with status: {1}".format(counter,status)
+                print "\nDeleted {0} chunks with status: {1}".format(counter,status)
             else:
                 print "No chunks to delete with status: {0}".format(status)
 
@@ -67,7 +66,6 @@ def delete_bad_regions(options, scanned_obj):
                 text = ' Deleting regions with status: {0} '.format(status)
                 print "{0:#^60}".format(text)
                 counter = scanned_obj.remove_problematic_regions(problem)
-                print "Done!"
 
                 print "Deleted {0} regions with status: {1}".format(counter,status)
             else:
