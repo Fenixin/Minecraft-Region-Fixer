@@ -726,57 +726,61 @@ class World(object):
                     if temp_regionset._get_dimension_directory() == regionset._get_dimension_directory():
                         b_regionset = temp_regionset
                         break
-                
+
                 # this don't need to be aware of region status, it just
                 # iterates the list returned by list_chunks()
                 bad_chunks = regionset.list_chunks(problem)
-                for c in bad_chunks:
-                    global_coords = c[0]
-                    status_tuple = c[1]
-                    local_coords = _get_local_chunk_coords(*global_coords)
-                    print "\n{0:-^60}".format(' New chunk to replace. Coords: x = {0}; z = {1} '.format(*global_coords))
+                
+                if bad_chunks and b_regionset._get_dimension_directory() != regionset._get_dimension_directory():
+                    print "The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dimension_directory())
+                else:
+                    for c in bad_chunks:
+                        global_coords = c[0]
+                        status_tuple = c[1]
+                        local_coords = _get_local_chunk_coords(*global_coords)
+                        print "\n{0:-^60}".format(' New chunk to replace. Coords: x = {0}; z = {1} '.format(*global_coords))
 
-                    # search for the region file
-                    backup_region_path, local_coords = b_regionset.locate_chunk(global_coords)
-                    tofix_region_path, _ = regionset.locate_chunk(global_coords)
-                    if exists(backup_region_path):
-                        print "Backup region file found in:\n  {0}".format(backup_region_path)
-                        
-                        # scan the whole region file, pretty slow, but completely needed to detec sharing offset chunks
-                        from scan import scan_region_file
-                        r = scan_region_file(ScannedRegionFile(backup_region_path),options)
-                        try:
-                            status_tuple = r[local_coords]
-                        except KeyError:
-                            status_tuple = None
-                        
-                        # retrive the status from status_tuple
-                        if status_tuple == None:
-                            status = CHUNK_NOT_CREATED
+                        # search for the region file
+                        backup_region_path, local_coords = b_regionset.locate_chunk(global_coords)
+                        tofix_region_path, _ = regionset.locate_chunk(global_coords)
+                        if exists(backup_region_path):
+                            print "Backup region file found in:\n  {0}".format(backup_region_path)
+                            
+                            # scan the whole region file, pretty slow, but completely needed to detec sharing offset chunks
+                            from scan import scan_region_file
+                            r = scan_region_file(ScannedRegionFile(backup_region_path),options)
+                            try:
+                                status_tuple = r[local_coords]
+                            except KeyError:
+                                status_tuple = None
+                            
+                            # retrive the status from status_tuple
+                            if status_tuple == None:
+                                status = CHUNK_NOT_CREATED
+                            else:
+                                status = status_tuple[TUPLE_STATUS]
+                            
+                            if status == CHUNK_OK:
+                                backup_region_file = region.RegionFile(backup_region_path)
+                                working_chunk = backup_region_file.get_chunk(local_coords[0],local_coords[1])
+
+                                print "Replacing..."
+                                # the chunk exists and is healthy, fix it!
+                                tofix_region_file = region.RegionFile(tofix_region_path)
+                                # first unlink the chunk, second write the chunk.
+                                # unlinking the chunk is more secure and the only way to replace chunks with 
+                                # a shared offset withou overwriting the good chunk
+                                tofix_region_file.unlink_chunk(*local_coords)
+                                tofix_region_file.write_chunk(local_coords[0], local_coords[1],working_chunk)
+                                counter += 1
+                                print "Chunk replaced using backup dir: {0}".format(backup.path)
+
+                            else:
+                                print "Can't use this backup directory, the chunk has the status: {0}".format(CHUNK_STATUS_TEXT[status])
+                                continue
+
                         else:
-                            status = status_tuple[TUPLE_STATUS]
-                        
-                        if status == CHUNK_OK:
-                            backup_region_file = region.RegionFile(backup_region_path)
-                            working_chunk = backup_region_file.get_chunk(local_coords[0],local_coords[1])
-
-                            print "Replacing..."
-                            # the chunk exists and is healthy, fix it!
-                            tofix_region_file = region.RegionFile(tofix_region_path)
-                            # first unlink the chunk, second write the chunk.
-                            # unlinking the chunk is more secure and the only way to replace chunks with 
-                            # a shared offset withou overwriting the good chunk
-                            tofix_region_file.unlink_chunk(*local_coords)
-                            tofix_region_file.write_chunk(local_coords[0], local_coords[1],working_chunk)
-                            counter += 1
-                            print "Chunk replaced using backup dir: {0}".format(backup.path)
-
-                        else:
-                            print "Can't use this backup directory, the chunk has the status: {0}".format(CHUNK_STATUS_TEXT[status])
-                            continue
-
-                    else:
-                        print "The region file doesn't exist in the backup directory: {0}".format(backup_region_path)
+                            print "The region file doesn't exist in the backup directory: {0}".format(backup_region_path)
 
         return counter
 
@@ -802,33 +806,36 @@ class World(object):
                         break
                 
                 bad_regions = regionset.list_regions(problem)
-                for r in bad_regions:
-                    print "\n{0:-^60}".format(' New region file to replace! Coords {0} '.format(r.get_coords()))
+                if bad_regions and b_regionset._get_dimension_directory() != regionset._get_dimension_directory():
+                    print "The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dimension_directory())
+                else:
+                    for r in bad_regions:
+                        print "\n{0:-^60}".format(' New region file to replace! Coords {0} '.format(r.get_coords()))
 
-                    # search for the region file
-                    
-                    try:
-                        backup_region_path = b_regionset[r.get_coords()].get_path()
-                    except:
-                        backup_region_path = None
-                    tofix_region_path = r.get_path()
-                    
-                    if backup_region_path != None and exists(backup_region_path):
-                        print "Backup region file found in:\n  {0}".format(backup_region_path)
-                        # check the region file, just open it.
+                        # search for the region file
+                        
                         try:
-                            backup_region_file = region.RegionFile(backup_region_path)
-                        except region.NoRegionHeader as e:
-                            print "Can't use this backup directory, the error while opening the region file: {0}".format(e)
-                            continue
-                        except Exception as e:
-                            print "Can't use this backup directory, unknown error: {0}".format(e)
-                            continue
-                        copy(backup_region_path, tofix_region_path)
-                        print "Region file replaced!"
-                        counter += 1
-                    else:
-                        print "The region file doesn't exist in the backup directory: {0}".format(backup_region_path)
+                            backup_region_path = b_regionset[r.get_coords()].get_path()
+                        except:
+                            backup_region_path = None
+                        tofix_region_path = r.get_path()
+                        
+                        if backup_region_path != None and exists(backup_region_path):
+                            print "Backup region file found in:\n  {0}".format(backup_region_path)
+                            # check the region file, just open it.
+                            try:
+                                backup_region_file = region.RegionFile(backup_region_path)
+                            except region.NoRegionHeader as e:
+                                print "Can't use this backup directory, the error while opening the region file: {0}".format(e)
+                                continue
+                            except Exception as e:
+                                print "Can't use this backup directory, unknown error: {0}".format(e)
+                                continue
+                            copy(backup_region_path, tofix_region_path)
+                            print "Region file replaced!"
+                            counter += 1
+                        else:
+                            print "The region file doesn't exist in the backup directory: {0}".format(backup_region_path)
 
         return counter
         
