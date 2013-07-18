@@ -316,7 +316,7 @@ def scan_chunk(region_file, coords, global_coords, options):
         scan_time = time.time()
         chunk = None
         data_coords = None
-        global_coords = world.get_global_chunk_coords(region_file.filename.split()[1], coords[0], coords[1])
+        global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
     except region.ChunkDataError as e:
@@ -326,7 +326,7 @@ def scan_chunk(region_file, coords, global_coords, options):
         scan_time = time.time()
         chunk = None
         data_coords = None
-        global_coords = world.get_global_chunk_coords(region_file.filename.split()[1], coords[0], coords[1])
+        global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
     except region.ChunkHeaderError as e:
@@ -336,7 +336,7 @@ def scan_chunk(region_file, coords, global_coords, options):
         scan_time = time.time()
         chunk = None
         data_coords = None
-        global_coords = world.get_global_chunk_coords(region_file.filename.split()[1], coords[0], coords[1])
+        global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
     return chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
