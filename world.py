@@ -381,7 +381,8 @@ class RegionSet(object):
         if there is no such a directory and the regionset is composed
         of sparse region files. """
         if self.path:
-            rest, dim_path = split(self.path)
+            rest, region = split(self.path)
+            rest, dim_path = split(rest)
             if dim_path == "": dim_path = split(rest)[1]
             return dim_path
 
@@ -588,7 +589,7 @@ class World(object):
         self.regionsets = []
 
         self.regionsets.append(RegionSet(join(self.path, "region/")))
-        for directory in glob(join(self.path, "DIM*/")):
+        for directory in glob(join(self.path, "DIM*/region")):
             self.regionsets.append(RegionSet(join(self.path, directory)))
 
         # level.dat
