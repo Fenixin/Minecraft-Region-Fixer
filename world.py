@@ -661,7 +661,7 @@ class World(object):
         if self.scanned_level.readable:
             final += "\t\'level.dat\' is readable\n"
         else:
-            final += "\t[WARNING]: \'leve.dat\' isn't readable, error: {0}\n".format(self.scanned_level.status_text)
+            final += "\t[WARNING]: \'level.dat\' isn't readable, error: {0}\n".format(self.scanned_level.status_text)
 
         all_ok = True
         final += "\nPlayer files:\n"
