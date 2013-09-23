@@ -227,7 +227,7 @@ def scan_region_file(scanned_regionfile_obj, options):
             for i in range(len(l)): # this is anything but efficient, but works
                 for j in range(i + 1,len(l)):
                     # there is an old header pointing to a non created chunk, skip it
-                    if  l[i] not in r.chunks:
+                    if  (l[i] not in r.chunks) or (l[j] not in r.chunks) :
                         continue
                     if region_file.header[l[i]][0] == region_file.header[l[j]][0]:
                         # if both chunks share offset the wrong located one will be the bad one.
