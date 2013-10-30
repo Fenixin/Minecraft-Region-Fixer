@@ -1,5 +1,9 @@
-Donors:
+Donors (random order):
 Crappotron (Minecraft forums)
+Travis Wicks
+Nico van Duuren (Knights and Merchants)
+Diana Rotter
+Biocraft
 
 Sponsors:
 Intial development was sponsored by: NITRADO Servers (http://nitrado.net)
