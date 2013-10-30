@@ -23,6 +23,12 @@
 
 import nbt.region as region
 import nbt.nbt as nbt
+#~ from nbt.region import STATUS_CHUNK_OVERLAPPING, STATUS_CHUNK_MISMATCHED_LENGTHS
+        #~ - STATUS_CHUNK_ZERO_LENGTH
+        #~ - STATUS_CHUNK_IN_HEADER
+        #~ - STATUS_CHUNK_OUT_OF_FILE
+        #~ - STATUS_CHUNK_OK
+        #~ - STATUS_CHUNK_NOT_CREATED
 from os.path import split, join
 import progressbar
 import multiprocessing
@@ -215,34 +221,20 @@ def scan_region_file(scanned_regionfile_obj, options):
                     elif c[TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
                         wrong += 1
             
-            # now check for chunks sharing offsets
-            # TODO: check how much does this slow down the scan process
-            l = sorted(list(region_file.header.keys()))
-            # a header in region.py always contain all the possible entries
-            offsets = []
-            keys = []
-            bad_chunks_list = []
+            # Now check for chunks sharing offsets:
+            # Please note! region.py will mark both overlapping chunks
+            # as bad (the one stepping outside his territory and the
+            # good one). Only wrong located chunk with a overlapping
+            # flag are really BAD chunks! Use this criterion to 
+            # discriminate
+            metadata = region_file.metadata
+            sharing = [k for k in metadata if (
+                metadata[k].status == region.STATUS_CHUNK_OVERLAPPING and
+                r[k][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED)]
             shared_counter = 0
-
-            for i in range(len(l)): # this is anything but efficient, but works
-                for j in range(i + 1,len(l)):
-                    # there is an old header pointing to a non created chunk, skip it
-                    if  (l[i] not in r.chunks) or (l[j] not in r.chunks) :
-                        continue
-                    if region_file.header[l[i]][0] == region_file.header[l[j]][0]:
-                        # if both chunks share offset the wrong located one will be the bad one.
-                        # both chunk could be wrong located and therefore both sharing offset with other chunk
-                        # that's why the two if statements
-                        if r[l[i]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
-                            r[l[i]] = (r[l[i]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
-                            shared_counter += 1
-                            wrong -= 1
-                            bad_chunks_list.append([l[i],region_file.header[l[i]][0]])
-                        if r[l[j]][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
-                            r[l[j]] = (r[l[j]][TUPLE_NUM_ENTITIES],world.CHUNK_SHARED_OFFSET)
-                            bad_chunks_list.append([l[j],region_file.header[l[j]][0]])
-                            wrong -= 1
-                            shared_counter += 1
+            for k in sharing:
+                r[k] = (r[k][TUPLE_NUM_ENTITIES], world.CHUNK_SHARED_OFFSET)
+                shared_counter += 1
 
         except KeyboardInterrupt:
             print "\nInterrupted by user\n"
@@ -258,15 +250,12 @@ def scan_region_file(scanned_regionfile_obj, options):
         r.status = world.REGION_OK
         return r 
 
-
-
         # Fatal exceptions:
     except:
         # anything else is a ChildProcessException
         except_type, except_class, tb = sys.exc_info()
         r = (r.path, r.coords, (except_type, except_class, traceback.extract_tb(tb)))
         return r
-
 
 def multithread_scan_regionfile(region_file):
     """ Does the multithread stuff for scan_region_file """
@@ -287,27 +276,28 @@ def scan_chunk(region_file, coords, global_coords, options):
         inputs, then scans the chunk and returns all the data."""
     try:
         chunk = region_file.get_chunk(*coords)
-        if chunk:
-            data_coords = world.get_chunk_data_coords(chunk)
-            num_entities = len(chunk["Level"]["Entities"])
-            if data_coords != global_coords:
-                status = world.CHUNK_WRONG_LOCATED
-                status_text = "Mismatched coordinates (wrong located chunk)."
-                scan_time = time.time()
-            elif num_entities > options.entity_limit:
-                status = world.CHUNK_TOO_MANY_ENTITIES
-                status_text = "The chunks has too many entities (it has {0}, and it's more than the limit {1})".format(num_entities, options.entity_limit)
-                scan_time = time.time()
-            else:
-                status = world.CHUNK_OK
-                status_text = "OK"
-                scan_time = time.time()
-        else:
-            data_coords = None
-            num_entities = None
-            status = world.CHUNK_NOT_CREATED
-            status_text = "The chunk doesn't exist"
+        data_coords = world.get_chunk_data_coords(chunk)
+        num_entities = len(chunk["Level"]["Entities"])
+        if data_coords != global_coords:
+            status = world.CHUNK_WRONG_LOCATED
+            status_text = "Mismatched coordinates (wrong located chunk)."
             scan_time = time.time()
+        elif num_entities > options.entity_limit:
+            status = world.CHUNK_TOO_MANY_ENTITIES
+            status_text = "The chunks has too many entities (it has {0}, and it's more than the limit {1})".format(num_entities, options.entity_limit)
+            scan_time = time.time()
+        else:
+            status = world.CHUNK_OK
+            status_text = "OK"
+            scan_time = time.time()
+
+    except region.InconceivedChunk as e:
+        chunk = None
+        data_coords = None
+        num_entities = None
+        status = world.CHUNK_NOT_CREATED
+        status_text = "The chunk doesn't exist"
+        scan_time = time.time()
 
     except region.RegionHeaderError as e:
         error = "Region header error: " + e.msg

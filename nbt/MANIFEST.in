@@ -3,5 +3,6 @@ include LICENSE.txt
 include CONTRIBUTORS.txt
 include tests/*.py
 include tests/bigtest.nbt
+include tests/regiontest.mca
 include examples/*.py
 include doc/*.rst
