@@ -22,19 +22,19 @@
 #
 
 
-# TODO needs big update!
 import world
 
 from cmd import Cmd
-from scan import scan_world, scan_regionset
+from scan import console_scan_world, console_scan_regionset
 
-class interactive_loop(Cmd):
+
+class InteractiveLoop(Cmd):
     def __init__(self, world_list, regionset, options, backup_worlds):
         Cmd.__init__(self)
         self.world_list = world_list
         self.regionset = regionset
         self.world_names = [str(i.name)  for i in self.world_list]
-        # if there's only one world use it 
+        # if there's only one world use it
         if len(self.world_list) == 1 and len(self.regionset) == 0:
             self.current = world_list[0]
         elif len(self.world_list) == 0 and len(self.regionset) > 0:
@@ -44,32 +44,32 @@ class interactive_loop(Cmd):
         self.options = options
         self.backup_worlds = backup_worlds
         self.prompt = "#-> "
-        self.intro = "Minecraft Region-Fixer interactive mode.\n(Use tab to autocomplete. Autocomplete doens't work on Windows. Type help for a list of commands.)\n"
+        self.intro = ("Minecraft Region-Fixer interactive mode.\n(Use tab to "
+                      "autocomplete. Type help for a list of commands.)\n")
 
-        # other region-fixer stuff
-
-        # possible args for chunks stuff
+        # Possible args for chunks stuff
         possible_args = ""
         first = True
         for i in world.CHUNK_PROBLEMS_ARGS.values() + ['all']:
             if not first:
                 possible_args += ", "
-            possible_args += i 
+            possible_args += i
             first = False
         self.possible_chunk_args_text = possible_args
-        
-        # possible args for region stuff
+
+        # Possible args for region stuff
         possible_args = ""
         first = True
         for i in world.REGION_PROBLEMS_ARGS.values() + ['all']:
             if not first:
                 possible_args += ", "
-            possible_args += i 
+            possible_args += i
             first = False
         self.possible_region_args_text = possible_args
-        
-    
-    # do
+
+    #################################################
+    # Do methods
+    #################################################
     def do_set(self,arg):
         """ Command to change some options and variables in interactive
             mode """
@@ -191,19 +191,22 @@ class interactive_loop(Cmd):
             print "This command doesn't use any arguments."
 
     def do_scan(self, arg):
+        """ Scans the current workload. """
         # TODO: what about scanning while deleting entities as done in non-interactive mode?
         # this would need an option to choose which of the two methods use
-        """ Scans the current workload. """
+        o = self.options
         if len(arg.split()) > 0:
             print "Error: too many parameters."
         else:
             if self.current:
                 if isinstance(self.current, world.World):
                     self.current = world.World(self.current.path)
-                    scan_world(self.current, self.options)
+                    console_scan_world(self.current, o.processes,
+                                       o.entity_limit, o.delete_entities)
                 elif isinstance(self.current, world.RegionSet):
                     print "\n{0:-^60}".format(' Scanning region files ')
-                    scan_regionset(self.current, self.options)
+                    console_scan_regionset(self.current, o.processes,
+                                           o.entity_limit, o.delete_entities)
             else:
                 print "No world set! Use \'set workload\'"
 
@@ -371,7 +374,9 @@ class interactive_loop(Cmd):
         print "Quitting."
         return True
 
-    # complete
+    #################################################
+    # Complete methods
+    #################################################
     def complete_arg(self, text, possible_args):
         l = []
         for arg in possible_args:
@@ -413,19 +418,26 @@ class interactive_loop(Cmd):
         possible_args = world.REGION_PROBLEMS_ARGS.values() + ['all']
         return self.complete_arg(text, possible_args)
 
-    # help
+    #################################################
+    # Help methods
+    #################################################
     # TODO sería una buena idea poner un artículo de ayuda de como usar el programa en un caso típico.
     # TODO: the help texts need a normalize
     def help_set(self):
-        print "\nSets some variables used for the scan in interactive mode. If you run this command without an argument for a variable you can see the current state of the variable. You can set:"
-        print "   verbose" 
-        print "If True prints a line per scanned region file instead of showing a progress bar."
-        print "\n   entity-limit"
-        print "If a chunk has more than this number of entities it will be added to the list of chunks with too many entities problem."
-        print "\n   processes"
-        print "Number of cores used while scanning the world."
-        print "\n   workload"
-        print "If you input a few worlds you can choose wich one will be scanned using this command.\n"
+        print ("\nSets some variables used for the scan in interactive mode. "
+               "If you run this command without an argument for a variable "
+               "you can see the current state of the variable. You can set:\n"
+               "   verbose\n"
+               "If True prints a line per scanned region file instead of "
+               "showing a progress bar.\n"
+               "   entity-limit\n"
+               "If a chunk has more than this number of entities it will be "
+               "added to the list of chunks with too many entities problem.\n"
+               "   processes"
+               "Number of cores used while scanning the world.\n"
+               "   workload\n"
+               "If you input a few worlds you can choose wich one will be "
+               "scanned using this command.\n")
     def help_current_workload(self):
         print "\nPrints information of the current region-set/world. This will be the region-set/world to scan and fix.\n"
     def help_scan(self):

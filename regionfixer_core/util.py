@@ -44,6 +44,7 @@ def is_bare_console():
             pass
     return False
 
+
 def entitle(text, level = 0):
     """ Put the text in a title with lot's of hashes everywhere. """
     t = ''
@@ -53,7 +54,7 @@ def entitle(text, level = 0):
         t += "{0:#^60}\n".format(' ' + text + ' ')
         t += "{0:#^60}\n".format('')
     return t
-        
+
 
 def table(columns):
     """ Gets a list with lists in which each list is a column,
@@ -128,6 +129,7 @@ def parse_chunk_list(chunk_list, world_obj):
 
     return parsed_list
 
+
 def parse_paths(args):
     """ Parse the list of args passed to region-fixer.py and returns a 
     RegionSet object with the list of regions and a list of World 
@@ -163,6 +165,7 @@ def parse_paths(args):
 
     return world_list, world.RegionSet(region_list = region_list)
 
+
 def parse_world_list(world_path_list):
     """ Parses a world list checking if they exists and are a minecraft
         world folders. Returns a list of World objects. """
@@ -178,7 +181,6 @@ def parse_world_list(world_path_list):
         else:
             print "Warning: The folder {0} doesn't exist. I'll skip it.".format(d)
     return tmp
-
 
 
 def parse_backup_list(world_backup_dirs):

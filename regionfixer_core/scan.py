@@ -38,6 +38,20 @@ import time
 
 import sys
 import traceback
+from copy import copy
+import logging
+from time import sleep
+
+
+#~ TUPLE_COORDS = 0
+#~ TUPLE_DATA_COORDS = 0
+#~ TUPLE_GLOBAL_COORDS = 2
+TUPLE_NUM_ENTITIES = 0
+TUPLE_STATUS = 1
+
+
+logging.basicConfig(filename='scan.log', level=logging.DEBUG)
+
 
 class ChildProcessException(Exception):
     """Takes the child process traceback text and prints it as a
@@ -45,16 +59,17 @@ class ChildProcessException(Exception):
     def __init__(self, error):
         # Helps to see wich one is the child process traceback
         traceback = error[2]
-        print "*"*10
+        print "*" * 10
         print "*** Error while scanning:"
         print "*** ", error[0]
-        print "*"*10
+        print "*" * 10
         print "*** Printing the child's Traceback:"
         print "*** Exception:", traceback[0], traceback[1]
         for tb in traceback[2]:
-            print "*"*10
+            print "*" * 10
             print "*** File {0}, line {1}, in {2} \n***   {3}".format(*tb)
-        print "*"*10
+        print "*" * 10
+
 
 class FractionWidget(progressbar.ProgressBarWidget):
     """ Convenience class to use the progressbar.py """
@@ -64,19 +79,198 @@ class FractionWidget(progressbar.ProgressBarWidget):
     def update(self, pbar):
         return '%2d%s%2d' % (pbar.currval, self.sep, pbar.maxval)
 
-def scan_world(world_obj, options):
-    """ Scans a world folder including players, region folders and
-        level.dat. While scanning prints status messages. """
-    w = world_obj
-    # scan the world dir
-    print "Scanning directory..."
 
-    if not w.scanned_level.path:
-        print "Warning: No \'level.dat\' file found!"
+class AsyncRegionsetScanner(object):
+    def __init__(self, regionset, processes, entity_limit,
+                 remove_entities=False):
+
+        self._regionset = regionset
+        self.processes = processes
+        self.entity_limit = entity_limit
+        self.remove_entities = remove_entities
+
+        # Queue used by processes to pass results
+        self.queue = q = queues.SimpleQueue()
+        self.pool = multiprocessing.Pool(processes=processes,
+                initializer=_mp_pool_init,
+                initargs=(regionset, entity_limit, remove_entities, q))
+
+    def scan(self):
+        """ Scan and fill the given regionset. """
+        total_regions = len(self._regionset.regions)
+        self._results = self.pool.map_async(multithread_scan_regionfile,
+                                            self._regionset.list_regions(None),
+                                            max(1,total_regions//self.processes))
+
+    def get_last_result(self):
+        """ Return results of last region file scanned.
+
+        If there are left no scanned region files return None. The
+        ScannedRegionFile returned is the same instance in the regionset,
+        don't modify it or you will modify the regionset results.
+        """
+
+        q = self.queue
+        logging.debug("AsyncRegionsetScanner: starting get_last_result")
+        logging.debug("AsyncRegionsetScanner: queue empty: {0}".format(q.empty()))
+        if not q.empty():
+            logging.debug("AsyncRegionsetScanner: queue not empty")
+            r = q.get()
+            logging.debug("AsyncRegionsetScanner: result: {0}".format(r))
+            if r is None:
+                # Something went wrong scanning!
+                raise ChildProcessException("Something went wrong \
+                                        scanning a region-file.")
+            # Overwrite it in the regionset
+            self._regionset[r.get_coords()] = r
+            return r
+        else:
+            return None
+
+    @property
+    def finished(self):
+        """ Finished the operation. The queue could have elements """
+        return self._results.ready() and self.queue.empty()
+
+    @property
+    def regionset(self):
+        return self._regionset
+
+
+class AsyncWorldScanner(object):
+    def __init__(self, world_obj, processes, entity_limit,
+                 remove_entities=False):
+
+        self._world_obj = world_obj
+        self.processes = processes
+        self.entity_limit = entity_limit
+        self.remove_entities = remove_entities
+
+        self.regionsets = copy(world_obj.regionsets)
+
+        self._current_regionset = None
+
+    def scan(self):
+        """ Scan and fill the given regionset. """
+        cr = AsyncRegionsetScanner(self.regionsets.pop(0),
+                                   self.processes,
+                                   self.entity_limit,
+                                   self.remove_entities)
+        self._current_regionset = cr
+        cr.scan()
+
+    def get_last_result(self):
+        """ Return results of last region file scanned.
+
+        If there are left no scanned region files return None. The
+        ScannedRegionFile returned is the same instance in the regionset,
+        don't modify it or you will modify the regionset results.
+        """
+        cr = self._current_regionset
+        logging.debug("AsyncWorldScanner: current_regionset {0}".format(cr))
+        if cr is not None:
+            logging.debug("AsyncWorldScanner: cr.finished {0}".format(cr.finished))
+            if not cr.finished:
+                return cr.get_last_result()
+            elif self.regionsets:
+                self.scan()
+                return None
+            else:
+                return None
+
+        else:
+            return None
+
+    @property
+    def current_regionset(self):
+        return self._current_regionset.regionset
+
+    @property
+    def finished(self):
+        """ Finished the operation. The queue could have elements """
+        return not self.regionsets and self._current_regionset.finished
+
+    @property
+    def world_obj(self):
+        return self._world_obj
+
+
+class AsyncPlayerScanner(object):
+    def __init__(self, player_dict, processes):
+
+        self._player_dict = player_dict
+        self.processes = processes
+
+        self.queue = q = queues.SimpleQueue()
+        self.pool = multiprocessing.Pool(processes=processes,
+                initializer=_mp_player_pool_init,
+                initargs=(q,))
+
+    def scan(self):
+        """ Scan and fill the given player_dict generated by world.py. """
+        total_players = len(self._player_dict)
+        player_list = self._player_dict.values()
+        self._results = self.pool.map_async(multiprocess_scan_player,
+                                            player_list,
+                                            max(1, total_players//self.processes))
+
+    def get_last_result(self):
+        """ Return results of last player scanned. """
+
+        q = self.queue
+        logging.debug("AsyncPlayerScanner: starting get_last_result")
+        logging.debug("AsyncPlayerScanner: queue empty: {0}".format(q.empty()))
+        if not q.empty():
+            logging.debug("AsyncPlayerScanner: queue not empty")
+            p = q.get()
+            logging.debug("AsyncPlayerScanner: result: {0}".format(p))
+#             if p is None:
+#                 # Something went wrong scanning!
+#                 raise ChildProcessException("Something went wrong \
+#                                         scanning a player-file.")
+            # Overwrite it in the regionset
+            self._player_dict[p.filename.split('.')[0]] = p
+            return p
+        else:
+            return None
+
+    @property
+    def finished(self):
+        """ Have the scan finished? """
+        return self._results.ready() and self.queue.empty()
+
+    @property
+    def player_dict(self):
+        return self._player_dict
+
+
+
+# All scanners will use this progress bar
+widgets = ['Scanning: ',
+           FractionWidget(),
+           ' ',
+           progressbar.Percentage(),
+           ' ',
+           progressbar.Bar(left='[', right=']'),
+           ' ',
+           progressbar.ETA()]
+
+
+def console_scan_world(world_obj, processes, entity_limit, remove_entities):
+    """ Scans a world folder including players and prints status to console.
+
+    This functions uses AsyncPlayerScanner and AsyncWorldScanner.
+    """
+
+    w = world_obj
+    # Scan the world directory
+    print "World info:"
 
     if w.players:
-        print "There are {0} region files and {1} player files in the world directory.".format(\
-            w.get_number_regions(), len(w.players))
+        print ("There are {0} region files and {1} player files "
+               "in the world directory.").format(
+                                                 w.get_number_regions(),
+                                                 len(w.players))
     else:
         print "There are {0} region files in the world directory.".format(\
             w.get_number_regions())
@@ -93,30 +287,79 @@ def scan_world(world_obj, options):
             print "[WARNING!]: \'level.dat\' is corrupted with the following error/s:"
             print "\t {0}".format(w.scanned_level.status_text)
 
-    print "\n{0:-^60}".format(' Checking player files ')
-    # TODO multiprocessing!
-    # Probably, create a scanner object with a nice buffer of logger for text and logs and debugs
+    # Scan player files
+    print "\n{0:-^60}".format(' Scanning player files ')
     if not w.players:
         print "Info: No player files to scan."
     else:
-        scan_all_players(w)
-        all_ok = True
-        for name in w.players:
-            if w.players[name].readable == False:
-                print "[WARNING]: Player file {0} has problems.\n\tError: {1}".format(w.players[name].filename, w.players[name].status_text)
-                all_ok = False
-        if all_ok:
-            print "All player files are readable."
+        total_players = len(w.players)
+        pbar = progressbar.ProgressBar(widgets=widgets,
+                                       maxval=total_players)
+
+        ps = AsyncPlayerScanner(w.players, processes)
+        ps.scan()
+        counter = 0
+        while not ps.finished:
+            sleep(0.001)
+            result = ps.get_last_result()
+            if result:
+                counter += 1
+            pbar.update(counter)
 
     # SCAN ALL THE CHUNKS!
     if w.get_number_regions == 0:
         print "No region files to scan!"
     else:
-        for r in w.regionsets:
-            if r.regions:
-                print "\n{0:-^60}".format(' Scanning the {0} '.format(r.get_name()))
-                scan_regionset(r, options)
+        print "\n{0:-^60}".format(' Scanning region files ')
+        #Scan world regionsets 
+        ws = AsyncWorldScanner(w, processes, entity_limit,
+                          remove_entities)
+
+        total_regions = ws.world_obj.count_regions()
+        pbar = progressbar.ProgressBar(widgets=widgets,
+                                       maxval=total_regions)
+        pbar = progressbar.ProgressBar(
+            widgets=widgets,
+            maxval=total_regions)
+        pbar.start()
+        ws.scan()
+
+        counter = 0
+        while not ws.finished:
+            sleep(0.01)
+            result = ws.get_last_result()
+            if result:
+                counter += 1
+                pbar.update(counter)
+
+        pbar.finish()
+
     w.scanned = True
+
+
+def console_scan_regionset(regionset, processes, entity_limit,
+                           remove_entities):
+    """ Scan a regionset printing status to console.
+
+    Uses AsyncRegionsetScanner.
+    """
+
+    total_regions = len(regionset)
+    pbar = progressbar.ProgressBar(widgets=widgets,
+                               maxval=total_regions)
+    pbar.start()
+    rs = AsyncRegionsetScanner(regionset, processes, entity_limit,
+                               remove_entities)
+    rs.scan()
+    counter = 0
+    while not rs.finished:
+        sleep(0.01)
+        result = rs.get_last_result()
+        if result:
+            counter += 1
+            pbar.update(counter)
+
+    pbar.finish()
 
 
 def scan_player(scanned_dat_file):
@@ -130,6 +373,20 @@ def scan_player(scanned_dat_file):
     except Exception, e:
         s.readable = False
         s.status_text = e
+    return s
+
+
+def multiprocess_scan_player(player):
+    """ Does the multithread stuff for scan_region_file """
+    p = player
+    p = scan_player(p)
+    multiprocess_scan_player.q.put(p)
+
+
+def _mp_player_pool_init(q):
+    """ Function to initialize the multiprocessing in scan_regionset.
+    Is used to pass values to the child process. """
+    multiprocess_scan_player.q = q
 
 
 def scan_all_players(world_obj):
@@ -139,20 +396,18 @@ def scan_all_players(world_obj):
         scan_player(world_obj.players[name])
 
 
-def scan_region_file(scanned_regionfile_obj, options):
+def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
     """ Given a scanned region file object with the information of a 
         region files scans it and returns the same obj filled with the
         results.
-        
+
         If delete_entities is True it will delete entities while
         scanning
-        
+
         entiti_limit is the threshold tof entities to conisder a chunk
         with too much entities problems.
     """
-    o = options
-    delete_entities = o.delete_entities
-    entity_limit = o.entity_limit
+
     try:
         r = scanned_regionfile_obj
         # counters of problems
@@ -191,7 +446,7 @@ def scan_region_file(scanned_regionfile_obj, options):
 
                     # start the actual chunk scanning
                     g_coords = r.get_global_chunk_coords(x, z)
-                    chunk, c = scan_chunk(region_file, (x,z), g_coords, o)
+                    chunk, c = scan_chunk(region_file, (x,z), g_coords, entity_limit)
                     if c != None: # chunk not created
                         r.chunks[(x,z)] = c
                         chunk_count += 1
@@ -253,27 +508,20 @@ def scan_region_file(scanned_regionfile_obj, options):
         # Fatal exceptions:
     except:
         # anything else is a ChildProcessException
-        except_type, except_class, tb = sys.exc_info()
-        r = (r.path, r.coords, (except_type, except_class, traceback.extract_tb(tb)))
+        try:
+            # Not even r was created, something went really wrong
+            except_type, except_class, tb = sys.exc_info()
+            r = (r.path, r.coords, (except_type, except_class, traceback.extract_tb(tb)))
+        except NameError:
+            r = (None, None, (except_type, except_class, traceback.extract_tb(tb)))
+        
         return r
 
-def multithread_scan_regionfile(region_file):
-    """ Does the multithread stuff for scan_region_file """
-    r = region_file
-    o = multithread_scan_regionfile.options
 
-    # call the normal scan_region_file with this parameters
-    r = scan_region_file(r,o)
-
-    # exceptions will be handled in scan_region_file which is in the
-    # single thread land
-    multithread_scan_regionfile.q.put(r)
-
-
-
-def scan_chunk(region_file, coords, global_coords, options):
+def scan_chunk(region_file, coords, global_coords, entity_limit):
     """ Takes a RegionFile obj and the local coordinatesof the chunk as
         inputs, then scans the chunk and returns all the data."""
+    el = entity_limit
     try:
         chunk = region_file.get_chunk(*coords)
         data_coords = world.get_chunk_data_coords(chunk)
@@ -282,9 +530,9 @@ def scan_chunk(region_file, coords, global_coords, options):
             status = world.CHUNK_WRONG_LOCATED
             status_text = "Mismatched coordinates (wrong located chunk)."
             scan_time = time.time()
-        elif num_entities > options.entity_limit:
+        elif num_entities > el:
             status = world.CHUNK_TOO_MANY_ENTITIES
-            status_text = "The chunks has too many entities (it has {0}, and it's more than the limit {1})".format(num_entities, options.entity_limit)
+            status_text = "The chunks has too many entities (it has {0}, and it's more than the limit {1})".format(num_entities, entity_limit)
             scan_time = time.time()
         else:
             status = world.CHUNK_OK
@@ -331,100 +579,29 @@ def scan_chunk(region_file, coords, global_coords, options):
 
     return chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
 
-#~ TUPLE_COORDS = 0
-#~ TUPLE_DATA_COORDS = 0
-#~ TUPLE_GLOBAL_COORDS = 2
-TUPLE_NUM_ENTITIES = 0
-TUPLE_STATUS = 1
 
-#~ def scan_and_fill_chunk(region_file, scanned_chunk_obj, options):
-    #~ """ Takes a RegionFile obj and a ScannedChunk obj as inputs,
-        #~ scans the chunk, fills the ScannedChunk obj and returns the chunk
-        #~ as a NBT object."""
-#~
-    #~ c = scanned_chunk_obj
-    #~ chunk, region_file, c.h_coords, c.d_coords, c.g_coords, c.num_entities, c.status, c.status_text, c.scan_time, c.region_path = scan_chunk(region_file, c.h_coords, options)
-    #~ return chunk
-
-def _mp_pool_init(regionset,options,q):
+def _mp_pool_init(regionset, entity_limit, remove_entities, q):
     """ Function to initialize the multiprocessing in scan_regionset.
     Is used to pass values to the child process. """
     multithread_scan_regionfile.regionset = regionset
     multithread_scan_regionfile.q = q
-    multithread_scan_regionfile.options = options
+    multithread_scan_regionfile.entity_limit = entity_limit
+    multithread_scan_regionfile.remove_entities = remove_entities
 
 
-def scan_regionset(regionset, options):
-    """ This function scans all te region files in a regionset object
-    and fills the ScannedRegionFile obj with the results
-    """
+def multithread_scan_regionfile(region_file):
+    """ Does the multithread stuff for scan_region_file """
+    r = region_file
+    entity_limit = multithread_scan_regionfile.entity_limit
+    remove_entities = multithread_scan_regionfile.remove_entities
+    # call the normal scan_region_file with this parameters
+    r = scan_region_file(r, entity_limit, remove_entities)
 
-    total_regions = len(regionset.regions)
-    total_chunks = 0
-    corrupted_total = 0
-    wrong_total = 0
-    entities_total = 0
-    too_small_total = 0
-    unreadable = 0
+    # exceptions will be handled in scan_region_file which is in the
+    # single thread land
+    
+    multithread_scan_regionfile.q.put(r)
 
-    # init progress bar
-    if not options.verbose:
-        pbar = progressbar.ProgressBar(
-            widgets=['Scanning: ', FractionWidget(), ' ', progressbar.Percentage(), ' ', progressbar.Bar(left='[',right=']'), ' ', progressbar.ETA()],
-            maxval=total_regions)
 
-    # queue used by processes to pass finished stuff
-    q = queues.SimpleQueue()
-    pool = multiprocessing.Pool(processes=options.processes,
-            initializer=_mp_pool_init,initargs=(regionset,options,q))
-
-    if not options.verbose:
-        pbar.start()
-
-    # start the pool
-    # Note to self: every child process has his own memory space,
-    # that means every obj recived by them will be a copy of the
-    # main obj
-    result = pool.map_async(multithread_scan_regionfile, regionset.list_regions(None), max(1,total_regions//options.processes))
-
-    # printing status
-    region_counter = 0
-
-    while not result.ready() or not q.empty():
-        time.sleep(0.01)
-        if not q.empty():
-            r = q.get()
-            if r == None: # something went wrong scanning this region file
-                          # probably a bug... don't know if it's a good
-                          # idea to skip it
-                continue
-            if not isinstance(r,world.ScannedRegionFile):
-                raise ChildProcessException(r)
-            else:
-                corrupted, wrong, entities_prob, shared_offset, num_chunks = r.get_counters()
-                filename = r.filename
-                # the obj returned is a copy, overwrite it in regionset
-                regionset[r.get_coords()] = r
-                corrupted_total += corrupted
-                wrong_total += wrong
-                total_chunks += num_chunks
-                entities_total += entities_prob
-                if r.status == world.REGION_TOO_SMALL:
-                    too_small_total += 1
-                elif r.status == world.REGION_UNREADABLE:
-                    unreadable += 1
-                region_counter += 1
-                if options.verbose:
-                  if r.status == world.REGION_OK:
-                    stats = "(c: {0}, w: {1}, tme: {2}, so: {3}, t: {4})".format( corrupted, wrong, entities_prob, shared_offset, num_chunks)
-                  elif r.status == world.REGION_TOO_SMALL:
-                    stats = "(Error: not a region file)"
-                  elif r.status == world.REGION_UNREADABLE:
-                    stats = "(Error: unreadable region file)"
-                  print "Scanned {0: <12} {1:.<43} {2}/{3}".format(filename, stats, region_counter, total_regions)
-                else:
-                    pbar.update(region_counter)
-
-    if not options.verbose: pbar.finish()
-
-    regionset.scanned = True
+if __name__ == '__main__':
+    pass
