@@ -3,13 +3,14 @@
 
 import wx
 import os
-
-from backups import BackupsWindow
-from scan import AsyncWorldScanner, AsyncPlayerScanner
-import world
-from world import World
 from time import sleep
 from os.path import split
+
+from backups import BackupsWindow
+from regionfixer_core.scan import AsyncWorldScanner, AsyncPlayerScanner
+from regionfixer_core import world
+from regionfixer_core.world import World
+
 
 class MainWindow(wx.Frame):
     def __init__(self, parent, title, backups = None):

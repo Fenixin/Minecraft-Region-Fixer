@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Needed for the gui
-import scan
-import world
+import regionfixer_core
 import nbt
 
 from gui import Starter

@@ -7,7 +7,8 @@ import os
 # TODO: just copied this file to this module, is a cutre solution
 # improve it! See Importing python modules from relative paths, or
 # order this in a better way
-from world import World
+from regionfixer_core.world import World
+
 
 class BackupsWindow(wx.Frame):
     def __init__(self, parent, title):

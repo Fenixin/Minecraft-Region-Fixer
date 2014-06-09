@@ -22,17 +22,16 @@
 #
 
 from multiprocessing import freeze_support
-from optparse import OptionParser, OptionGroup
+from optparse import OptionParser
 from getpass import getpass
 import sys
 
-import world
-from scan import console_scan_world, AsyncRegionsetScanner,\
-    console_scan_regionset
-from interactive import InteractiveLoop
-from util import entitle, is_bare_console, parse_world_list, parse_paths, parse_backup_list
-from time import sleep
-import progressbar
+from regionfixer_core import world
+from regionfixer_core.scan import console_scan_world, console_scan_regionset
+from regionfixer_core.interactive import InteractiveLoop
+from regionfixer_core.util import entitle, is_bare_console, parse_paths,\
+                                  parse_backup_list
+from regionfixer_core import progressbar
 
 
 class FractionWidget(progressbar.ProgressBarWidget):
@@ -63,6 +62,7 @@ def delete_bad_chunks(options, scanned_obj):
                 print "\nDeleted {0} chunks with status: {1}".format(counter,status)
             else:
                 print "No chunks to delete with status: {0}".format(status)
+
 
 def delete_bad_regions(options, scanned_obj):
     """ Takes an scanned object (world object or regionset object) and 
