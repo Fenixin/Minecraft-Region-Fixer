@@ -4,6 +4,10 @@ Travis Wicks
 Nico van Duuren (Knights and Merchants)
 Diana Rotter
 Biocraft
+Andrew Van Hise
+Eugene Sterner
+Udell Ross Burton
+Powercraft Network
 
 Sponsors:
-Intial development was sponsored by: NITRADO Servers (http://nitrado.net)
+Initial development was sponsored by: NITRADO Servers (http://nitrado.net)
