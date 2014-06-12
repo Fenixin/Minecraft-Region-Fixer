@@ -611,7 +611,7 @@ class World(object):
             self.scanned_level = ScannedDatFile(None, False, "The file doesn't exist")
 
         # player files
-        player_paths = glob(join(join(self.path, "players"), "*.dat"))
+        player_paths = glob(join(join(self.path, "playerdata"), "*.dat"))
         self.players = {}
         for path in player_paths:
             name = split(path)[1].split(".")[0]
