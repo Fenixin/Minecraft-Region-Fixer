@@ -1,6 +1,5 @@
 """
 Handles a single chunk of data (16x16x128 blocks) from a Minecraft save.
-Chunk is currently McRegion only.
 """
 from io import BytesIO
 from struct import pack, unpack
@@ -11,11 +10,19 @@ class Chunk(object):
     def __init__(self, nbt):
         chunk_data = nbt['Level']
         self.coords = chunk_data['xPos'],chunk_data['zPos']
-        self.blocks = BlockArray(chunk_data['Blocks'].value, chunk_data['Data'].value)
+        self.sections = [None]*16
+        for section_data in chunk_data['Sections']:
+            add = section_data['Add'].value if 'Add' in section_data.keys() else None
+            self.sections[section_data['Y'].value] = BlockArray(section_data['Blocks'].value, add, section_data['Data'].value)
 
     def get_coords(self):
         """Return the coordinates of this chunk."""
         return (self.coords[0].value,self.coords[1].value)
+
+    def get_block(self, x, y, z):
+        d,m = divmod(y, 16)
+        if self.sections[d]:
+            return self.sections[d].get_block(x, m, z)
 
     def __repr__(self):
         """Return a representation of this Chunk."""
@@ -24,13 +31,17 @@ class Chunk(object):
 
 class BlockArray(object):
     """Convenience class for dealing with a Block/data byte array."""
-    def __init__(self, blocksBytes=None, dataBytes=None):
+    def __init__(self, blocksBytes=None, addBytes=None, dataBytes=None):
         """Create a new BlockArray, defaulting to no block or data bytes."""
         if isinstance(blocksBytes, (bytearray, array.array)):
             self.blocksList = list(blocksBytes)
         else:
             self.blocksList = [0]*32768 # Create an empty block list (32768 entries of zero (air))
 
+        if isinstance(addBytes, (bytearray, array.array)):
+            self.addList = list(addBytes)
+        else:
+            self.addList = [0]*16384 # Create an empty data list (32768 4-bit entries of zero make 16384 byte entries)
         if isinstance(dataBytes, (bytearray, array.array)):
             self.dataList = list(dataBytes)
         else:
@@ -53,10 +64,22 @@ class BlockArray(object):
             bits.append((b >> 4) & 15) # Big end of the byte
         return bits
 
+    def get_all_add(self):
+        """Return the data of all the blocks in this BlockArray."""
+        bits = []
+        for b in self.addList:
+            # The first byte of the Blocks arrays correspond
+            # to the LEAST significant bits of the first byte of the Data.
+            # NOT to the MOST significant bits, as you might expected.
+            bits.append(b & 15) # Little end of the byte
+            bits.append((b >> 4) & 15) # Big end of the byte
+        return bits
+        
+
     # Get all block entries and data entries as tuples
-    def get_all_blocks_and_data(self):
+    def get_all(self):
         """Return both blocks and data, packed together as tuples."""
-        return list(zip(self.get_all_blocks(), self.get_all_data()))
+        return list(zip(self.get_all_blocks(), self.get_all_add(), self.get_all_data()))
 
     def get_blocks_struct(self):
         """Return a dictionary with block ids keyed to (x, y, z)."""
@@ -171,13 +194,13 @@ class BlockArray(object):
                 blocks.append(Block(x,y,z))
         """
 
-        offset = y + z*128 + x*128*16 if (coord == False) else coord[1] + coord[2]*128 + coord[0]*128*16
+        offset = y*16*16 + z*16 + x if (coord == False) else coord[0] + coord[2]*16 + coord[1]*16*16
         return self.blocksList[offset]
 
     # Get a given X,Y,Z or a tuple of three coordinates
     def get_data(self, x,y,z, coord=False):
         """Return the data of the block at x, y, z."""
-        offset = y + z*128 + x*128*16 if (coord == False) else coord[1] + coord[2]*128 + coord[0]*128*16
+        offset = y*16*16 + z*16 + x if (coord == False) else coord[0] + coord[2]*16 + coord[1]*16*16
         # The first byte of the Blocks arrays correspond
         # to the LEAST significant bits of the first byte of the Data.
         # NOT to the MOST significant bits, as you might expected.
