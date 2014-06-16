@@ -265,10 +265,9 @@ class MainWindow(wx.Frame):
         self.world.remove_problematic_regions(world.REGION_UNREADABLE)
         progressdlg.pulse()
         progressdlg.Destroy()
-        
+
         self.update_delete_buttons_status(False)
         self.update_replace_buttons_status(False)
-        
 
     def OnScan(self, e):
         # Let's simulate the options stuff
@@ -281,17 +280,13 @@ class MainWindow(wx.Frame):
                 self.gui = True
 
         options = Options(self)
-        progressdlg = wx.ProgressDialog("Scanning...", "Scanning...", 
-            self.world.count_regions(), self, 
-            style = wx.PD_ELAPSED_TIME | 
-            wx.PD_ESTIMATED_TIME | 
-            wx.PD_REMAINING_TIME | 
-            wx.PD_CAN_SKIP | 
-            wx.PD_CAN_ABORT | 
-            wx.PD_AUTO_HIDE |
-            wx.PD_SMOOTH)
+        progressdlg = wx.ProgressDialog("Scanning...", "Scanning...",
+            self.world.count_regions(), self,
+            style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME |
+                  wx.PD_REMAINING_TIME | wx.PD_CAN_SKIP | wx.PD_CAN_ABORT |
+                  wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
         options.progressdlg = progressdlg
-        
+
         ws = AsyncWorldScanner(self.world, options.processes,
                                options.entity_limit,
                                options.delete_entities)
@@ -305,18 +300,15 @@ class MainWindow(wx.Frame):
                 counter += 1
             progressdlg.Update(counter,
                                "Scanning regions from: " + rs.get_name())
-        
+
         progressdlg.Destroy()
-        
-        progressdlg = wx.ProgressDialog("Scanning...", "Scanning...", 
-            len(self.world.players), self, 
-            style = wx.PD_ELAPSED_TIME | 
-            wx.PD_ESTIMATED_TIME | 
-            wx.PD_REMAINING_TIME | 
-            wx.PD_CAN_SKIP | 
-            wx.PD_CAN_ABORT | 
-            wx.PD_AUTO_HIDE |
-            wx.PD_SMOOTH)
+
+        # TODO: DATA files and old player files
+        progressdlg = wx.ProgressDialog("Scanning...", "Scanning...",
+            self.world.count_regions(), self,
+            style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME |
+                  wx.PD_REMAINING_TIME | wx.PD_CAN_SKIP | wx.PD_CAN_ABORT |
+                  wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
 
         ps = AsyncPlayerScanner(self.world.players, options.processes)
         ps.scan()
@@ -333,9 +325,29 @@ class MainWindow(wx.Frame):
 
         progressdlg.Destroy()
 
-        # TODO! We need to make every module truly independent.
-        # We need to make better way to separate print of text to 
-        # console and scanning
+        # Data files
+        progressdlg = wx.ProgressDialog("Scanning...", "Scanning...",
+            self.world.count_regions(), self,
+            style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME |
+                  wx.PD_REMAINING_TIME | wx.PD_CAN_SKIP | wx.PD_CAN_ABORT |
+                  wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
+
+        ps = AsyncPlayerScanner(self.world.players, options.processes)
+        ps.scan()
+        counter = 0
+        last_player = ""
+        while not ps.finished:
+            sleep(0.001)
+            result = ps.get_last_result()
+            if result:
+                counter += 1
+                last_player = result.filename.split('.')[0]
+            progressdlg.Update(counter,
+                               "Last player scanned: " + last_player)
+
+        progressdlg.Destroy()
+
+
         self.results_text.SetValue(self.world.generate_report(True))
         self.update_delete_buttons_status(True)
         

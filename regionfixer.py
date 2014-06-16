@@ -269,7 +269,7 @@ def main():
         print
         print "Minecraft Region Fixer is a command line aplication, if you want to run it"
         print "you need to open a command line (cmd.exe in the start menu in windows 7)."
-        print 
+        print
         getpass("Press enter to continue:")
         return 1
 
@@ -357,7 +357,7 @@ def main():
         c.cmdloop()
     else:
         summary_text = ""
-        # scan the separate region files
+        # Scan the separate region files
         if len(regionset.regions) > 0:
             print entitle("Scanning separate region files", 0)
 
@@ -365,13 +365,13 @@ def main():
                                    o.delete_entities)
             print regionset.generate_report(True)
 
-            # delete chunks
+            # Delete chunks
             delete_bad_chunks(options, regionset)
 
-            # delete region files
+            # Delete region files
             delete_bad_regions(options, regionset)
 
-            # verbose log
+            # Verbose log
             if options.summary:
                 summary_text += "\n"
                 summary_text += entitle("Separate region files")
@@ -391,12 +391,12 @@ def main():
 
             print w.generate_report(True)
 
-            corrupted, wrong_located, entities_prob, shared_prob, \
-            total_chunks, too_small_region, unreadable_region, total_regions \
-            = w.generate_report(standalone = False)
+#             corrupted, wrong_located, entities_prob, shared_prob, \
+#             total_chunks, too_small_region, unreadable_region, total_regions \
+#             = w.generate_report(standalone = False)
 
             print
-            # replace chunks
+            # Replace chunks
             if backup_worlds and not len(world_list) > 1:
                 options_replace = [o.replace_corrupted,
                                    o.replace_wrong_located,
@@ -411,7 +411,8 @@ def main():
                             print "{0:#^60}".format(text)
                             fixed = w.replace_problematic_chunks(backup_worlds, problem, options)
                             print "\n{0} replaced of a total of {1} chunks with status: {2}".format(fixed, total, status)
-                        else: print "No chunks to replace with status: {0}".format(status)
+                        else:
+                            print "No chunks to replace with status: {0}".format(status)
 
             elif any_chunk_replace_option and not backup_worlds:
                 print "Info: Won't replace any chunk."
@@ -432,7 +433,8 @@ def main():
                             print "{0:#^60}".format(text)
                             fixed = w.replace_problematic_regions(backup_worlds, problem, options)
                             print "\n{0} replaced of a total of {1} regions with status: {2}".format(fixed, total, status)
-                        else: print "No region to replace with status: {0}".format(status)
+                        else:
+                            print "No region to replace with status: {0}".format(status)
 
             elif any_region_replace_option and not backup_worlds:
                 print "Info: Won't replace any regions."

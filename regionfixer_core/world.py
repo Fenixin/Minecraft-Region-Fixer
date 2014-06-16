@@ -628,31 +628,48 @@ class World(object):
             self.regionsets.append(RegionSet(join(self.path, directory)))
 
         # level.dat
-        # let's scan level.dat here so we can extract the world name
-        # right now
+        # Let's scan level.dat here so we can extract the world name
         level_dat_path = join(self.path, "level.dat")
         if exists(level_dat_path):
             try:
                 self.level_data = nbt.NBTFile(level_dat_path)["Data"]
                 self.name = self.level_data["LevelName"].value
-                self.scanned_level = ScannedDatFile(level_dat_path, readable = True, status_text = "OK")
+                self.scanned_level = ScannedDatFile(level_dat_path,
+                                                    readable=True,
+                                                    status_text="OK")
             except Exception, e:
                 self.name = None
-                self.scanned_level = ScannedDatFile(level_dat_path, readable = False, status_text = e)
+                self.scanned_level = ScannedDatFile(level_dat_path,
+                                                    readable=False,
+                                                    status_text=e)
         else:
             self.level_file = None
             self.level_data = None
             self.name = None
             self.scanned_level = ScannedDatFile(None, False, "The file doesn't exist")
 
-        # player files
-        player_paths = glob(join(join(self.path, "players"), "*.dat"))
+        # Player files
+        old_player_paths = glob(join(join(self.path, "players"), "*.dat"))
+        player_paths = glob(join(join(self.path, "playerdata"), "*.dat"))
         self.players = {}
         for path in player_paths:
-            name = split(path)[1].split(".")[0]
-            self.players[name] = ScannedDatFile(path)
+            uuid = split(path)[1].split(".")[0]
+            self.players[uuid] = ScannedDatFile(path)
 
-        # does it look like a world folder?
+        # Player files before 1.7.6
+        self.old_players = {}
+        for path in old_player_paths:
+            name = split(path)[1].split(".")[0]
+            self.old_players[name] = ScannedDatFile(path)
+
+        # Structures dat files
+        data_files_paths = glob(join(join(self.path, "data"), "*.dat"))
+        self.data_files = {}
+        for path in data_files_paths:
+            name = split(path)[1]
+            self.data_files[name] = ScannedDatFile(path)
+
+        # Does it look like a world folder?
         region_files = False
         for region_directory in self.regionsets:
             if region_directory:
@@ -663,7 +680,7 @@ class World(object):
             self.isworld = False
         # TODO: Make a Exception for this! so we can use try/except
 
-        # set in scan.py, used in interactive.py
+        # Set in scan.py, used in interactive.py
         self.scanned = False
 
     def __str__(self):
@@ -692,7 +709,7 @@ class World(object):
         final += "{0:#^60}\n".format(" World name: {0} ".format(self.name))
         final += "{0:#^60}\n".format('')
 
-        # dat files info
+        # leve.dat files info
         final += "\nlevel.dat:\n"
         if self.scanned_level.readable:
             final += "\t\'level.dat\' is readable\n"
@@ -700,13 +717,31 @@ class World(object):
             final += "\t[WARNING]: \'level.dat\' isn't readable, error: {0}\n".format(self.scanned_level.status_text)
 
         all_ok = True
-        final += "\nPlayer files:\n"
-        for name in self.players:
-            if not self.players[name].readable:
+        final += "\nPlayer UUID files:\n"
+        for p in self.players.values():
+            if not p.readable:
                 all_ok = False
-                final += "\t-[WARNING]: Player file {0} has problems.\n\t\tError: {1}\n\n".format(self.players[name].filename, self.players[name].status_text)
+                final += "\t-[WARNING]: Player file {0} has problems.\n\t\tError: {1}\n\n".format(p.filename, p.status_text)
         if all_ok:
             final += "\tAll player files are readable.\n\n"
+
+        all_ok = True
+        final += "\nOld format player files:\n"
+        for p in self.old_players.values():
+            if not p.readable:
+                all_ok = False
+                final += "\t-[WARNING]: Player file {0} has problems.\n\t\tError: {1}\n\n".format(p.filename, p.status_text)
+        if all_ok:
+            final += "\tAll player files are readable.\n\n"
+
+        all_ok = True
+        final += "\nStructures and map data files:\n"
+        for d in self.data_files.values():
+            if not d.readable:
+                all_ok = False
+                final += "\t-[WARNING]: File {0} has problems.\n\t\tError: {1}\n\n".format(d.filename, d.status_text)
+        if all_ok:
+            final += "\tAll data files are readable.\n\n"
 
         # chunk info
         chunk_info = ""
@@ -901,7 +936,7 @@ class World(object):
             regionset.rescan_entities(options)
 
     def generate_report(self, standalone):
-        
+
         # collect data
         corrupted = self.count_chunks(CHUNK_CORRUPTED)
         wrong_located = self.count_chunks(CHUNK_WRONG_LOCATED)
@@ -912,13 +947,44 @@ class World(object):
         too_small_region = self.count_regions(REGION_TOO_SMALL)
         unreadable_region = self.count_regions(REGION_UNREADABLE)
         total_regions = self.count_regions()
-        
+
         if standalone:
             text = ""
-        
-            # Print all this info in a table format
-            chunk_errors = ("Problem","Corrupted","Wrong l.","Etities","Shared o.", "Total chunks")
-            chunk_counters = ("Counts",corrupted, wrong_located, entities_prob, shared_prob, total_chunks)
+
+            # Print all the player files with problems
+            broken_players = [p for p in self.players.values() if not p.readable]
+            broken_players.extend([p for p in self.old_players.values() if not p.readable])
+            if broken_players:
+                text += "\nUnreadable player files:\n"
+                broken_player_files = [p.filename for p in broken_players]
+                text += "\n".join(broken_player_files)
+                text += "\n"
+            else:
+                text += "\nAll player files are readable\n"
+
+            # Now all the data files
+            broken_data_files = [d for d in self.data_files.values() if not d.readable]
+            if broken_data_files:
+                text += "\nUnreadable data files:\n"
+                broken_data_filenames = [p.filename for p in broken_players]
+                text += "\n".join(broken_data_filenames)
+                text += "\n"
+            else:
+                text += "\nAll data files are readable\n"
+
+            # Print all chunk info in a table format
+            chunk_errors = ("Problem",
+                            "Corrupted",
+                            "Wrong l.",
+                            "Entities",
+                            "Shared o.",
+                            "Total chunks")
+            chunk_counters = ("Counts",
+                              corrupted,
+                              wrong_located,
+                              entities_prob,
+                              shared_prob,
+                              total_chunks)
             table_data = []
             for i, j in zip(chunk_errors, chunk_counters):
                 table_data.append([i,j])
@@ -942,7 +1008,9 @@ class World(object):
                 
             return text
         else:
-            return corrupted, wrong_located, entities_prob, shared_prob, total_chunks, too_small_region, unreadable_region, total_regions
+            return corrupted, wrong_located, entities_prob, shared_prob,\
+                   total_chunks, too_small_region, unreadable_region,\
+                   total_regions
 
 
 

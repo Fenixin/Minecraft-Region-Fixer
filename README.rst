@@ -9,7 +9,7 @@ Locates problems and tries to fix Minecraft worlds (or region files).
 
 Tries to fix corrupted chunks in region files using old backup copies
 of the Minecraft world. If you don't have a copy, you can eliminate the
-corrupted chunks making Minecraft recreate them.
+corrupted chunks making Minecraft regenerate them.
 
 It also scans the 'level.dat' file and the player '\*.dat' and tries to 
 read them. If there are any problems it prints warnings. At the moment
@@ -18,6 +18,9 @@ it doesn't fix any problem in these files.
 Web page:
 https://github.com/Fenixin/Minecraft-Region-Fixer
 
+Mincraft forums posts:
+http://www.minecraftforum.net/topic/302380-minecraft-region-fixer/
+http://www.minecraftforum.net/topic/275730-minecraft-region-fixer/
 
 Supported platforms
 ===================
@@ -45,9 +48,11 @@ Notes
 Older versions of Minecraft had big problems when loading corrupted 
 chunks. But in the latest versions of Minecraft (tested in 1.4.7) the
 server itself removes corrupted chunks (when loading them) and 
-regenerate those chunks. Region-Fixer still is useful for replacing 
-those chunks with a backup, removing entities, or trying to see what's 
-going wrong with your world.
+regenerate those chunks.
+
+Region-Fixer still is useful for replacing those chunks with a 
+backup, removing entities, or trying to see what's going wrong
+with your world.
 
 
 Usage

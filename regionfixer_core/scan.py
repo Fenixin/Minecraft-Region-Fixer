@@ -21,26 +21,21 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import nbt.region as region
-import nbt.nbt as nbt
-#~ from nbt.region import STATUS_CHUNK_OVERLAPPING, STATUS_CHUNK_MISMATCHED_LENGTHS
-        #~ - STATUS_CHUNK_ZERO_LENGTH
-        #~ - STATUS_CHUNK_IN_HEADER
-        #~ - STATUS_CHUNK_OUT_OF_FILE
-        #~ - STATUS_CHUNK_OK
-        #~ - STATUS_CHUNK_NOT_CREATED
-from os.path import split, join
-import progressbar
-import multiprocessing
-from multiprocessing import queues
-import world
-import time
 
+from os.path import split, join
+from time import sleep, time
 import sys
 import traceback
 from copy import copy
 import logging
-from time import sleep
+import multiprocessing
+from multiprocessing import queues
+
+import nbt.region as region
+import nbt.nbt as nbt
+
+import progressbar
+import world
 
 
 #~ TUPLE_COORDS = 0
@@ -50,7 +45,7 @@ TUPLE_NUM_ENTITIES = 0
 TUPLE_STATUS = 1
 
 
-logging.basicConfig(filename='scan.log', level=logging.DEBUG)
+# logging.basicConfig(filename='scan.log', level=logging.DEBUG)
 
 
 class ChildProcessException(Exception):
@@ -266,16 +261,13 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities):
     # Scan the world directory
     print "World info:"
 
-    if w.players:
-        print ("There are {0} region files and {1} player files "
-               "in the world directory.").format(
-                                                 w.get_number_regions(),
-                                                 len(w.players))
-    else:
-        print "There are {0} region files in the world directory.".format(\
-            w.get_number_regions())
+    print ("There are {0} region files, {1} player files and {2} data"
+           " files in the world directory.").format(
+                                     w.get_number_regions(),
+                                     len(w.players) + len(w.old_players),
+                                     len(w.data_files))
 
-    # check the level.dat file and the *.dat files in players directory
+    # check the level.dat
     print "\n{0:-^60}".format(' Checking level.dat ')
 
     if not w.scanned_level.path:
@@ -288,7 +280,7 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities):
             print "\t {0}".format(w.scanned_level.status_text)
 
     # Scan player files
-    print "\n{0:-^60}".format(' Scanning player files ')
+    print "\n{0:-^60}".format(' Scanning UUID player files ')
     if not w.players:
         print "Info: No player files to scan."
     else:
@@ -297,6 +289,44 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities):
                                        maxval=total_players)
 
         ps = AsyncPlayerScanner(w.players, processes)
+        ps.scan()
+        counter = 0
+        while not ps.finished:
+            sleep(0.001)
+            result = ps.get_last_result()
+            if result:
+                counter += 1
+            pbar.update(counter)
+
+    # Scan old player files
+    print "\n{0:-^60}".format(' Scanning old format player files ')
+    if not w.old_players:
+        print "Info: No old format player files to scan."
+    else:
+        total_players = len(w.old_players)
+        pbar = progressbar.ProgressBar(widgets=widgets,
+                                       maxval=total_players)
+
+        ps = AsyncPlayerScanner(w.old_players, processes)
+        ps.scan()
+        counter = 0
+        while not ps.finished:
+            sleep(0.001)
+            result = ps.get_last_result()
+            if result:
+                counter += 1
+            pbar.update(counter)
+
+    # Scan dat files
+    print "\n{0:-^60}".format(' Scanning structures and map data files ')
+    if not w.data_files:
+        print "Info: No structures and map data files to scan."
+    else:
+        total_files = len(w.data_files)
+        pbar = progressbar.ProgressBar(widgets=widgets,
+                                       maxval=total_players)
+
+        ps = AsyncPlayerScanner(w.data_files, processes)
         ps.scan()
         counter = 0
         while not ps.finished:
@@ -428,7 +458,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         except IOError, e:
             print "\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(filename,e)
             r.status = world.REGION_UNREADABLE
-            r.scan_time = time.time()
+            r.scan_time = time()
             print "Note: this region file won't be scanned and won't be taken into acount in the summaries"
             # TODO count also this region files
             return r
@@ -501,7 +531,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         r.wrong_located_chunks = wrong
         r.entities_prob = entities_prob
         r.shared_offset = shared_counter
-        r.scan_time = time.time()
+        r.scan_time = time()
         r.status = world.REGION_OK
         return r 
 
@@ -529,15 +559,15 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         if data_coords != global_coords:
             status = world.CHUNK_WRONG_LOCATED
             status_text = "Mismatched coordinates (wrong located chunk)."
-            scan_time = time.time()
+            scan_time = time()
         elif num_entities > el:
             status = world.CHUNK_TOO_MANY_ENTITIES
             status_text = "The chunks has too many entities (it has {0}, and it's more than the limit {1})".format(num_entities, entity_limit)
-            scan_time = time.time()
+            scan_time = time()
         else:
             status = world.CHUNK_OK
             status_text = "OK"
-            scan_time = time.time()
+            scan_time = time()
 
     except region.InconceivedChunk as e:
         chunk = None
@@ -545,13 +575,13 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         num_entities = None
         status = world.CHUNK_NOT_CREATED
         status_text = "The chunk doesn't exist"
-        scan_time = time.time()
+        scan_time = time()
 
     except region.RegionHeaderError as e:
         error = "Region header error: " + e.msg
         status = world.CHUNK_CORRUPTED
         status_text = error
-        scan_time = time.time()
+        scan_time = time()
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
@@ -561,7 +591,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         error = "Chunk data error: " + e.msg
         status = world.CHUNK_CORRUPTED
         status_text = error
-        scan_time = time.time()
+        scan_time = time()
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
@@ -571,7 +601,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         error = "Chunk herader error: " + e.msg
         status = world.CHUNK_CORRUPTED
         status_text = error
-        scan_time = time.time()
+        scan_time = time()
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])

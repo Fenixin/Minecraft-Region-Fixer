@@ -39,7 +39,7 @@ def is_bare_console():
             num = GetConsoleProcessList(ctypes.byref(ctypes.c_int(0)), ctypes.c_int(1))
             if (num == 1):
                 return True
-                
+
         except Exception:
             pass
     return False
