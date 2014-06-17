@@ -44,11 +44,15 @@ class FractionWidget(progressbar.ProgressBarWidget):
 
 
 def delete_bad_chunks(options, scanned_obj):
-    """ Takes a scanned object (world object or regionset object) and 
+    """ Takes a scanned object (world object or regionset object) and
     the options given to region-fixer, it deletes all the chunks with
     problems iterating through all the possible problems. """
-    print # a blank line
-    options_delete = [options.delete_corrupted, options.delete_wrong_located, options.delete_entities, options.delete_shared_offset]
+    print
+    # In the same order as in CHUNK_PROBLEMS
+    options_delete = [options.delete_corrupted,
+                      options.delete_wrong_located,
+                      options.delete_entities,
+                      options.delete_shared_offset]
     deleting = zip(options_delete, world.CHUNK_PROBLEMS)
     for delete, problem in deleting:
         status = world.CHUNK_STATUS_TEXT[problem]
@@ -56,19 +60,19 @@ def delete_bad_chunks(options, scanned_obj):
         if delete:
             if total:
                 text = ' Deleting chunks with status: {0} '.format(status)
-                print "{0:#^60}".format(text)
+                print "\n{0:#^60}".format(text)
                 counter = scanned_obj.remove_problematic_chunks(problem)
-
-                print "\nDeleted {0} chunks with status: {1}".format(counter,status)
+                print "\nDeleted {0} chunks with status: {1}".format(counter,
+                                                                     status)
             else:
                 print "No chunks to delete with status: {0}".format(status)
 
 
 def delete_bad_regions(options, scanned_obj):
-    """ Takes an scanned object (world object or regionset object) and 
+    """ Takes an scanned object (world object or regionset object) and
     the options give to region-fixer, it deletes all the region files
     with problems iterating through all the possible problems. """
-    print # a blank line
+    print
     options_delete = [options.delete_too_small]
     deleting = zip(options_delete, world.REGION_PROBLEMS)
     for delete, problem in deleting:
@@ -79,8 +83,8 @@ def delete_bad_regions(options, scanned_obj):
                 text = ' Deleting regions with status: {0} '.format(status)
                 print "{0:#^60}".format(text)
                 counter = scanned_obj.remove_problematic_regions(problem)
-
-                print "Deleted {0} regions with status: {1}".format(counter,status)
+                print "Deleted {0} regions with status: {1}".format(counter,
+                                                                    status)
             else:
                 print "No regions to delete with status: {0}".format(status)
 
@@ -384,15 +388,18 @@ def main():
 
         # scan all the world folders
         for w in world_list:
-            print entitle(' Scanning world: {0} '.format(w.get_name()), 0)
+            w_name = w.get_name()
+            print entitle(' Scanning world: {0} '.format(w_name), 0)
 
             console_scan_world(w, o.processes, o.entity_limit,
                                o.delete_entities)
 
+            print
+            print entitle('Scan results for: {0}'.format(w_name), 0)
             print w.generate_report(True)
 
-#             corrupted, wrong_located, entities_prob, shared_prob, \
-#             total_chunks, too_small_region, unreadable_region, total_regions \
+#             corrupted, wrong_located, entities_prob, shared_prob,\
+#             total_chunks, too_small_region, unreadable_region, total_regions\
 #             = w.generate_report(standalone = False)
 
             print

@@ -115,7 +115,7 @@ class ScannedDatFile(object):
         self.status_text = status_text
 
     def __str__(self):
-        text = "NBT file:" + str(self.path) + "\n"
+        text = "NBT file:" + str(self.filename) + "\n"
         text += "\tReadable:" + str(self.readable) + "\n"
         return text
 
@@ -653,21 +653,21 @@ class World(object):
         player_paths = glob(join(join(self.path, "playerdata"), "*.dat"))
         self.players = {}
         for path in player_paths:
-            uuid = split(path)[1].split(".")[0]
-            self.players[uuid] = ScannedDatFile(path)
+            filename = split(path)[1]
+            self.players[filename] = ScannedDatFile(path)
 
         # Player files before 1.7.6
         self.old_players = {}
         for path in old_player_paths:
-            name = split(path)[1].split(".")[0]
-            self.old_players[name] = ScannedDatFile(path)
+            filename = split(path)[1]
+            self.old_players[filename] = ScannedDatFile(path)
 
         # Structures dat files
         data_files_paths = glob(join(join(self.path, "data"), "*.dat"))
         self.data_files = {}
         for path in data_files_paths:
-            name = split(path)[1]
-            self.data_files[name] = ScannedDatFile(path)
+            filename = split(path)[1]
+            self.data_files[filename] = ScannedDatFile(path)
 
         # Does it look like a world folder?
         region_files = False
@@ -876,7 +876,7 @@ class World(object):
                     if temp_regionset._get_dimension_directory() == regionset._get_dimension_directory():
                         b_regionset = temp_regionset
                         break
-                
+
                 bad_regions = regionset.list_regions(problem)
                 if bad_regions and b_regionset._get_dimension_directory() != regionset._get_dimension_directory():
                     print "The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dimension_directory())
@@ -885,13 +885,13 @@ class World(object):
                         print "\n{0:-^60}".format(' New region file to replace! Coords {0} '.format(r.get_coords()))
 
                         # search for the region file
-                        
+
                         try:
                             backup_region_path = b_regionset[r.get_coords()].get_path()
                         except:
                             backup_region_path = None
                         tofix_region_path = r.get_path()
-                        
+
                         if backup_region_path != None and exists(backup_region_path):
                             print "Backup region file found in:\n  {0}".format(backup_region_path)
                             # check the region file, just open it.
@@ -910,7 +910,6 @@ class World(object):
                             print "The region file doesn't exist in the backup directory: {0}".format(backup_region_path)
 
         return counter
-        
 
     def remove_problematic_regions(self, problem):
         """ Removes all the regions files with the given problem.
@@ -952,25 +951,25 @@ class World(object):
             text = ""
 
             # Print all the player files with problems
+            text += "\nUnreadable player files:\n"
             broken_players = [p for p in self.players.values() if not p.readable]
             broken_players.extend([p for p in self.old_players.values() if not p.readable])
             if broken_players:
-                text += "\nUnreadable player files:\n"
                 broken_player_files = [p.filename for p in broken_players]
                 text += "\n".join(broken_player_files)
                 text += "\n"
             else:
-                text += "\nAll player files are readable\n"
+                text += "No problems found.\n"
 
             # Now all the data files
+            text += "\nUnreadable data files:\n"
             broken_data_files = [d for d in self.data_files.values() if not d.readable]
             if broken_data_files:
-                text += "\nUnreadable data files:\n"
-                broken_data_filenames = [p.filename for p in broken_players]
+                broken_data_filenames = [p.filename for p in broken_data_files]
                 text += "\n".join(broken_data_filenames)
                 text += "\n"
             else:
-                text += "\nAll data files are readable\n"
+                text += "No problems found.\n"
 
             # Print all chunk info in a table format
             chunk_errors = ("Problem",

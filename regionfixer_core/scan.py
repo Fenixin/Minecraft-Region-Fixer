@@ -45,7 +45,7 @@ TUPLE_NUM_ENTITIES = 0
 TUPLE_STATUS = 1
 
 
-# logging.basicConfig(filename='scan.log', level=logging.DEBUG)
+logging.basicConfig(filename='scan.log', level=logging.DEBUG)
 
 
 class ChildProcessException(Exception):
@@ -224,7 +224,7 @@ class AsyncPlayerScanner(object):
 #                 raise ChildProcessException("Something went wrong \
 #                                         scanning a player-file.")
             # Overwrite it in the regionset
-            self._player_dict[p.filename.split('.')[0]] = p
+            self._player_dict[p.filename] = p
             return p
         else:
             return None
@@ -297,6 +297,8 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities):
             if result:
                 counter += 1
             pbar.update(counter)
+            
+        pbar.finish()
 
     # Scan old player files
     print "\n{0:-^60}".format(' Scanning old format player files ')
@@ -317,14 +319,16 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities):
                 counter += 1
             pbar.update(counter)
 
-    # Scan dat files
+        pbar.finish()
+
+    # Scan data files
     print "\n{0:-^60}".format(' Scanning structures and map data files ')
     if not w.data_files:
         print "Info: No structures and map data files to scan."
     else:
         total_files = len(w.data_files)
         pbar = progressbar.ProgressBar(widgets=widgets,
-                                       maxval=total_players)
+                                       maxval=total_files)
 
         ps = AsyncPlayerScanner(w.data_files, processes)
         ps.scan()
@@ -335,6 +339,8 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities):
             if result:
                 counter += 1
             pbar.update(counter)
+
+        pbar.finish()
 
     # SCAN ALL THE CHUNKS!
     if w.get_number_regions == 0:
