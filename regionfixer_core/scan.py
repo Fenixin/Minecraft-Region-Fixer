@@ -90,12 +90,20 @@ class AsyncRegionsetScanner(object):
                 initializer=_mp_pool_init,
                 initargs=(regionset, entity_limit, remove_entities, q))
 
+        # Recommended time to sleep between polls for results
+        self.scan_wait_time = 0.001
+
     def scan(self):
         """ Scan and fill the given regionset. """
         total_regions = len(self._regionset.regions)
         self._results = self.pool.map_async(multithread_scan_regionfile,
                                             self._regionset.list_regions(None),
                                             max(1,total_regions//self.processes))
+        # No more tasks to the pool, exit the processes once the tasks are done
+        self.pool.close()
+
+        # See method
+        self._str_last_scanned = ""
 
     def get_last_result(self):
         """ Return results of last region file scanned.
@@ -117,10 +125,23 @@ class AsyncRegionsetScanner(object):
                 raise ChildProcessException("Something went wrong \
                                         scanning a region-file.")
             # Overwrite it in the regionset
+            if isinstance(r, tuple):
+                raise ChildProcessException(r)
             self._regionset[r.get_coords()] = r
+            self._str_last_scanned = self._regionset.get_name() + ": " + r.filename
             return r
         else:
             return None
+
+    def terminate(self):
+        """ Terminate the pool, this will exit no matter what.
+        """
+        self.pool.terminate()
+
+    @property
+    def str_last_scanned(self):
+        """ A friendly string with last scanned thing. """
+        return self._str_last_scanned if self._str_last_scanned else "Scanning..."
 
     @property
     def finished(self):
@@ -131,6 +152,35 @@ class AsyncRegionsetScanner(object):
     def regionset(self):
         return self._regionset
 
+    @property
+    def results(self):
+        """ Yield all the results from the scan.
+
+        This is the preferred method to report scanning status. This way you
+        can iterate through all the results in easy way:
+
+        for result in scanner.results:
+            # do things
+        """
+
+        q = self.queue
+        logging.debug("AsyncRegionsetScanner: starting yield results")
+        while not q.empty() or not self.finished:
+            sleep(0.0001)
+            logging.debug("AsyncRegionsetScanner: in while")
+            if not q.empty():
+                r = q.get()
+                logging.debug("AsyncRegionsetScanner: result: {0}".format(r))
+    #             if r is None:
+    #                 # Something went wrong scanning!
+    #                 raise ChildProcessException("Something went wrong \
+    #                                         scanning a region-file.")
+                # Overwrite it in the regionset
+                self._regionset[r.get_coords()] = r
+                yield r
+
+    def __len__(self):
+        return len(self._regionset)
 
 class AsyncWorldScanner(object):
     def __init__(self, world_obj, processes, entity_limit,
@@ -144,6 +194,10 @@ class AsyncWorldScanner(object):
         self.regionsets = copy(world_obj.regionsets)
 
         self._current_regionset = None
+        self._str_last_scanned = ""
+
+        # Recommended time to sleep between polls for results
+        self.scan_wait_time = 0.001
 
     def scan(self):
         """ Scan and fill the given regionset. """
@@ -160,21 +214,33 @@ class AsyncWorldScanner(object):
         If there are left no scanned region files return None. The
         ScannedRegionFile returned is the same instance in the regionset,
         don't modify it or you will modify the regionset results.
+
+        This method is better if you want to closely control the scan
+        process.
         """
         cr = self._current_regionset
         logging.debug("AsyncWorldScanner: current_regionset {0}".format(cr))
         if cr is not None:
             logging.debug("AsyncWorldScanner: cr.finished {0}".format(cr.finished))
             if not cr.finished:
-                return cr.get_last_result()
+                r = cr.get_last_result()
+                self._str_last_scanned = cr.str_last_scanned
+                return r
             elif self.regionsets:
                 self.scan()
                 return None
             else:
                 return None
-
         else:
             return None
+
+    def terminate(self):
+        self._current_regionset.terminate()
+
+    @property
+    def str_last_scanned(self):
+        """ A friendly string with last scanned thing. """
+        return self._str_last_scanned
 
     @property
     def current_regionset(self):
@@ -189,42 +255,74 @@ class AsyncWorldScanner(object):
     def world_obj(self):
         return self._world_obj
 
+    @property
+    def results(self):
+        """ Yield all the results from the scan.
 
-class AsyncPlayerScanner(object):
-    def __init__(self, player_dict, processes):
+        This is the simpler method to control the scanning process,
+        but also the most slopy. If you want to closely control the
+        scan process (for example cancel the process in the middle,
+        whatever is happening) use get_last_result().
 
-        self._player_dict = player_dict
+        Example using this method:
+
+        for result in scanner.results:
+            # do things
+        """
+
+        while not self.finished:
+            cr = self._current_regionset
+            if cr and not cr.finished:
+                for r in cr.results:
+                    yield r
+            elif self.regionsets:
+                self.scan()
+
+    def __len__(self):
+        l = 0
+        for rs in self.regionsets:
+            l += len(rs)
+        return l
+
+class AsyncDataScanner(object):
+    def __init__(self, data_dict, processes):
+
+        self._data_dict = data_dict
         self.processes = processes
 
         self.queue = q = queues.SimpleQueue()
         self.pool = multiprocessing.Pool(processes=processes,
                 initializer=_mp_player_pool_init,
                 initargs=(q,))
+        # Recommended time to sleep between polls for results
+        self.scan_wait_time = 0.0001
 
     def scan(self):
-        """ Scan and fill the given player_dict generated by world.py. """
-        total_players = len(self._player_dict)
-        player_list = self._player_dict.values()
+        """ Scan and fill the given data_dict generated by world.py. """
+        total_players = len(self._data_dict)
+        player_list = self._data_dict.values()
         self._results = self.pool.map_async(multiprocess_scan_player,
                                             player_list,
                                             max(1, total_players//self.processes))
+        # No more tasks to the pool, exit the processes once the tasks are done
+        self.pool.close()
 
     def get_last_result(self):
         """ Return results of last player scanned. """
 
         q = self.queue
-        logging.debug("AsyncPlayerScanner: starting get_last_result")
-        logging.debug("AsyncPlayerScanner: queue empty: {0}".format(q.empty()))
+        logging.debug("AsyncDataScanner: starting get_last_result")
+        logging.debug("AsyncDataScanner: queue empty: {0}".format(q.empty()))
         if not q.empty():
-            logging.debug("AsyncPlayerScanner: queue not empty")
+            logging.debug("AsyncDataScanner: queue not empty")
             p = q.get()
-            logging.debug("AsyncPlayerScanner: result: {0}".format(p))
+            logging.debug("AsyncDataScanner: result: {0}".format(p))
 #             if p is None:
 #                 # Something went wrong scanning!
 #                 raise ChildProcessException("Something went wrong \
 #                                         scanning a player-file.")
             # Overwrite it in the regionset
-            self._player_dict[p.filename] = p
+            self._data_dict[p.filename] = p
             return p
         else:
             return None
@@ -235,10 +333,39 @@ class AsyncPlayerScanner(object):
         return self._results.ready() and self.queue.empty()
 
     @property
-    def player_dict(self):
-        return self._player_dict
+    def data_dict(self):
+        return self._data_dict
 
+    @property
+    def results(self):
+        """ Yield all the results from the scan.
 
+        This is the preferred method to report scanning status. This way you
+        can iterate through all the results in easy way:
+
+        for result in scanner.results:
+            # do things
+        """
+
+        q = self.queue
+        logging.debug("AsyncDataScanner: starting yield results")
+        logging.debug("AsyncDataScanner: queue empty: {0}".format(q.empty()))
+        while not q.empty() or not self.finished:
+            sleep(0.0001)
+            logging.debug("AsyncDataScanner: in while")
+            if not q.empty():
+                p = q.get()
+                logging.debug("AsyncDataScanner: result: {0}".format(p))
+    #             if p is None:
+    #                 # Something went wrong scanning!
+    #                 raise ChildProcessException("Something went wrong \
+    #                                         scanning a player-file.")
+                # Overwrite it in the data dict
+                self._data_dict[p.filename] = p
+                yield p
+
+    def __len__(self):
+        return len(self._data_dict)
 
 # All scanners will use this progress bar
 widgets = ['Scanning: ',
@@ -254,9 +381,12 @@ widgets = ['Scanning: ',
 def console_scan_world(world_obj, processes, entity_limit, remove_entities):
     """ Scans a world folder including players and prints status to console.
 
-    This functions uses AsyncPlayerScanner and AsyncWorldScanner.
+    This functions uses AsyncDataScanner and AsyncWorldScanner.
     """
 
+    # Time to wait beween asking for results. Note that if the time is too big
+    # results will be waiting in the queue and the scan will take longer just
+    # because of this.
     w = world_obj
     # Scan the world directory
     print "World info:"
@@ -279,98 +409,40 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities):
             print "[WARNING!]: \'level.dat\' is corrupted with the following error/s:"
             print "\t {0}".format(w.scanned_level.status_text)
 
-    # Scan player files
-    print "\n{0:-^60}".format(' Scanning UUID player files ')
-    if not w.players:
-        print "Info: No player files to scan."
-    else:
-        total_players = len(w.players)
-        pbar = progressbar.ProgressBar(widgets=widgets,
-                                       maxval=total_players)
+    ps = AsyncDataScanner(w.players, processes)
+    ops = AsyncDataScanner(w.old_players, processes)
+    ds = AsyncDataScanner(w.data_files, processes)
+    ws = AsyncWorldScanner(w, processes, entity_limit, remove_entities)
 
-        ps = AsyncPlayerScanner(w.players, processes)
-        ps.scan()
-        counter = 0
-        while not ps.finished:
-            sleep(0.001)
-            result = ps.get_last_result()
-            if result:
-                counter += 1
-            pbar.update(counter)
-            
-        pbar.finish()
+    scanners = [ps, ops, ds, ws]
 
-    # Scan old player files
-    print "\n{0:-^60}".format(' Scanning old format player files ')
-    if not w.old_players:
-        print "Info: No old format player files to scan."
-    else:
-        total_players = len(w.old_players)
-        pbar = progressbar.ProgressBar(widgets=widgets,
-                                       maxval=total_players)
-
-        ps = AsyncPlayerScanner(w.old_players, processes)
-        ps.scan()
-        counter = 0
-        while not ps.finished:
-            sleep(0.001)
-            result = ps.get_last_result()
-            if result:
-                counter += 1
-            pbar.update(counter)
-
-        pbar.finish()
-
-    # Scan data files
-    print "\n{0:-^60}".format(' Scanning structures and map data files ')
-    if not w.data_files:
-        print "Info: No structures and map data files to scan."
-    else:
-        total_files = len(w.data_files)
-        pbar = progressbar.ProgressBar(widgets=widgets,
-                                       maxval=total_files)
-
-        ps = AsyncPlayerScanner(w.data_files, processes)
-        ps.scan()
-        counter = 0
-        while not ps.finished:
-            sleep(0.001)
-            result = ps.get_last_result()
-            if result:
-                counter += 1
-            pbar.update(counter)
-
-        pbar.finish()
-
-    # SCAN ALL THE CHUNKS!
-    if w.get_number_regions == 0:
-        print "No region files to scan!"
-    else:
-        print "\n{0:-^60}".format(' Scanning region files ')
-        #Scan world regionsets 
-        ws = AsyncWorldScanner(w, processes, entity_limit,
-                          remove_entities)
-
-        total_regions = ws.world_obj.count_regions()
-        pbar = progressbar.ProgressBar(widgets=widgets,
-                                       maxval=total_regions)
-        pbar = progressbar.ProgressBar(
-            widgets=widgets,
-            maxval=total_regions)
-        pbar.start()
-        ws.scan()
-
-        counter = 0
-        while not ws.finished:
-            sleep(0.01)
-            result = ws.get_last_result()
-            if result:
-                counter += 1
-                pbar.update(counter)
-
-        pbar.finish()
-
-    w.scanned = True
+    scan_titles = [' Scanning UUID player files ',
+                   ' Scanning old format player files ',
+                   ' Scanning structures and map data files ',
+                   ' Scanning region files ']
+    try:
+        for scanner, title in zip(scanners, scan_titles):
+            # Scan player files
+            print "\n{0:-^60}".format(title)
+            if not len(scanner):
+                print "Info: No files to scan."
+            else:
+                total = len(scanner)
+                pbar = progressbar.ProgressBar(widgets=widgets, maxval=total)
+                scanner.scan()
+                counter = 0
+                while not scanner.finished:
+                    sleep(scanner.scan_wait_time)
+                    result = scanner.get_last_result()
+                    if result:
+                        counter += 1
+                    pbar.update(counter)
+                pbar.finish()
+        w.scanned = True
+    except ChildProcessException, e:
+        print "Something went really wrong scanning a region file."
+        print "See a log for more details!"
+        print e
 
 
 def console_scan_regionset(regionset, processes, entity_limit,
