@@ -12,17 +12,21 @@ from regionfixer_core.world import World
 
 class BackupsWindow(wx.Frame):
     def __init__(self, parent, title):
-        wx.Frame.__init__(self, parent, title=title, size = (100,500))
-        
+        wx.Frame.__init__(self, parent, title=title)
+        # Every windows should use panel as parent. Not doing so will
+        # make the windows look non-native (very ugly)
+        panel = wx.Panel(self)
+
         # Sizer with all the elements in the window
         self.all_sizer = wx.BoxSizer(wx.VERTICAL)
-        
+
         # Text with help in the top
-        self.help_text = wx.StaticText(self, style=wx.TE_MULTILINE, label="Region-Fixer will use the worlds in\nthis list in top-down order.")
-        
+        self.help_text = wx.StaticText(panel, style=wx.TE_MULTILINE,
+                                       label=("Region-Fixer will use the worlds in\n"
+                                              "this list in top-down order."))
+
         # List of worlds to use as backups
-        self.world_list_box = wx.ListBox(self, size = (80, 100) )
-        #~ test_list = ["world1", "world2", "world3"]
+        self.world_list_box = wx.ListBox(panel, size=(180, 100))
         test_list = []
         self.world_list_box.Set(test_list)
         # Here will be the worlds to use as backup
@@ -30,30 +34,33 @@ class BackupsWindow(wx.Frame):
         self.world_list_text = test_list[:]
         # Last path we used in the file dialog
         self.last_path = ""
-        
+
         # Buttons
         self.buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.add = wx.Button(self, label = "Add")
-        self.move_up = wx.Button(self, label = "Move up")
-        self.move_down = wx.Button(self, label = "Move down")
+        self.add = wx.Button(panel, label="Add")
+        self.move_up = wx.Button(panel, label="Move up")
+        self.move_down = wx.Button(panel, label="Move down")
         self.buttons_sizer.Add(self.add, 0, 0)
         self.buttons_sizer.Add(self.move_up, 0, 0)
         self.buttons_sizer.Add(self.move_down, 0, 0)
-        
+
         # Add things to the general sizer
-        self.all_sizer.Add(self.help_text, 0, wx.GROW | wx.ALL, 10)
-        self.all_sizer.Add(self.world_list_box, 1, wx.EXPAND | wx.ALL, 10)
-        self.all_sizer.Add(self.buttons_sizer, 0, wx.ALIGN_CENTER | wx.ALL, 10)
-        
+        self.all_sizer.Add(self.help_text, proportion=0,
+                           flag=wx.GROW | wx.ALL, border=10)
+        self.all_sizer.Add(self.world_list_box, proportion=1,
+                           flag=wx.EXPAND | wx.ALL, border=10)
+        self.all_sizer.Add(self.buttons_sizer, proportion=0,
+                           flag=wx.ALIGN_CENTER | wx.ALL, border=10)
+
         # Layout sizers
-        self.SetSizerAndFit(self.all_sizer)
+        panel.SetSizerAndFit(self.all_sizer)
 
         # Bindings
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_BUTTON, self.OnAddWorld, self.add)
         self.Bind(wx.EVT_BUTTON, self.OnMoveUp, self.move_up)
         self.Bind(wx.EVT_BUTTON, self.OnMoveDown, self.move_down)
-        
+
         # Show the window, usually False, True for fast testing
         self.Show(False)
 
@@ -65,13 +72,9 @@ class BackupsWindow(wx.Frame):
             if os.path.isdir(p):
                 tmp.append(p)
         return tmp
-                
-                
+
     def are_there_files(self, list_dirs):
-        """ Given a list of paths return True if there are 
-            any files.
-        
-        """
+        """ Given a list of paths return True if there are any files. """
 
         for d in list_dirs:
             if not os.path.isdir(d):

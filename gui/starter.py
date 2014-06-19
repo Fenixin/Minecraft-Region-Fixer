@@ -20,8 +20,7 @@ class Starter(object):
         self.about = AboutWindow(self.frame, "About")
         self.frame.backups = self.backups
         self.frame.about = self.about
-        
-        
+
     def run(self):
         """ Run the app main loop. """
 
