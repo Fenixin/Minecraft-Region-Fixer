@@ -9,7 +9,6 @@ from backups import BackupsWindow
 from regionfixer_core.scan import AsyncWorldScanner, AsyncDataScanner
 from regionfixer_core import world
 from regionfixer_core.world import World
-from regionfixer_core.version import version_string
 
 # Proper way to set an icon in windows 7 and above
 # Thanks to http://stackoverflow.com/a/15923439
@@ -53,7 +52,7 @@ class MainWindow(wx.Frame):
 
         # Add elements to windowsmenu
         menuBackups = windowsmenu.Append(-1, "&Backups", "Manage list of backups")
-        menuAdvanced = windowsmenu.Append(-1, "A&dvanced actions", "Manage list of backups")
+#         menuAdvanced = windowsmenu.Append(-1, "A&dvanced actions", "Manage list of backups")
 
         # Create a menu bar
         menuBar = wx.MenuBar()
@@ -120,18 +119,18 @@ class MainWindow(wx.Frame):
         self.thirdrow_buttons_box_sizer.Add(self.thirdrow_buttons_sizer, 1, wx.EXPAND)
         self.thirdrow_sizer.Add(self.results_text_box_sizer, 1, wx.EXPAND)
         self.thirdrow_sizer.Add(self.thirdrow_buttons_box_sizer, 0, wx.EXPAND)
-        
+
         # All together now
         self.frame_sizer = wx.BoxSizer(wx.VERTICAL)
         self.frame_sizer.Add(self.firstrow_static_box_sizer, 0, wx.EXPAND)
         self.frame_sizer.Add(self.secondrow_static_box_sizer, 0, wx.EXPAND)
         self.frame_sizer.Add(self.thirdrow_sizer, 1, wx.EXPAND)
-        
+
         # Layout sizers
         panel.SetSizerAndFit(self.frame_sizer)
 
         self.frame_sizer.Fit(self)
-        
+
         # Bindings
         self.Bind(wx.EVT_MENU, self.OnAbout, menuAbout)
         self.Bind(wx.EVT_MENU, self.OnOpen, menuOpen)
@@ -143,18 +142,18 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnReplaceChunks, self.replace_all_chunks_button)
         self.Bind(wx.EVT_BUTTON, self.OnDeleteRegions, self.delete_all_regions_button)
         self.Bind(wx.EVT_BUTTON, self.OnReplaceRegions, self.replace_all_regions_button)
-        
+
         self.Show(True)
-    
+
     def OnExit(self, e):
         self.Close(True)
-    
+
     def OnBackups(self, e):
         self.backups.Show(True)
-    
+
     def OnAbout(self, e):
         self.about.Show(True)
-        
+
     def OnOpen(self, e):
         dlg = wx.DirDialog(self, "Choose a Minecraf world folder")
         # Set the last path used
@@ -175,7 +174,7 @@ class MainWindow(wx.Frame):
         # Properly recover the last path used
         self.last_path = split(dlg.GetPath())[0]
         dlg.Destroy()
-        
+
         # Rest the results textctrl
         self.results_text.SetValue("")
 
@@ -205,7 +204,7 @@ class MainWindow(wx.Frame):
         progressdlg.Pulse()
         print "4"
         progressdlg.Destroy()
-        
+
         self.update_delete_buttons_status(False)
 
     def OnDeleteRegions(self, e):
@@ -220,13 +219,13 @@ class MainWindow(wx.Frame):
             wx.PD_SMOOTH
             )
         progressdlg = progressdlg
-        
+
         self.world.remove_problematic_regions(world.REGION_TOO_SMALL)
         progressdlg.pulse()
         self.world.remove_problematic_regions(world.REGION_UNREADABLE)
         progressdlg.pulse()
         progressdlg.Destroy()
-        
+
         self.update_delete_buttons_status(False)
         self.update_replace_buttons_status(False)
 
@@ -242,9 +241,9 @@ class MainWindow(wx.Frame):
             wx.PD_SMOOTH
             )
         progressdlg = progressdlg
-        
+
         backups = self.backups.world_list
-        
+
         self.world.replace_problematic_chunks(world.CHUNK_CORRUPTED, backups)
         progressdlg.pulse()
         self.world.replace_problematic_chunks(world.CHUNK_SHARED_OFFSET, backups)
@@ -254,7 +253,7 @@ class MainWindow(wx.Frame):
         self.world.replace_problematic_chunks(world.CHUNK_TOO_MANY_ENTITIES, backups)
         progressdlg.pulse()
         progressdlg.Destroy()
-        
+
         self.update_delete_buttons_status(False)
         self.update_replace_buttons_status(False)
 
@@ -270,7 +269,7 @@ class MainWindow(wx.Frame):
             wx.PD_SMOOTH
             )
         progressdlg = progressdlg
-        
+
         self.world.remove_problematic_regions(world.REGION_TOO_SMALL)
         progressdlg.pulse()
         self.world.remove_problematic_regions(world.REGION_UNREADABLE)
