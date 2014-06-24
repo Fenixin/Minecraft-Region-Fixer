@@ -3,6 +3,9 @@
 
 import wx
 
+from regionfixer_core.version import version_string as rf_ver
+from gui.version import version_string as gui_ver
+
 
 class AboutWindow(wx.Frame):
     def __init__(self, parent, title="About"):
@@ -13,7 +16,7 @@ class AboutWindow(wx.Frame):
         panel = wx.Panel(self)
 
         self.about1 = wx.StaticText(panel, style=wx.ALIGN_CENTER,
-                                    label="Minecraft Region-Fixer (GUI)")
+                                    label="Minecraft Region-Fixer (GUI) (ver. {0})\n(using Region-Fixer ver. {1})".format(gui_ver,rf_ver))
         self.about2 = wx.StaticText(panel, style=wx.ALIGN_CENTER,
                                     label="Fix problems in Minecraft worlds.")
         self.about3 = wx.StaticText(panel, style=wx.ALIGN_CENTER,
@@ -34,11 +37,11 @@ class AboutWindow(wx.Frame):
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.about1, 0, wx.ALIGN_CENTER | wx.TOP, 10)
-        self.sizer.Add(self.about2, 0, wx.ALIGN_CENTER)
+        self.sizer.Add(self.about2, 0, wx.ALIGN_CENTER| wx.TOP, 20)
         self.sizer.Add(self.about3, 0, wx.ALIGN_CENTER | wx.TOP, 20)
         self.sizer.Add(self.link_github, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         self.sizer.Add(self.about4, 0, wx.ALIGN_CENTER | wx.TOP, 20)
-        self.sizer.Add(self.link_minecraft_forums, 0, wx.ALIGN_CENTER | wx.ALL, 5)
+        self.sizer.Add(self.link_minecraft_forums, 0,wx.ALIGN_CENTER | wx.ALL, 5)
         self.sizer.Add(self.close_button, 0, wx.ALIGN_CENTER | wx.ALL, 20)
 
         # Fit sizers and make the windows not resizable

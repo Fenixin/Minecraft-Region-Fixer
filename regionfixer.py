@@ -32,6 +32,7 @@ from regionfixer_core.interactive import InteractiveLoop
 from regionfixer_core.util import entitle, is_bare_console, parse_paths,\
                                   parse_backup_list
 from regionfixer_core import progressbar
+from regionfixer_core.version import version_string
 
 
 class FractionWidget(progressbar.ProgressBarWidget):
@@ -105,7 +106,7 @@ def main():
                                        'possible. It uses NBT by twoolie. '
                                        'Author: Alejandro Aguilera (Fenixin)'),
                           prog='region_fixer',
-                          version='0.1.3',
+                          version=version_string,
                           usage=usage,
                           epilog=epilog)
 

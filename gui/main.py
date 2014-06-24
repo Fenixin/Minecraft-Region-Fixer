@@ -9,6 +9,13 @@ from backups import BackupsWindow
 from regionfixer_core.scan import AsyncWorldScanner, AsyncDataScanner
 from regionfixer_core import world
 from regionfixer_core.world import World
+from regionfixer_core.version import version_string
+
+# Proper way to set an icon in windows 7 and above
+# Thanks to http://stackoverflow.com/a/15923439
+import ctypes
+myappid = 'Fenixin.region-fixer.gui.100'  # arbitrary string
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 
 class MainWindow(wx.Frame):
@@ -20,7 +27,11 @@ class MainWindow(wx.Frame):
 
         self.backups = backups
 
-        # Variables
+        # Icon
+        ico = wx.Icon('icon.ico', wx.BITMAP_TYPE_ICO)
+        self.SetIcon(ico)
+
+        # Open world stuff
         self.last_path = ""  # Last path opened
         self.world = None  # World to scan
 
@@ -53,7 +64,7 @@ class MainWindow(wx.Frame):
 
         # Create elements in the window
         # First row:
-        self.status_text = wx.StaticText(panel, style=wx.TE_MULTILINE, label="test")
+        self.status_text = wx.StaticText(panel, style=wx.TE_MULTILINE, label="No world loaded")
         self.open_button = wx.Button(panel, label="Open")
         self.scan_button = wx.Button(panel, label="Scan")
         self.scan_button.Disable()

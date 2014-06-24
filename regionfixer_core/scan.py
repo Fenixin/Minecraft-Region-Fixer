@@ -707,7 +707,7 @@ def multithread_scan_regionfile(region_file):
 
     # exceptions will be handled in scan_region_file which is in the
     # single thread land
-    
+
     multithread_scan_regionfile.q.put(r)
 
 
