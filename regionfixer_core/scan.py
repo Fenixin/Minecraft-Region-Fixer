@@ -572,10 +572,12 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
             region_file = region.RegionFile(r.path)
         except region.NoRegionHeader:  # The region has no header
             r.status = world.REGION_TOO_SMALL
+            r.scan_time = time()
             return r
         except IOError, e:
             r.status = world.REGION_UNREADABLE
             r.scan_time = time()
+            return r
 
         for x in range(32):
             for z in range(32):
@@ -646,7 +648,8 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
 
     except KeyboardInterrupt:
         print "\nInterrupted by user\n"
-        # TODO this should't exit
+        # TODO this should't exit. It should return to interactive
+        # mode if we are in it.
         sys.exit(1)
 
         # Fatal exceptions:
