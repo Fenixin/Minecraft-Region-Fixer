@@ -77,17 +77,17 @@ class MainWindow(wx.Frame):
         self.firstrow_static_box_sizer.Add(self.firstrow_sizer, 1, wx.EXPAND)
 
         # Second row:
-        self.proc_info_text = wx.StaticText(panel, label="Threads to use: ")
-        self.proc_text = wx.TextCtrl(panel, value="1")
+        self.proc_info_text = wx.StaticText(panel, label="Processes to use: ")
+        self.proc_text = wx.TextCtrl(panel, value="1", size=(30, 24), style=wx.TE_CENTER)
         self.el_info_text = wx.StaticText(panel, label="Entity limit: " )
-        self.el_text = wx.TextCtrl(panel, value="150")
+        self.el_text = wx.TextCtrl(panel, value="150", size=(50, 24), style=wx.TE_CENTER)
         self.secondrow_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.secondrow_sizer.Add(self.proc_info_text, 0, wx.ALIGN_CENTER)
-        self.secondrow_sizer.Add(self.proc_text, 0, wx.ALIGN_LEFT)
+        self.secondrow_sizer.Add(self.proc_info_text, flag=wx.ALIGN_CENTER)
+        self.secondrow_sizer.Add(self.proc_text, 0, flag=wx.RIGHT | wx.ALIGN_LEFT, border=15)
         self.secondrow_sizer.Add(self.el_info_text, 0, wx.ALIGN_CENTER)
         self.secondrow_sizer.Add(self.el_text, 0, wx.ALIGN_RIGHT)
         self.secondrow_static_box_sizer = wx.StaticBoxSizer(wx.StaticBox(panel, label="Scan options"))
-        self.secondrow_static_box_sizer.Add(self.secondrow_sizer, 1, wx.EXPAND)
+        self.secondrow_static_box_sizer.Add(self.secondrow_sizer, 1, flag=wx.EXPAND)
 
         # Third row:
         # Note: In order to use a static box add it directly to a 
