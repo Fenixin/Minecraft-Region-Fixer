@@ -3,10 +3,11 @@
 
 import wx
 from time import sleep
-from os.path import split
+from os.path import split, abspath
 
 from backups import BackupsWindow
-from regionfixer_core.scan import AsyncWorldScanner, AsyncDataScanner
+from regionfixer_core.scan import AsyncWorldScanner, AsyncDataScanner,\
+    ChildProcessException
 from regionfixer_core import world
 from regionfixer_core.world import World
 
@@ -295,35 +296,50 @@ class MainWindow(wx.Frame):
                         "Scanning old format player files",
                         "Scanning players",
                         "Scanning data files"]
-        for scanner, dialog_title in zip(things_to_scan, dialog_texts):
-            progressdlg = wx.ProgressDialog(
-                        dialog_title,
-                        "Last scanned:\n starting...",
-                        len(scanner), self,
-                        style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME |
-                              wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT |
-                              wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
-            scanner.scan()
-            counter = 0
-            while not scanner.finished:
-                sleep(0.001)
-                result = scanner.get_last_result()
-                if result:
-                    counter += 1
-                not_cancelled, not_skipped = progressdlg.Update(counter,
-                                   "Last scanned:\n" + ws.str_last_scanned)
+        try:
+            for scanner, dialog_title in zip(things_to_scan, dialog_texts):
+                progressdlg = wx.ProgressDialog(
+                            dialog_title,
+                            "Last scanned:\n starting...",
+                            len(scanner), self,
+                            style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME |
+                                  wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT |
+                                  wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
+                scanner.scan()
+                counter = 0
+                while not scanner.finished:
+                    sleep(0.001)
+                    result = scanner.get_last_result()
+                    if result:
+                        counter += 1
+                    not_cancelled, not_skipped = progressdlg.Update(counter,
+                                       "Last scanned:\n" + ws.str_last_scanned)
+                    if not not_cancelled:
+                        # User pressed cancel
+                        scanner.terminate()
+                        break
+                progressdlg.Destroy()
                 if not not_cancelled:
-                    # User pressed cancel
-                    scanner.terminate()
                     break
+            else:
+                # The scan finished successfully
+                self.world.scanned = True
+                self.results_text.SetValue(self.world.generate_report(True))
+                self.update_delete_buttons_status(True)
+        except ChildProcessException as e:
+            error_log_path = e.save_error_log()
+            filename = e.scanned_file.filename
+            scanner.terminate()
             progressdlg.Destroy()
-            if not not_cancelled:
-                break
-        else:
-            # The scan finished successfully
-            self.world.scanned = True
-            self.results_text.SetValue(self.world.generate_report(True))
-            self.update_delete_buttons_status(True)
+            error = wx.MessageDialog(self,
+                         ("Something went really wrong scanning {0}\n\n"
+                          "This is probably an error in the code. Please, "
+                          "if you have the time report it. "
+                          "I have saved all the error information in:\n\n"
+                          "{1}").format(filename, error_log_path),
+                                            "Error",
+                                            wx.ICON_ERROR)
+            error.ShowModal()
 
     def update_delete_buttons_status(self, status):
 

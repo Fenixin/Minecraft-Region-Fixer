@@ -172,9 +172,11 @@ class InteractiveLoop(Cmd):
         if len(arg) == 0:
             if self.current:
                 if self.current.scanned:
-                    text = self.current.summary()
-                    if text: print text
-                    else: print "No problems found!"
+                    text = self.current.generate_report(True)
+                    if text:
+                        print text
+                    else:
+                        print "No problems found!"
                 else:
                     print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
             else:

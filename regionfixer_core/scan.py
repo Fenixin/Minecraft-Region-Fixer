@@ -22,18 +22,20 @@
 #
 
 
-from os.path import split, join
-from time import sleep, time
 import sys
-import traceback
-from copy import copy
 import logging
 import multiprocessing
+from os.path import split, abspath
+from time import sleep, time
+from copy import copy
 from multiprocessing import queues
+from traceback import extract_tb
 
 import nbt.region as region
 import nbt.nbt as nbt
-
+from nbt.nbt import MalformedFileError
+from nbt.region import ChunkDataError, ChunkHeaderError,\
+                       RegionHeaderError, InconceivedChunk
 import progressbar
 import world
 
@@ -45,25 +47,54 @@ TUPLE_NUM_ENTITIES = 0
 TUPLE_STATUS = 1
 
 
-logging.basicConfig(filename='scan.log', level=logging.DEBUG)
+# logging.basicConfig(filename='scan.log', level=logging.DEBUG)
 
 
 class ChildProcessException(Exception):
-    """Takes the child process traceback text and prints it as a
-    real traceback with asterisks everywhere."""
-    def __init__(self, error):
-        # Helps to see wich one is the child process traceback
-        traceback = error[2]
-        print "*" * 10
-        print "*** Error while scanning:"
-        print "*** ", error[0]
-        print "*" * 10
-        print "*** Printing the child's Traceback:"
-        print "*** Exception:", traceback[0], traceback[1]
-        for tb in traceback[2]:
-            print "*" * 10
-            print "*** File {0}, line {1}, in {2} \n***   {3}".format(*tb)
-        print "*" * 10
+    """ Raised when a child process has problems.
+
+    Stores all the info given by sys.exc_info() and the
+    scanned file object which is probably partially filled.
+    """
+    def __init__(self, partial_scanned_file, exc_type, exc_class, tb_text):
+        self.scanned_file = partial_scanned_file
+        self.exc_type = exc_type
+        self.exc_class = exc_class
+        self.tb_text = tb_text
+
+    @property
+    def printable_traceback(self):
+        """ Returns a nice printable traceback.
+
+        It uses a lot of asteriks to ensure it doesn't mix with
+        the main process traceback.
+        """
+        text = ""
+        scanned_file = self.scanned_file
+        text += "*" * 10 + "\n"
+        text += "*** Exception while scanning:" + "\n"
+        text += "*** " + str(scanned_file.filename) + "\n"
+        text += "*" * 10 + "\n"
+        text += "*** Printing the child's traceback:" + "\n"
+        text += "*** Exception:" + str(self.exc_type) + str(self.exc_class) + "\n"
+        for tb in self.tb_text:
+            text += "*" * 10 + "\n"
+            text += "*** File {0}, line {1}, in {2} \n***   {3}".format(*tb)
+        text += "\n" + "*" * 10 + "\n"
+
+        return text
+
+    def save_error_log(self, filename='error.log'):
+        """ Save the error in filename, return the path of saved file. """
+        f = open(filename, 'w')
+        error_log_path = abspath(f.name)
+        filename = self.scanned_file.filename
+        f.write("Error while scanning: {0}\n".format(filename))
+        f.write(self.printable_traceback)
+        f.write('\n')
+        f.close()
+
+        return error_log_path
 
 
 class FractionWidget(progressbar.ProgressBarWidget):
@@ -96,7 +127,7 @@ class AsyncRegionsetScanner(object):
     def scan(self):
         """ Scan and fill the given regionset. """
         total_regions = len(self._regionset.regions)
-        self._results = self.pool.map_async(multithread_scan_regionfile,
+        self._results = self.pool.map_async(multiprocess_scan_regionfile,
                                             self._regionset.list_regions(None),
                                             max(1,total_regions//self.processes))
         # No more tasks to the pool, exit the processes once the tasks are done
@@ -117,16 +148,12 @@ class AsyncRegionsetScanner(object):
         logging.debug("AsyncRegionsetScanner: starting get_last_result")
         logging.debug("AsyncRegionsetScanner: queue empty: {0}".format(q.empty()))
         if not q.empty():
-            logging.debug("AsyncRegionsetScanner: queue not empty")
             r = q.get()
             logging.debug("AsyncRegionsetScanner: result: {0}".format(r))
-            if r is None:
-                # Something went wrong scanning!
-                raise ChildProcessException("Something went wrong \
-                                        scanning a region-file.")
-            # Overwrite it in the regionset
             if isinstance(r, tuple):
-                raise ChildProcessException(r)
+                logging.debug("AsyncRegionsetScanner: Something went wrong handling error")
+                raise ChildProcessException(r[0], r[1][0], r[1][1], r[1][2])
+            # Overwrite it in the regionset
             self._regionset[r.get_coords()] = r
             self._str_last_scanned = self._regionset.get_name() + ": " + r.filename
             return r
@@ -156,8 +183,10 @@ class AsyncRegionsetScanner(object):
     def results(self):
         """ Yield all the results from the scan.
 
-        This is the preferred method to report scanning status. This way you
-        can iterate through all the results in easy way:
+        This is the simpler method to control the scanning process,
+        but also the most sloppy. If you want to closely control the
+        scan process (for example cancel the process in the middle,
+        whatever is happening) use get_last_result().
 
         for result in scanner.results:
             # do things
@@ -171,16 +200,15 @@ class AsyncRegionsetScanner(object):
             if not q.empty():
                 r = q.get()
                 logging.debug("AsyncRegionsetScanner: result: {0}".format(r))
-    #             if r is None:
-    #                 # Something went wrong scanning!
-    #                 raise ChildProcessException("Something went wrong \
-    #                                         scanning a region-file.")
+                if isinstance(r, tuple):
+                    raise ChildProcessException(r[0], r[1][0], r[1][1], r[1][2])
                 # Overwrite it in the regionset
                 self._regionset[r.get_coords()] = r
                 yield r
 
     def __len__(self):
         return len(self._regionset)
+
 
 class AsyncWorldScanner(object):
     def __init__(self, world_obj, processes, entity_limit,
@@ -260,7 +288,7 @@ class AsyncWorldScanner(object):
         """ Yield all the results from the scan.
 
         This is the simpler method to control the scanning process,
-        but also the most slopy. If you want to closely control the
+        but also the most sloppy. If you want to closely control the
         scan process (for example cancel the process in the middle,
         whatever is happening) use get_last_result().
 
@@ -283,6 +311,7 @@ class AsyncWorldScanner(object):
         for rs in self.regionsets:
             l += len(rs)
         return l
+
 
 class AsyncDataScanner(object):
     def __init__(self, data_dict, processes):
@@ -316,11 +345,9 @@ class AsyncDataScanner(object):
         if not q.empty():
             logging.debug("AsyncDataScanner: queue not empty")
             p = q.get()
+            if isinstance(p, tuple):
+                raise ChildProcessException(p[0], p[1][0], p[1][1], p[1][2])
             logging.debug("AsyncDataScanner: result: {0}".format(p))
-#             if p is None:
-#                 # Something went wrong scanning!
-#                 raise ChildProcessException("Something went wrong \
-#                                         scanning a data-file.")
             # Overwrite it in the regionset
             self._data_dict[p.filename] = p
             return p
@@ -340,8 +367,10 @@ class AsyncDataScanner(object):
     def results(self):
         """ Yield all the results from the scan.
 
-        This is the preferred method to report scanning status. This way you
-        can iterate through all the results in easy way:
+        This is the simpler method to control the scanning process,
+        but also the most sloppy. If you want to closely control the
+        scan process (for example cancel the process in the middle,
+        whatever is happening) use get_last_result().
 
         for result in scanner.results:
             # do things
@@ -356,16 +385,15 @@ class AsyncDataScanner(object):
             if not q.empty():
                 p = q.get()
                 logging.debug("AsyncDataScanner: result: {0}".format(p))
-    #             if p is None:
-    #                 # Something went wrong scanning!
-    #                 raise ChildProcessException("Something went wrong \
-    #                                         scanning a player-file.")
+                if isinstance(p, tuple):
+                    raise ChildProcessException(p[0], p[1][0], p[1][1], p[1][2])
                 # Overwrite it in the data dict
                 self._data_dict[p.filename] = p
                 yield p
 
     def __len__(self):
         return len(self._data_dict)
+
 
 # All scanners will use this progress bar
 widgets = ['Scanning: ',
@@ -439,10 +467,13 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities):
                     pbar.update(counter)
                 pbar.finish()
         w.scanned = True
-    except ChildProcessException, e:
-        print "Something went really wrong scanning a region file."
-        print "See a log for more details!"
-        print e
+    except ChildProcessException as e:
+        print "\n\nSomething went really wrong scanning a file."
+        print ("This is probably a bug! If you have the time, please report "
+               "it to the region-fixer github or in the region fixer post "
+               "in minecraft forums")
+        print e.printable_traceback
+        raise e
 
 
 def console_scan_regionset(regionset, processes, entity_limit,
@@ -460,27 +491,45 @@ def console_scan_regionset(regionset, processes, entity_limit,
                                remove_entities)
     rs.scan()
     counter = 0
-    while not rs.finished:
-        sleep(0.01)
-        result = rs.get_last_result()
-        if result:
-            counter += 1
-            pbar.update(counter)
-
-    pbar.finish()
+    try:
+        while not rs.finished:
+            sleep(0.01)
+            result = rs.get_last_result()
+            if result:
+                counter += 1
+                pbar.update(counter)
+        pbar.finish()
+    except ChildProcessException as e:
+        print "\n\nSomething went really wrong scanning a file."
+        print ("This is probably a bug! If you have the time, please report "
+               "it to the region-fixer github or in the region fixer post "
+               "in minecraft forums")
+        print e.printable_traceback
+        raise e
 
 
 def scan_data(scanned_dat_file):
-    """ At the moment only tries to read a .dat player file. It returns
-    0 if it's ok and 1 if has some problem """
+    """ Try to parse the nbd data file, and fill the scanned object.
+
+    If something is wrong it will return a tuple with useful info
+    to debug the problem.
+    """
 
     s = scanned_dat_file
     try:
-        nbt_data = nbt.NBTFile(filename=s.path)
+        _ = nbt.NBTFile(filename=s.path)
         s.readable = True
-    except Exception, e:
+    except MalformedFileError as e:
         s.readable = False
-        s.status_text = e
+        s.status_text = str(e)
+    except IOError:
+        s.readable = False
+        s.status_text = str(e)
+    except:
+        s.readable = False
+        except_type, except_class, tb = sys.exc_info()
+        s = (s, (except_type, except_class, extract_tb(tb)))
+
     return s
 
 
@@ -497,17 +546,8 @@ def _mp_data_pool_init(q):
     multiprocess_scan_data.q = q
 
 
-def scan_all_players(world_obj):
-    """ Scans all the players using the scan_data function. """
-
-    for name in world_obj.players:
-        scan_data(world_obj.players[name])
-
-
 def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
-    """ Given a scanned region file object with the information of a 
-        region files scans it and returns the same obj filled with the
-        results.
+    """ Scan a region file filling the ScannedRegionFile
 
         If delete_entities is True it will delete entities while
         scanning
@@ -530,79 +570,70 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         # try to open the file and see if we can parse the header
         try:
             region_file = region.RegionFile(r.path)
-        except region.NoRegionHeader: # the region has no header
+        except region.NoRegionHeader:  # The region has no header
             r.status = world.REGION_TOO_SMALL
             return r
         except IOError, e:
-            print "\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(filename,e)
             r.status = world.REGION_UNREADABLE
             r.scan_time = time()
-            print "Note: this region file won't be scanned and won't be taken into acount in the summaries"
-            # TODO count also this region files
-            return r
-        except: # whatever else print an error and ignore for the scan
-                # not really sure if this is a good solution...
-            print "\nWARNING: The region file \'{0}\' had an error and couldn't be parsed as region file!\nError:{1}\n".format(join(split(split(r.path)[0])[1], split(r.path)[1]),sys.exc_info()[0])
-            print "Note: this region file won't be scanned and won't be taken into acount."
-            print "Also, this may be a bug. Please, report it if you have the time.\n"
-            return None
 
-        try:# start the scanning of chunks
-            
-            for x in range(32):
-                for z in range(32):
+        for x in range(32):
+            for z in range(32):
+                # start the actual chunk scanning
+                g_coords = r.get_global_chunk_coords(x, z)
+                chunk, c = scan_chunk(region_file,
+                                      (x, z),
+                                      g_coords,
+                                      entity_limit)
+                if c:
+                    r.chunks[(x, z)] = c
+                    chunk_count += 1
+                else:
+                    # chunk not created
+                    continue
 
-                    # start the actual chunk scanning
-                    g_coords = r.get_global_chunk_coords(x, z)
-                    chunk, c = scan_chunk(region_file, (x,z), g_coords, entity_limit)
-                    if c != None: # chunk not created
-                        r.chunks[(x,z)] = c
-                        chunk_count += 1
-                    else: continue
-                    if c[TUPLE_STATUS] == world.CHUNK_OK:
-                        continue
-                    elif c[TUPLE_STATUS] == world.CHUNK_TOO_MANY_ENTITIES:
-                        # deleting entities is in here because parsing a chunk with thousands of wrong entities
-                        # takes a long time, and once detected is better to fix it at once.
-                        if delete_entities:
-                            world.delete_entities(region_file, x, z)
-                            print "Deleted {0} entities in chunk ({1},{2}) of the region file: {3}".format(c[TUPLE_NUM_ENTITIES], x, z, r.filename)
-                            # entities removed, change chunk status to OK
-                            r.chunks[(x,z)] = (0, world.CHUNK_OK)
+                if c[TUPLE_STATUS] == world.CHUNK_OK:
+                    continue
+                elif c[TUPLE_STATUS] == world.CHUNK_TOO_MANY_ENTITIES:
+                    # Deleting entities is in here because parsing a chunk
+                    # with thousands of wrong entities takes a long time,
+                    # and once detected is better to fix it at once.
+                    if delete_entities:
+                        world.delete_entities(region_file, x, z)
+                        print ("Deleted {0} entities in chunk"
+                               " ({1},{2}) of the region file: {3}").format(
+                                    c[TUPLE_NUM_ENTITIES], x, z, r.filename)
+                        # entities removed, change chunk status to OK
+                        r.chunks[(x, z)] = (0, world.CHUNK_OK)
 
-                        else:
-                            entities_prob += 1
-                            # This stores all the entities in a file,
-                            # comes handy sometimes.
-                            #~ pretty_tree = chunk['Level']['Entities'].pretty_tree()
-                            #~ name = "{2}.chunk.{0}.{1}.txt".format(x,z,split(region_file.filename)[1])
-                            #~ archivo = open(name,'w')
-                            #~ archivo.write(pretty_tree)
+                    else:
+                        entities_prob += 1
+                        # This stores all the entities in a file,
+                        # comes handy sometimes.
+                        #~ pretty_tree = chunk['Level']['Entities'].pretty_tree()
+                        #~ name = "{2}.chunk.{0}.{1}.txt".format(x,z,split(region_file.filename)[1])
+                        #~ archivo = open(name,'w')
+                        #~ archivo.write(pretty_tree)
 
-                    elif c[TUPLE_STATUS] == world.CHUNK_CORRUPTED:
-                        corrupted += 1
-                    elif c[TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
-                        wrong += 1
-            
-            # Now check for chunks sharing offsets:
-            # Please note! region.py will mark both overlapping chunks
-            # as bad (the one stepping outside his territory and the
-            # good one). Only wrong located chunk with a overlapping
-            # flag are really BAD chunks! Use this criterion to 
-            # discriminate
-            metadata = region_file.metadata
-            sharing = [k for k in metadata if (
-                metadata[k].status == region.STATUS_CHUNK_OVERLAPPING and
-                r[k][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED)]
-            shared_counter = 0
-            for k in sharing:
-                r[k] = (r[k][TUPLE_NUM_ENTITIES], world.CHUNK_SHARED_OFFSET)
-                shared_counter += 1
+                elif c[TUPLE_STATUS] == world.CHUNK_CORRUPTED:
+                    corrupted += 1
+                elif c[TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
+                    wrong += 1
 
-        except KeyboardInterrupt:
-            print "\nInterrupted by user\n"
-            # TODO this should't exit
-            sys.exit(1)
+        # Now check for chunks sharing offsets:
+        # Please note! region.py will mark both overlapping chunks
+        # as bad (the one stepping outside his territory and the
+        # good one). Only wrong located chunk with a overlapping
+        # flag are really BAD chunks! Use this criterion to 
+        # discriminate
+        metadata = region_file.metadata
+        sharing = [k for k in metadata if (
+            metadata[k].status == region.STATUS_CHUNK_OVERLAPPING and
+            r[k][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED)]
+        shared_counter = 0
+        for k in sharing:
+            r[k] = (r[k][TUPLE_NUM_ENTITIES], world.CHUNK_SHARED_OFFSET)
+            shared_counter += 1
 
         r.chunk_count = chunk_count
         r.corrupted_chunks = corrupted
@@ -611,18 +642,21 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         r.shared_offset = shared_counter
         r.scan_time = time()
         r.status = world.REGION_OK
-        return r 
+        return r
+
+    except KeyboardInterrupt:
+        print "\nInterrupted by user\n"
+        # TODO this should't exit
+        sys.exit(1)
 
         # Fatal exceptions:
     except:
-        # anything else is a ChildProcessException
-        try:
-            # Not even r was created, something went really wrong
-            except_type, except_class, tb = sys.exc_info()
-            r = (r.path, r.coords, (except_type, except_class, traceback.extract_tb(tb)))
-        except NameError:
-            r = (None, None, (except_type, except_class, traceback.extract_tb(tb)))
-        
+        # Anything else is a ChildProcessException
+        # NOTE TO SELF: do not try to return the traceback object directly!
+        # A multiprocess pythonic hell comes to earth if you do so.
+        except_type, except_class, tb = sys.exc_info()
+        r = (scanned_regionfile_obj, (except_type, except_class, extract_tb(tb)))
+
         return r
 
 
@@ -647,7 +681,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
             status_text = "OK"
             scan_time = time()
 
-    except region.InconceivedChunk as e:
+    except InconceivedChunk as e:
         chunk = None
         data_coords = None
         num_entities = None
@@ -655,7 +689,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         status_text = "The chunk doesn't exist"
         scan_time = time()
 
-    except region.RegionHeaderError as e:
+    except RegionHeaderError as e:
         error = "Region header error: " + e.msg
         status = world.CHUNK_CORRUPTED
         status_text = error
@@ -665,7 +699,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
-    except region.ChunkDataError as e:
+    except ChunkDataError as e:
         error = "Chunk data error: " + e.msg
         status = world.CHUNK_CORRUPTED
         status_text = error
@@ -675,7 +709,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
-    except region.ChunkHeaderError as e:
+    except ChunkHeaderError as e:
         error = "Chunk herader error: " + e.msg
         status = world.CHUNK_CORRUPTED
         status_text = error
@@ -691,24 +725,24 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
 def _mp_pool_init(regionset, entity_limit, remove_entities, q):
     """ Function to initialize the multiprocessing in scan_regionset.
     Is used to pass values to the child process. """
-    multithread_scan_regionfile.regionset = regionset
-    multithread_scan_regionfile.q = q
-    multithread_scan_regionfile.entity_limit = entity_limit
-    multithread_scan_regionfile.remove_entities = remove_entities
+    multiprocess_scan_regionfile.regionset = regionset
+    multiprocess_scan_regionfile.q = q
+    multiprocess_scan_regionfile.entity_limit = entity_limit
+    multiprocess_scan_regionfile.remove_entities = remove_entities
 
 
-def multithread_scan_regionfile(region_file):
+def multiprocess_scan_regionfile(region_file):
     """ Does the multithread stuff for scan_region_file """
     r = region_file
-    entity_limit = multithread_scan_regionfile.entity_limit
-    remove_entities = multithread_scan_regionfile.remove_entities
+    entity_limit = multiprocess_scan_regionfile.entity_limit
+    remove_entities = multiprocess_scan_regionfile.remove_entities
     # call the normal scan_region_file with this parameters
     r = scan_region_file(r, entity_limit, remove_entities)
 
     # exceptions will be handled in scan_region_file which is in the
     # single thread land
 
-    multithread_scan_regionfile.q.put(r)
+    multiprocess_scan_regionfile.q.put(r)
 
 
 if __name__ == '__main__':
