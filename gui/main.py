@@ -4,6 +4,7 @@
 import wx
 from time import sleep
 from os.path import split, abspath
+from os import name as os_name
 
 from backups import BackupsWindow
 from regionfixer_core.scan import AsyncWorldScanner, AsyncDataScanner,\
@@ -11,11 +12,12 @@ from regionfixer_core.scan import AsyncWorldScanner, AsyncDataScanner,\
 from regionfixer_core import world
 from regionfixer_core.world import World
 
-# Proper way to set an icon in windows 7 and above
-# Thanks to http://stackoverflow.com/a/15923439
-import ctypes
-myappid = 'Fenixin.region-fixer.gui.100'  # arbitrary string
-ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+if os_name == 'nt':
+    # Proper way to set an icon in windows 7 and above
+    # Thanks to http://stackoverflow.com/a/15923439
+    import ctypes
+    myappid = 'Fenixin.region-fixer.gui.100'  # arbitrary string
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 
 class MainWindow(wx.Frame):

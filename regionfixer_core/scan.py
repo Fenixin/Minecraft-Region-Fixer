@@ -47,7 +47,7 @@ TUPLE_NUM_ENTITIES = 0
 TUPLE_STATUS = 1
 
 
-# logging.basicConfig(filename='scan.log', level=logging.DEBUG)
+logging.basicConfig(filename='scan.log', level=logging.DEBUG)
 
 
 class ChildProcessException(Exception):
@@ -512,16 +512,28 @@ def scan_data(scanned_dat_file):
 
     If something is wrong it will return a tuple with useful info
     to debug the problem.
+    
+    NOTE: idcounts.dat (number of map files) is a nbt file and
+    is not compressed, we handle the  special case here.
+    
     """
 
     s = scanned_dat_file
     try:
-        _ = nbt.NBTFile(filename=s.path)
+        if s.filename == 'idcounts.dat':
+            # TODO: This is ugly
+            # Open the file and create a buffer, this way
+            # NBT won't try to de-gzip the file
+            f = open(s.path)
+            
+            _ = nbt.NBTFile(buffer=f)
+        else:
+            _ = nbt.NBTFile(filename=s.path)
         s.readable = True
     except MalformedFileError as e:
         s.readable = False
         s.status_text = str(e)
-    except IOError:
+    except IOError as e:
         s.readable = False
         s.status_text = str(e)
     except:
