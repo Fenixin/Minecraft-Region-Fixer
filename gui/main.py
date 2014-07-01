@@ -209,14 +209,17 @@ class MainWindow(wx.Frame):
                                   wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
                 scanner.scan()
                 counter = 0
-                progressdlg.ShowModal()
+                # NOTE TO SELF: ShowModal behaves different in windows and Linux!
+                # Use it with care.
+                progressdlg.Show()
                 while not scanner.finished:
                     sleep(0.001)
                     result = scanner.get_last_result()
+                    
                     if result:
                         counter += 1
                     not_cancelled, not_skipped = progressdlg.Update(counter,
-                                       "Last scanned:\n" + ws.str_last_scanned)
+                                       "Last scanned:\n" + scanner.str_last_scanned)
                     if not not_cancelled:
                         # User pressed cancel
                         scanner.terminate()

@@ -585,7 +585,7 @@ class RegionSet(object):
                 text += "\nNo problems found.\n"
 
             # regions
-            text += "\n\nRegion problems:\n"
+            text += "\n\nRegion files problems:\n"
             region_errors = ("Problem","Too small","Unreadable","Total regions")
             region_counters = ("Counts", too_small_region,unreadable_region, total_regions)
             table_data = []
