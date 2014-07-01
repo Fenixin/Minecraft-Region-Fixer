@@ -151,7 +151,7 @@ class AsyncRegionsetScanner(object):
             r = q.get()
             logging.debug("AsyncRegionsetScanner: result: {0}".format(r))
             if isinstance(r, tuple):
-                logging.debug("AsyncRegionsetScanner: Something went wrong handling error")
+                logging.debug("AsyncRegionsetScanner: Something went wrong, handling error")
                 raise ChildProcessException(r[0], r[1][0], r[1][1], r[1][2])
             # Overwrite it in the regionset
             self._regionset[r.get_coords()] = r
@@ -343,7 +343,6 @@ class AsyncDataScanner(object):
         logging.debug("AsyncDataScanner: starting get_last_result")
         logging.debug("AsyncDataScanner: queue empty: {0}".format(q.empty()))
         if not q.empty():
-            logging.debug("AsyncDataScanner: queue not empty")
             p = q.get()
             if isinstance(p, tuple):
                 raise ChildProcessException(p[0], p[1][0], p[1][1], p[1][2])

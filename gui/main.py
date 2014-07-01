@@ -179,106 +179,6 @@ class MainWindow(wx.Frame):
         # Rest the results textctrl
         self.results_text.SetValue("")
 
-    def OnDeleteChunks(self, e):
-        progressdlg = wx.ProgressDialog("Removing chunks", "Removing...", 
-            self.world.count_regions(), self, 
-            style = wx.PD_ELAPSED_TIME | 
-            wx.PD_ESTIMATED_TIME | 
-            wx.PD_REMAINING_TIME | 
-            wx.PD_CAN_SKIP | 
-            wx.PD_CAN_ABORT | 
-            wx.PD_AUTO_HIDE |
-            wx.PD_SMOOTH
-            )
-        progressdlg = progressdlg
-        progressdlg.Pulse()
-        self.world.remove_problematic_chunks(world.CHUNK_CORRUPTED)
-        progressdlg.Pulse()
-        print "1"
-        self.world.remove_problematic_chunks(world.CHUNK_SHARED_OFFSET)
-        progressdlg.Pulse()
-        print "2"
-        self.world.remove_problematic_chunks(world.CHUNK_WRONG_LOCATED)
-        progressdlg.Pulse()
-        print "3"
-        self.world.remove_problematic_chunks(world.CHUNK_TOO_MANY_ENTITIES)
-        progressdlg.Pulse()
-        print "4"
-        progressdlg.Destroy()
-
-        self.update_delete_buttons_status(False)
-
-    def OnDeleteRegions(self, e):
-        progressdlg = wx.ProgressDialog("Removing regions", "Removing...", 
-            self.world.count_regions(), self, 
-            style = wx.PD_ELAPSED_TIME | 
-            wx.PD_ESTIMATED_TIME | 
-            wx.PD_REMAINING_TIME | 
-            #~ wx.PD_CAN_SKIP | 
-            #~ wx.PD_CAN_ABORT | 
-            wx.PD_AUTO_HIDE |
-            wx.PD_SMOOTH
-            )
-        progressdlg = progressdlg
-
-        self.world.remove_problematic_regions(world.REGION_TOO_SMALL)
-        progressdlg.pulse()
-        self.world.remove_problematic_regions(world.REGION_UNREADABLE)
-        progressdlg.pulse()
-        progressdlg.Destroy()
-
-        self.update_delete_buttons_status(False)
-        self.update_replace_buttons_status(False)
-
-    def OnReplaceChunks(self, e):
-        progressdlg = wx.ProgressDialog("Removing chunks", "Removing...", 
-            self.world.count_regions(), self, 
-            style = wx.PD_ELAPSED_TIME | 
-            wx.PD_ESTIMATED_TIME | 
-            wx.PD_REMAINING_TIME | 
-            #~ wx.PD_CAN_SKIP | 
-            #~ wx.PD_CAN_ABORT | 
-            wx.PD_AUTO_HIDE |
-            wx.PD_SMOOTH
-            )
-        progressdlg = progressdlg
-
-        backups = self.backups.world_list
-
-        self.world.replace_problematic_chunks(world.CHUNK_CORRUPTED, backups)
-        progressdlg.pulse()
-        self.world.replace_problematic_chunks(world.CHUNK_SHARED_OFFSET, backups)
-        progressdlg.pulse()
-        self.world.replace_problematic_chunks(world.CHUNK_WRONG_LOCATED, backups)
-        progressdlg.pulse()
-        self.world.replace_problematic_chunks(world.CHUNK_TOO_MANY_ENTITIES, backups)
-        progressdlg.pulse()
-        progressdlg.Destroy()
-
-        self.update_delete_buttons_status(False)
-        self.update_replace_buttons_status(False)
-
-    def OnReplaceRegions(self, e):
-        progressdlg = wx.ProgressDialog("Removing regions", "Removing...", 
-            self.world.count_regions(), self, 
-            style = wx.PD_ELAPSED_TIME | 
-            wx.PD_ESTIMATED_TIME | 
-            wx.PD_REMAINING_TIME | 
-            #~ wx.PD_CAN_SKIP | 
-            #~ wx.PD_CAN_ABORT | 
-            wx.PD_AUTO_HIDE |
-            wx.PD_SMOOTH
-            )
-        progressdlg = progressdlg
-
-        self.world.remove_problematic_regions(world.REGION_TOO_SMALL)
-        progressdlg.pulse()
-        self.world.remove_problematic_regions(world.REGION_UNREADABLE)
-        progressdlg.pulse()
-        progressdlg.Destroy()
-
-        self.update_delete_buttons_status(False)
-        self.update_replace_buttons_status(False)
 
     def OnScan(self, e):
         processes = int(self.proc_text.GetValue())
@@ -307,6 +207,7 @@ class MainWindow(wx.Frame):
                                   wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
                 scanner.scan()
                 counter = 0
+                progressdlg.ShowModal()
                 while not scanner.finished:
                     sleep(0.001)
                     result = scanner.get_last_result()
@@ -326,6 +227,7 @@ class MainWindow(wx.Frame):
                 self.world.scanned = True
                 self.results_text.SetValue(self.world.generate_report(True))
                 self.update_delete_buttons_status(True)
+                self.update_replace_buttons_status(True)
         except ChildProcessException as e:
             error_log_path = e.save_error_log()
             filename = e.scanned_file.filename
@@ -340,6 +242,99 @@ class MainWindow(wx.Frame):
                                             "Error",
                                             wx.ICON_ERROR)
             error.ShowModal()
+
+    def OnDeleteChunks(self, e):
+        progressdlg = wx.ProgressDialog("Removing chunks", "This may take a while", 
+            self.world.count_regions(), self,
+            style=wx.PD_ELAPSED_TIME |
+                wx.PD_ESTIMATED_TIME |
+                wx.PD_REMAINING_TIME |
+                wx.PD_CAN_SKIP |
+                wx.PD_CAN_ABORT |
+                wx.PD_AUTO_HIDE |
+                wx.PD_SMOOTH
+            )
+        progressdlg = progressdlg
+        progressdlg.Pulse()
+        remove_chunks = self.world.remove_problematic_chunks
+        for problem in world.CHUNK_PROBLEMS:
+            progressdlg.Pulse("Removing chunks with problem: {}".format(world.CHUNK_STATUS_TEXT[problem]))
+            remove_chunks(problem)
+        progressdlg.Destroy()
+        progressdlg.Destroy()
+
+        self.update_delete_buttons_status(False)
+
+    def OnDeleteRegions(self, e):
+        progressdlg = wx.ProgressDialog("Removing regions", "This may take a while...", 
+            self.world.count_regions(), self,
+            style=wx.PD_ELAPSED_TIME |
+            wx.PD_ESTIMATED_TIME |
+            wx.PD_REMAINING_TIME |
+            wx.PD_AUTO_HIDE |
+            wx.PD_SMOOTH
+            )
+        progressdlg = progressdlg
+        progressdlg.Pulse()
+        remove_regions = self.world.remove_problematic_regions
+        for problem in world.REGION_PROBLEMS:
+            progressdlg.Pulse("Removing regions with problem: {}".format(world.REGION_STATUS_TEXT[problem]))
+            remove_regions(problem)
+        progressdlg.Destroy()
+
+        self.update_delete_buttons_status(False)
+        self.update_replace_buttons_status(False)
+
+    def OnReplaceChunks(self, e):
+        # Get options
+        entity_limit = int(self.el_text.GetValue())
+        delete_entities = False
+
+        progressdlg = wx.ProgressDialog("Removing chunks", "Removing...",
+            self.world.count_regions(), self,
+            style=wx.PD_ELAPSED_TIME |
+            wx.PD_ESTIMATED_TIME |
+            wx.PD_REMAINING_TIME |
+            wx.PD_AUTO_HIDE |
+            wx.PD_SMOOTH
+            )
+        progressdlg = progressdlg
+        backups = self.backups.world_list
+        progressdlg.Pulse()
+        replace_chunks = self.world.replace_problematic_chunks
+        for problem in world.CHUNK_PROBLEMS:
+            progressdlg.Pulse("Replacing chunks with problem: {}".format(world.CHUNK_STATUS_TEXT[problem]))
+            replace_chunks(backups, problem, entity_limit, delete_entities)
+        progressdlg.Destroy()
+
+        self.update_delete_buttons_status(False)
+        self.update_replace_buttons_status(False)
+
+    def OnReplaceRegions(self, e):
+        # Get options
+        entity_limit = int(self.el_text.GetValue())
+        delete_entities = False
+        progressdlg = wx.ProgressDialog("Removing regions", "Removing...", 
+            self.world.count_regions(), self, 
+            style = wx.PD_ELAPSED_TIME | 
+            wx.PD_ESTIMATED_TIME | 
+            wx.PD_REMAINING_TIME | 
+            #~ wx.PD_CAN_SKIP | 
+            #~ wx.PD_CAN_ABORT | 
+            wx.PD_AUTO_HIDE |
+            wx.PD_SMOOTH
+            )
+        progressdlg = progressdlg
+        backups = self.backups.world_list
+        progressdlg.Pulse()
+        replace_regions = self.world.replace_problematic_regions
+        for problem in world.REGION_PROBLEMS:
+            progressdlg.Pulse("Replacing regions with problem: {}".format(world.REGION_STATUS_TEXT[problem]))
+            replace_regions(backups, problem, entity_limit, delete_entities)
+        progressdlg.Destroy()
+
+        self.update_delete_buttons_status(False)
+        self.update_replace_buttons_status(False)
 
     def update_delete_buttons_status(self, status):
 

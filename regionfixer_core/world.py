@@ -783,13 +783,14 @@ class World(object):
             counter += count
         return counter
 
-    def replace_problematic_chunks(self, backup_worlds, problem, options):
+    def replace_problematic_chunks(self, backup_worlds, problem, entity_limit, delete_entities):
         """ Takes a list of world objects and a problem value and try
             to replace every chunk with that problem using a working
             chunk from the list of world objects. It uses the world
             objects in left to riht order. """
 
         counter = 0
+        scanned_regions = {}
         for regionset in self.regionsets:
             for backup in backup_worlds:
                 # choose the correct regionset based on the dimension
@@ -817,21 +818,28 @@ class World(object):
                         tofix_region_path, _ = regionset.locate_chunk(global_coords)
                         if exists(backup_region_path):
                             print "Backup region file found in:\n  {0}".format(backup_region_path)
-
-                            # scan the whole region file, pretty slow, but completely needed to detec sharing offset chunks
-                            from scan import scan_region_file
-                            r = scan_region_file(ScannedRegionFile(backup_region_path),options)
+                            # Scan the whole region file, pretty slow, but
+                            # absolutely needed to detect sharing offset chunks
+                            # The backups world doesn't change, check if the
+                            # region_file is already scanned:
+                            try:
+                                coords = get_region_coords(backup_region_path.split()[1])
+                                r = scanned_regions[coords]
+                            except KeyError:
+                                from scan import scan_region_file
+                                r = scan_region_file(ScannedRegionFile(backup_region_path), entity_limit, delete_entities)
+                                scanned_regions[r.coords] = r
                             try:
                                 status_tuple = r[local_coords]
                             except KeyError:
                                 status_tuple = None
-                            
-                            # retrive the status from status_tuple
+
+                            # Retrive the status from status_tuple
                             if status_tuple == None:
                                 status = CHUNK_NOT_CREATED
                             else:
                                 status = status_tuple[TUPLE_STATUS]
-                            
+
                             if status == CHUNK_OK:
                                 backup_region_file = region.RegionFile(backup_region_path)
                                 working_chunk = backup_region_file.get_chunk(local_coords[0],local_coords[1])
@@ -864,7 +872,7 @@ class World(object):
             counter += regionset.remove_problematic_chunks(problem)
         return counter
 
-    def replace_problematic_regions(self, backup_worlds, problem, options):
+    def replace_problematic_regions(self, backup_worlds, problem, entity_limit, delete_entities):
         """ Replaces region files with the given problem using a backup
             directory. """
         counter = 0

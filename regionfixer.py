@@ -406,6 +406,8 @@ def main():
             print
             # Replace chunks
             if backup_worlds and not len(world_list) > 1:
+                del_ent = options.delete_entities
+                ent_lim = options.entity_limit
                 options_replace = [o.replace_corrupted,
                                    o.replace_wrong_located,
                                    o.replace_entities,
@@ -417,7 +419,7 @@ def main():
                         if total:
                             text = " Replacing chunks with status: {0} ".format(status)
                             print "{0:#^60}".format(text)
-                            fixed = w.replace_problematic_chunks(backup_worlds, problem, options)
+                            fixed = w.replace_problematic_chunks(backup_worlds, problem, ent_lim, del_ent)
                             print "\n{0} replaced of a total of {1} chunks with status: {2}".format(fixed, total, status)
                         else:
                             print "No chunks to replace with status: {0}".format(status)
@@ -431,6 +433,8 @@ def main():
 
             # replace region files
             if backup_worlds and not len(world_list) > 1:
+                del_ent = options.delete_entities
+                ent_lim = options.entity_limit
                 options_replace = [o.replace_too_small]
                 replacing = zip(options_replace, world.REGION_PROBLEMS_ITERATOR)
                 for replace, (problem, status, arg) in replacing:
@@ -439,7 +443,7 @@ def main():
                         if total:
                             text = " Replacing regions with status: {0} ".format(status)
                             print "{0:#^60}".format(text)
-                            fixed = w.replace_problematic_regions(backup_worlds, problem, options)
+                            fixed = w.replace_problematic_regions(backup_worlds, problem, ent_lim, del_ent)
                             print "\n{0} replaced of a total of {1} regions with status: {2}".format(fixed, total, status)
                         else:
                             print "No region to replace with status: {0}".format(status)

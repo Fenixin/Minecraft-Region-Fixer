@@ -307,6 +307,8 @@ class InteractiveLoop(Cmd):
             print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
 
     def do_replace_chunks(self, arg):
+        el = self.options.entity_limit
+        de = self.options.delete_entities
         if self.current and self.current.scanned:
             if len(arg.split()) == 0:
                 print "Possible arguments are: {0}".format(self.possible_chunk_args_text)
@@ -316,7 +318,7 @@ class InteractiveLoop(Cmd):
                 if arg in world.CHUNK_PROBLEMS_ARGS.values() or arg == 'all':
                     for problem, status_text, a in world.CHUNK_PROBLEMS_ITERATOR:
                         if arg == 'all' or arg == a:
-                            n = self.current.replace_problematic_chunks(self.backup_worlds, problem, self.options)
+                            n = self.current.replace_problematic_chunks(self.backup_worlds, problem, el, de)
                             if n:
                                 self.current.scanned = False
                             print "\nReplaced {0} chunks with status \'{1}\'.".format(n, status_text)
@@ -326,6 +328,8 @@ class InteractiveLoop(Cmd):
             print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
 
     def do_replace_regions(self, arg):
+        el = self.options.entity_limit
+        de = self.options.delete_entities
         if self.current and self.current.scanned:
             if len(arg.split()) == 0:
                 print "Possible arguments are: {0}".format(self.possible_region_args_text)
@@ -335,7 +339,7 @@ class InteractiveLoop(Cmd):
                 if arg in world.REGION_PROBLEMS_ARGS.values() or arg == 'all':
                     for problem, status_text, a in world.REGION_PROBLEMS_ITERATOR:
                         if arg == 'all' or arg == a:
-                            n = self.current.replace_problematic_regions(self.backup_worlds, problem, self.options)
+                            n = self.current.replace_problematic_regions(self.backup_worlds, problem, el, de)
                             if n:
                                 self.current.scanned = False
                             print "\nReplaced {0} regions with status \'{1}\'.".format(n, status_text)
