@@ -582,7 +582,7 @@ class RegionSet(object):
             if corrupted or wrong_located or entities_prob or shared_prob:
                 text += table(table_data)
             else:
-                text += "\nNo problems found.\n"
+                text += "No problems found.\n"
 
             # regions
             text += "\n\nRegion files problems:\n"
