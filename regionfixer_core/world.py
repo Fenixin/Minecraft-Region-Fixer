@@ -119,6 +119,10 @@ class ScannedDatFile(object):
         text += "\tReadable:" + str(self.readable) + "\n"
         return text
 
+    @property
+    def oneliner_status(self):
+        return "Readable" if self.readable else "Unreadable"
+
 
 class ScannedChunk(object):
     """ Stores all the results of the scan. Not used at the moment, it
@@ -180,9 +184,8 @@ class ScannedRegionFile(object):
         # in the region file
         self.chunks = {}
 
-        # TODO: these values aren't really used.
-        # count_chunks() is used instead.
-        # counters with the number of chunks
+        # Counters with the number of chunks
+        # Filled in scan.scan_region_file
         self.corrupted_chunks = corrupted
         self.wrong_located_chunks = wrong
         self.entities_prob = entities_prob
@@ -196,6 +199,25 @@ class ScannedRegionFile(object):
         # TOO SMALL or UNREADABLE see the constants at the start
         # of the file.
         self.status = status
+        
+        self.scanned = False
+
+    @property
+    def oneliner_status(self):
+        if self.scanned:
+            status = self.status
+            if status == REGION_OK:
+                stats = "c: {0}, w: {1}, tme: {2}, so: {3}, t: {4}".format(\
+                        self.corrupted_chunks, self.wrong_located_chunks,\
+                        self.entities_prob, self.shared_offset, self.chunk_count)
+            elif status == REGION_TOO_SMALL:
+                stats = "No header in the region file"
+            elif status == REGION_UNREADABLE:
+                stats = "Unreadable region file)"
+        else:
+            stats = "Not scanned"
+
+        return stats
 
     def __str__(self):
         text = "Path: {0}".format(self.path)

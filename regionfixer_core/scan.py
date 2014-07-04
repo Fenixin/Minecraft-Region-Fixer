@@ -38,6 +38,9 @@ from nbt.region import ChunkDataError, ChunkHeaderError,\
                        RegionHeaderError, InconceivedChunk
 import progressbar
 import world
+from regionfixer_core.world import REGION_OK, REGION_TOO_SMALL,\
+    REGION_UNREADABLE
+from regionfixer_core.util import entitle
 
 
 #~ TUPLE_COORDS = 0
@@ -422,7 +425,44 @@ widgets = ['Scanning: ',
            progressbar.ETA()]
 
 
-def console_scan_world(world_obj, processes, entity_limit, remove_entities):
+def console_scan_loop(scanners, scan_titles, verbose):
+    try:
+        for scanner, title in zip(scanners, scan_titles):
+            # Scan player files
+            print "\n{0:-^60}".format(title)
+            if not len(scanner):
+                print "Info: No files to scan."
+            else:
+                total = len(scanner)
+                if not verbose:
+                    pbar = progressbar.ProgressBar(widgets=widgets,
+                                                   maxval=total)
+                scanner.scan()
+                counter = 0
+                while not scanner.finished:
+                    sleep(scanner.scan_wait_time)
+                    result = scanner.get_last_result()
+                    if result:
+                        counter += 1
+                        if not verbose:
+                            pbar.update(counter)
+                        else:
+                            status = "(" + result.oneliner_status + ")"
+                            fn = result.filename
+                            print "Scanned {0: <12} {1:.<43} {2}/{3}".format(fn, status, counter, total)
+                if not verbose:
+                    pbar.finish()
+    except ChildProcessException as e:
+        print "\n\nSomething went really wrong scanning a file."
+        print ("This is probably a bug! If you have the time, please report "
+               "it to the region-fixer github or in the region fixer post "
+               "in minecraft forums")
+        print e.printable_traceback
+        raise e
+
+
+def console_scan_world(world_obj, processes, entity_limit, remove_entities,
+                       verbose):
     """ Scans a world folder prints status to console.
 
     It will scan region files and data files (includes players).
@@ -464,65 +504,22 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities):
                    ' Scanning old format player files ',
                    ' Scanning structures and map data files ',
                    ' Scanning region files ']
-    try:
-        for scanner, title in zip(scanners, scan_titles):
-            # Scan player files
-            print "\n{0:-^60}".format(title)
-            if not len(scanner):
-                print "Info: No files to scan."
-            else:
-                total = len(scanner)
-                pbar = progressbar.ProgressBar(widgets=widgets, maxval=total)
-                scanner.scan()
-                counter = 0
-                while not scanner.finished:
-                    sleep(scanner.scan_wait_time)
-                    result = scanner.get_last_result()
-                    if result:
-                        counter += 1
-                    pbar.update(counter)
-                pbar.finish()
-        w.scanned = True
-    except ChildProcessException as e:
-        print "\n\nSomething went really wrong scanning a file."
-        print ("This is probably a bug! If you have the time, please report "
-               "it to the region-fixer github or in the region fixer post "
-               "in minecraft forums")
-        print e.printable_traceback
-        raise e
+    console_scan_loop(scanners, scan_titles, verbose)
+    w.scanned = True
 
 
 def console_scan_regionset(regionset, processes, entity_limit,
-                           remove_entities):
+                           remove_entities, verbose):
     """ Scan a regionset printing status to console.
 
     Uses AsyncRegionsetScanner.
     """
 
-    total_regions = len(regionset)
-    pbar = progressbar.ProgressBar(widgets=widgets,
-                               maxval=total_regions)
-    pbar.start()
     rs = AsyncRegionsetScanner(regionset, processes, entity_limit,
                                remove_entities)
-    rs.scan()
-    counter = 0
-    try:
-        while not rs.finished:
-            sleep(0.01)
-            result = rs.get_last_result()
-            if result:
-                counter += 1
-                pbar.update(counter)
-        pbar.finish()
-    except ChildProcessException as e:
-        print "\n\nSomething went really wrong scanning a file."
-        print ("This is probably a bug! If you have the time, please report "
-               "it to the region-fixer github or in the region fixer post "
-               "in minecraft forums")
-        print e.printable_traceback
-        raise e
-
+    scanners = [rs]
+    titles = [entitle("Scanning separate region files", 0)]
+    console_scan_loop(scanners, titles, verbose)
 
 def scan_data(scanned_dat_file):
     """ Try to parse the nbd data file, and fill the scanned object.
@@ -601,10 +598,12 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         except region.NoRegionHeader:  # The region has no header
             r.status = world.REGION_TOO_SMALL
             r.scan_time = time()
+            r.scanned = True
             return r
         except IOError, e:
             r.status = world.REGION_UNREADABLE
             r.scan_time = time()
+            r.scanned = True
             return r
 
         for x in range(32):
@@ -672,6 +671,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         r.shared_offset = shared_counter
         r.scan_time = time()
         r.status = world.REGION_OK
+        r.scanned = True
         return r
 
     except KeyboardInterrupt:

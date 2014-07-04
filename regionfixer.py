@@ -364,10 +364,8 @@ def main():
         summary_text = ""
         # Scan the separate region files
         if len(regionset.regions) > 0:
-            print entitle("Scanning separate region files", 0)
-
             console_scan_regionset(regionset, o.processes, o.entity_limit,
-                                   o.delete_entities)
+                                   o.delete_entities, o.verbose)
             print regionset.generate_report(True)
 
             # Delete chunks
@@ -393,7 +391,7 @@ def main():
             print entitle(' Scanning world: {0} '.format(w_name), 0)
 
             console_scan_world(w, o.processes, o.entity_limit,
-                               o.delete_entities)
+                               o.delete_entities, o.verbose)
 
             print
             print entitle('Scan results for: {0}'.format(w_name), 0)

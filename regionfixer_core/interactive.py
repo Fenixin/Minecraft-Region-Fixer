@@ -204,7 +204,8 @@ class InteractiveLoop(Cmd):
                 if isinstance(self.current, world.World):
                     self.current = world.World(self.current.path)
                     console_scan_world(self.current, o.processes,
-                                       o.entity_limit, o.delete_entities)
+                                       o.entity_limit, o.delete_entities,
+                                       o.verbose)
                 elif isinstance(self.current, world.RegionSet):
                     print "\n{0:-^60}".format(' Scanning region files ')
                     console_scan_regionset(self.current, o.processes,
