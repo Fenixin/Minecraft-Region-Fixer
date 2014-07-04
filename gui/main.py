@@ -51,6 +51,8 @@ class MainWindow(wx.Frame):
         menuExit = filemenu.Append(wx.ID_EXIT, "E&xit","Terminate program")
 
         # Add elements to helpmenu
+        menuHelp = helpmenu.Append(wx.ID_HELP, "&Help", "Where to find help")
+        helpmenu.AppendSeparator()
         menuAbout = helpmenu.Append(wx.ID_ABOUT, "&About", "Information about this program")
 
         # Add elements to windowsmenu
@@ -136,6 +138,7 @@ class MainWindow(wx.Frame):
 
         # Bindings
         self.Bind(wx.EVT_MENU, self.OnAbout, menuAbout)
+        self.Bind(wx.EVT_MENU, self.OnHelp, menuHelp)
         self.Bind(wx.EVT_MENU, self.OnOpen, menuOpen)
         self.Bind(wx.EVT_MENU, self.OnBackups, menuBackups)
         self.Bind(wx.EVT_MENU, self.OnExit, menuExit)
@@ -156,6 +159,9 @@ class MainWindow(wx.Frame):
 
     def OnAbout(self, e):
         self.about.Show(True)
+    
+    def OnHelp(self, e):
+        self.help.Show(True)
 
     def OnOpen(self, e):
         dlg = wx.DirDialog(self, "Choose a Minecraf world folder")

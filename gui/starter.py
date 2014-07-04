@@ -6,6 +6,7 @@ import wx
 from main import MainWindow
 from backups import BackupsWindow
 from about import AboutWindow
+from help import HelpWindow
 
 
 class Starter(object):
@@ -20,6 +21,7 @@ class Starter(object):
         self.about = AboutWindow(self.frame, "About")
         self.frame.backups = self.backups
         self.frame.about = self.about
+        self.frame.help = HelpWindow(self.frame, "Help")
 
     def run(self):
         """ Run the app main loop. """
