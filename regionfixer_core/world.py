@@ -104,7 +104,7 @@ DIMENSION_NAMES = {"region": "Overworld",
                    "DIM-1": "Nether"}
 
 
-class ScannedDatFile(object):
+class ScannedDataFile(object):
     def __init__(self, path=None, readable=None, status_text=None):
         self.path = path
         if self.path and exists(self.path):
@@ -391,7 +391,54 @@ class ScannedRegionFile(object):
                 self[c] = tuple(t)
 
 
-class RegionSet(object):
+class DataSet(object):
+    """ Stores data items to be scanned by AsyncScanner in scan.py. """
+
+    def _replace_in_data_structure(self, data):
+        raise NotImplemented
+
+    def _get_list(self):
+        raise NotImplemented
+
+    def __getitem__(self, key):
+        """ This and __setitem__ should use the path of the file as keys
+        not the filename. (I think)
+        TODO: Es realmente esto necesario?
+        """
+        raise NotImplemented
+
+    def __setitem__(self, key, value):
+        raise NotImplemented
+
+    def __len__(self):
+        raise NotImplemented
+
+
+class DataFileSet(DataSet):
+    """ Any scanneable set should derive from this.
+
+    DataSets are scanned using scan.AsyncScanner
+    """
+    def __init__(self, path, *args, **kwargs):
+        DataSet.__init__(self, *args, **kwargs)
+
+        self.path = path
+        data_files_path = glob(join(path, "*.dat"))
+        self.data_files = d = {}
+        for path in data_files_path:
+            d[path] = ScannedDataFile(path)
+
+    def _get_list(self):
+        return self.data_files.values()
+
+    def _replace_in_data_structure(self, data):
+        self.data_files[data.path] = data
+
+    def __len__(self):
+        return len(self.data_files)
+
+
+class RegionSet(DataSet):
     """Stores an arbitrary number of region files and the scan results.
         Inits with a list of region files. The regions dict is filled
         while scanning with ScannedRegionFiles and ScannedChunks."""
@@ -458,6 +505,12 @@ class RegionSet(object):
 
     def __len__(self):
         return len(self.regions)
+
+    def _get_list(self):
+        return self.regions.values()
+
+    def _replace_in_data_structure(self, data):
+        self.regions[data.get_coords()] = data
 
     def keys(self):
         return self.regions.keys()
@@ -656,40 +709,28 @@ class World(object):
             try:
                 self.level_data = nbt.NBTFile(level_dat_path)["Data"]
                 self.name = self.level_data["LevelName"].value
-                self.scanned_level = ScannedDatFile(level_dat_path,
+                self.scanned_level = ScannedDataFile(level_dat_path,
                                                     readable=True,
                                                     status_text="OK")
             except Exception, e:
                 self.name = None
-                self.scanned_level = ScannedDatFile(level_dat_path,
+                self.scanned_level = ScannedDataFile(level_dat_path,
                                                     readable=False,
                                                     status_text=e)
         else:
             self.level_file = None
             self.level_data = None
             self.name = None
-            self.scanned_level = ScannedDatFile(None, False, "The file doesn't exist")
+            self.scanned_level = ScannedDataFile(None, False,
+                                                 "The file doesn't exist")
 
         # Player files
-        old_player_paths = glob(join(join(self.path, "players"), "*.dat"))
-        player_paths = glob(join(join(self.path, "playerdata"), "*.dat"))
-        self.players = {}
-        for path in player_paths:
-            filename = split(path)[1]
-            self.players[filename] = ScannedDatFile(path)
-
-        # Player files before 1.7.6
-        self.old_players = {}
-        for path in old_player_paths:
-            filename = split(path)[1]
-            self.old_players[filename] = ScannedDatFile(path)
-
-        # Structures dat files
-        data_files_paths = glob(join(join(self.path, "data"), "*.dat"))
-        self.data_files = {}
-        for path in data_files_paths:
-            filename = split(path)[1]
-            self.data_files[filename] = ScannedDatFile(path)
+        PLAYERS_DIRECTORY = 'players'
+        OLD_PLAYERS_DIRECTORY = ' playerdata'
+        STRUCTURES_DIRECTORY = 'data'
+        self.players = DataFileSet(join(self.path, PLAYERS_DIRECTORY))
+        self.old_players = DataFileSet(join(self.path, OLD_PLAYERS_DIRECTORY))
+        self.data_files = DataFileSet(join(self.path, STRUCTURES_DIRECTORY))
 
         # Does it look like a world folder?
         region_files = False
@@ -982,8 +1023,8 @@ class World(object):
 
             # Print all the player files with problems
             text += "\nUnreadable player files:\n"
-            broken_players = [p for p in self.players.values() if not p.readable]
-            broken_players.extend([p for p in self.old_players.values() if not p.readable])
+            broken_players = [p for p in self.players._get_list() if not p.readable]
+            broken_players.extend([p for p in self.old_players._get_list() if not p.readable])
             if broken_players:
                 broken_player_files = [p.filename for p in broken_players]
                 text += "\n".join(broken_player_files)
@@ -993,7 +1034,7 @@ class World(object):
 
             # Now all the data files
             text += "\nUnreadable data files:\n"
-            broken_data_files = [d for d in self.data_files.values() if not d.readable]
+            broken_data_files = [d for d in self.data_files._get_list() if not d.readable]
             if broken_data_files:
                 broken_data_filenames = [p.filename for p in broken_data_files]
                 text += "\n".join(broken_data_filenames)

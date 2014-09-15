@@ -25,10 +25,10 @@
 import sys
 import logging
 import multiprocessing
+from multiprocessing.queues import SimpleQueue
 from os.path import split, abspath
 from time import sleep, time
 from copy import copy
-from multiprocessing import queues
 from traceback import extract_tb
 
 import nbt.region as region
@@ -38,8 +38,7 @@ from nbt.region import ChunkDataError, ChunkHeaderError,\
                        RegionHeaderError, InconceivedChunk
 import progressbar
 import world
-from regionfixer_core.world import REGION_OK, REGION_TOO_SMALL,\
-    REGION_UNREADABLE
+
 from regionfixer_core.util import entitle
 
 
@@ -88,7 +87,7 @@ class ChildProcessException(Exception):
         return text
 
     def save_error_log(self, filename='error.log'):
-        """ Save the error in filename, return the path of saved file. """
+        """ Save the error in filename, return the absolute path of saved file. """
         f = open(filename, 'w')
         error_log_path = abspath(f.name)
         filename = self.scanned_file.filename
@@ -109,33 +108,107 @@ class FractionWidget(progressbar.ProgressBarWidget):
         return '%2d%s%2d' % (pbar.currval, self.sep, pbar.maxval)
 
 
-class AsyncRegionsetScanner(object):
-    def __init__(self, regionset, processes, entity_limit,
-                 remove_entities=False):
+def multiprocess_scan_data(data):
+    """ Does the multithread stuff for scan_data """
+    # Protect everything so an exception will be returned from the worker
+    try:
+        result = scan_data(data)
+        multiprocess_scan_data.q.put(result)
+    except KeyboardInterrupt as e:
+        raise e
+    except:
+        except_type, except_class, tb = sys.exc_info()
+        s = (data, (except_type, except_class, extract_tb(tb)))
+        multiprocess_scan_data.q.put(s)
 
-        self._regionset = regionset
+
+def multiprocess_scan_regionfile(region_file):
+    """ Does the multithread stuff for scan_region_file """
+    # Protect everything so an exception will be returned from the worker
+    try:
+        r = region_file
+        entity_limit = multiprocess_scan_regionfile.entity_limit
+        remove_entities = multiprocess_scan_regionfile.remove_entities
+        # call the normal scan_region_file with this parameters
+        r = scan_region_file(r, entity_limit, remove_entities)
+        multiprocess_scan_regionfile.q.put(r)
+    except KeyboardInterrupt as e:
+        raise e
+    except:
+        except_type, except_class, tb = sys.exc_info()
+        s = (region_file, (except_type, except_class, extract_tb(tb)))
+        multiprocess_scan_regionfile.q.put(s)
+
+
+def _mp_data_pool_init(d):
+    """ Function to initialize the multiprocessing in scan_regionset.
+    Is used to pass values to the child process.
+
+    Requiere to pass the multiprocessing queue as argument.
+    """
+    assert(type(d) == dict)
+    assert('queue' in d)
+    multiprocess_scan_data.q = d['queue']
+
+
+def _mp_regionset_pool_init(d):
+    """ Function to initialize the multiprocessing in scan_regionset.
+    Is used to pass values to the child process. """
+    assert(type(d) == dict)
+    assert('regionset' in d)
+    assert('queue' in d)
+    assert('entity_limit' in d)
+    assert('remove_entities' in d)
+    multiprocess_scan_regionfile.regionset = d['regionset']
+    multiprocess_scan_regionfile.q = d['queue']
+    multiprocess_scan_regionfile.entity_limit = ['entity_limit']
+    multiprocess_scan_regionfile.remove_entities = ['remove_entities']
+
+
+class AsyncScanner(object):
+    """ Class to derive all the scanner classes from.
+
+    To implement a scanner you have to override:
+    update_str_last_scanned()
+     """
+    def __init__(self, data_structure, processes, scan_function, init_args,
+                 _mp_init_function):
+        """ Init the scanner.
+
+        data_structure is a world.DataSet
+        processes is the number of child processes to use
+        scan_function is the function to use for scanning
+        init_args are the arguments passed to the init function
+        _mp_init_function is the function used to init the child processes
+        """
+        assert(isinstance(data_structure, world.DataSet))
+        self.data_structure = data_structure
+        self.list_files_to_scan = data_structure._get_list()
         self.processes = processes
-        self.entity_limit = entity_limit
-        self.remove_entities = remove_entities
+        self.scan_function = scan_function
 
         # Queue used by processes to pass results
-        self.queue = q = queues.SimpleQueue()
+        self.queue = SimpleQueue()
+        init_args.update({'queue': self.queue})
+        # NOTE TO SELF: initargs doesn't handle kwargs, only args!
+        # Pass a dict with all the args
         self.pool = multiprocessing.Pool(processes=processes,
-                initializer=_mp_pool_init,
-                initargs=(regionset, entity_limit, remove_entities, q))
+                initializer=_mp_init_function,
+                initargs=(init_args,))
 
+        # TODO: make this automatic amount
         # Recommended time to sleep between polls for results
-        self.scan_wait_time = 0.001
+        self.SCAN_WAIT_TIME = 0.001
 
         # Holds a friendly string with the name of the last file scanned
         self._str_last_scanned = None
 
     def scan(self):
-        """ Scan and fill the given regionset. """
-        total_regions = len(self._regionset.regions)
-        self._results = self.pool.map_async(multiprocess_scan_regionfile,
-                                            self._regionset.list_regions(None),
-                                            max(1,total_regions//self.processes))
+        """ Launch the child processes and scan all the files. """
+        total_files = len(self.data_structure)
+        self._results = self.pool.map_async(self.scan_function,
+                                            self.list_files_to_scan, 5)
+                                            # max(1, total_files // self.processes))
         # No more tasks to the pool, exit the processes once the tasks are done
         self.pool.close()
 
@@ -143,26 +216,18 @@ class AsyncRegionsetScanner(object):
         self._str_last_scanned = ""
 
     def get_last_result(self):
-        """ Return results of last region file scanned.
-
-        If there are left no scanned region files return None. The
-        ScannedRegionFile returned is the same instance in the regionset,
-        don't modify it or you will modify the regionset results.
-        """
+        """ Return results of last file scanned. """
 
         q = self.queue
-        logging.debug("AsyncRegionsetScanner: starting get_last_result")
-        logging.debug("AsyncRegionsetScanner: queue empty: {0}".format(q.empty()))
+        ds = self.data_structure
         if not q.empty():
-            r = q.get()
-            logging.debug("AsyncRegionsetScanner: result: {0}".format(r))
-            if isinstance(r, tuple):
-                logging.debug("AsyncRegionsetScanner: Something went wrong, handling error")
-                raise ChildProcessException(r[0], r[1][0], r[1][1], r[1][2])
-            # Overwrite it in the regionset
-            self._regionset[r.get_coords()] = r
-            self._str_last_scanned = self._regionset.get_name() + ": " + r.filename
-            return r
+            d = q.get()
+            if isinstance(d, tuple):
+                self.raise_child_exception(d)
+            # Copy it to the father process
+            ds._replace_in_data_structure(d)
+            self.update_str_last_scanned(d)
+            return d
         else:
             return None
 
@@ -171,19 +236,26 @@ class AsyncRegionsetScanner(object):
         """
         self.pool.terminate()
 
+    def raise_child_exception(self, exception_tuple):
+        """ Raises a ChildProcessException using the info
+        contained in the tuple returned by the child process. """
+        e = exception_tuple
+        raise ChildProcessException(e[0], e[1][0], e[1][1], e[1][2])
+
+    def update_str_last_scanned(self):
+        """ Updates the string that represents the last file scanned. """
+        raise NotImplemented
+
     @property
     def str_last_scanned(self):
         """ A friendly string with last scanned thing. """
-        return self._str_last_scanned if self._str_last_scanned else "Scanning..."
+        return self._str_last_scanned if self._str_last_scanned \
+            else "Scanning..."
 
     @property
     def finished(self):
         """ Finished the operation. The queue could have elements """
         return self._results.ready() and self.queue.empty()
-
-    @property
-    def regionset(self):
-        return self._regionset
 
     @property
     def results(self):
@@ -199,24 +271,67 @@ class AsyncRegionsetScanner(object):
         """
 
         q = self.queue
-        logging.debug("AsyncRegionsetScanner: starting yield results")
+        T = self.SCAN_WAIT_TIME
         while not q.empty() or not self.finished:
-            sleep(0.0001)
-            logging.debug("AsyncRegionsetScanner: in while")
+            sleep(T)
             if not q.empty():
-                r = q.get()
-                logging.debug("AsyncRegionsetScanner: result: {0}".format(r))
-                if isinstance(r, tuple):
-                    raise ChildProcessException(r[0], r[1][0], r[1][1], r[1][2])
-                # Overwrite it in the regionset
-                self._regionset[r.get_coords()] = r
-                yield r
+                d = q.get()
+                if isinstance(d, tuple):
+                    self.raise_child_exception(d)
+                # Overwrite it in the data dict
+                self.replace_in_data_structure(d)
+                yield d
 
     def __len__(self):
-        return len(self._regionset)
+        return len(self.data_structure)
 
 
-class AsyncWorldScanner(object):
+class AsyncDataScanner(AsyncScanner):
+    """ Scan a DataFileSet and fill the data structure. """
+    def __init__(self, data_structure, processes):
+        scan_function = multiprocess_scan_data
+        init_args = {}
+        _mp_init_function = _mp_data_pool_init
+
+        AsyncScanner.__init__(self, data_structure, processes, scan_function,
+                              init_args, _mp_init_function)
+
+        # Recommended time to sleep between polls for results
+        self.scan_wait_time = 0.0001
+
+    def update_str_last_scanned(self, data):
+        self._str_last_scanned = data.filename
+
+
+class AsyncRegionsetScanner(AsyncScanner):
+    """ Scan a RegionSet and fill the data structure. """
+    def __init__(self, regionset, processes, entity_limit,
+                 remove_entities=False):
+
+        assert(isinstance(regionset, world.DataSet))
+
+        scan_function = multiprocess_scan_regionfile
+        _mp_init_function = _mp_regionset_pool_init
+
+        init_args = {}
+        init_args['regionset'] = regionset
+        init_args['processes'] = processes
+        init_args['entity_limit'] = entity_limit
+        init_args['remove_entities'] = remove_entities
+
+        AsyncScanner.__init__(self, regionset, processes, scan_function,
+                              init_args, _mp_init_function)
+
+        # Recommended time to sleep between polls for results
+        self.scan_wait_time = 0.001
+
+    def update_str_last_scanned(self, r):
+        self._str_last_scanned = self.data_structure.get_name() + ": " + r.filename
+
+
+class AsyncWorldRegionScanner(object):
+    """ Wrapper around the calls of AsyncScanner to scan all the
+    regionsets of a world. """
     def __init__(self, world_obj, processes, entity_limit,
                  remove_entities=False):
 
@@ -241,7 +356,7 @@ class AsyncWorldScanner(object):
                                    self.remove_entities)
         self._current_regionset = cr
         cr.scan()
-        
+
         # See method
         self._str_last_scanned = ""
 
@@ -322,98 +437,6 @@ class AsyncWorldScanner(object):
         return l
 
 
-class AsyncDataScanner(object):
-    def __init__(self, data_dict, processes):
-
-        self._data_dict = data_dict
-        self.processes = processes
-
-        self.queue = q = queues.SimpleQueue()
-        self.pool = multiprocessing.Pool(processes=processes,
-                initializer=_mp_data_pool_init,
-                initargs=(q,))
-        # Recommended time to sleep between polls for results
-        self.scan_wait_time = 0.0001
-
-        # Holds a friendly string with the name of the last file scanned
-        self._str_last_scanned = None
-
-    def scan(self):
-        """ Scan and fill the given data_dict generated by world.py. """
-        total_datas = len(self._data_dict)
-        data_list = self._data_dict.values()
-        self._results = self.pool.map_async(multiprocess_scan_data,
-                                            data_list,
-                                            max(1, total_datas//self.processes))
-        # No more tasks to the pool, exit the processes once the tasks are done
-        self.pool.close()
-
-        # See method
-        self._str_last_scanned = ""
-
-    def get_last_result(self):
-        """ Return results of last data file scanned. """
-
-        q = self.queue
-        logging.debug("AsyncDataScanner: starting get_last_result")
-        logging.debug("AsyncDataScanner: queue empty: {0}".format(q.empty()))
-        if not q.empty():
-            p = q.get()
-            if isinstance(p, tuple):
-                raise ChildProcessException(p[0], p[1][0], p[1][1], p[1][2])
-            logging.debug("AsyncDataScanner: result: {0}".format(p))
-            # Overwrite it in the regionset
-            self._data_dict[p.filename] = p
-            return p
-        else:
-            return None
-
-    @property
-    def str_last_scanned(self):
-        """ A friendly string with last scanned thing. """
-        return self._str_last_scanned if self._str_last_scanned else "Scanning..."
-
-    @property
-    def finished(self):
-        """ Have the scan finished? """
-        return self._results.ready() and self.queue.empty()
-
-    @property
-    def data_dict(self):
-        return self._data_dict
-
-    @property
-    def results(self):
-        """ Yield all the results from the scan.
-
-        This is the simpler method to control the scanning process,
-        but also the most sloppy. If you want to closely control the
-        scan process (for example cancel the process in the middle,
-        whatever is happening) use get_last_result().
-
-        for result in scanner.results:
-            # do things
-        """
-
-        q = self.queue
-        logging.debug("AsyncDataScanner: starting yield results")
-        logging.debug("AsyncDataScanner: queue empty: {0}".format(q.empty()))
-        while not q.empty() or not self.finished:
-            sleep(0.0001)
-            logging.debug("AsyncDataScanner: in while")
-            if not q.empty():
-                p = q.get()
-                logging.debug("AsyncDataScanner: result: {0}".format(p))
-                if isinstance(p, tuple):
-                    raise ChildProcessException(p[0], p[1][0], p[1][1], p[1][2])
-                # Overwrite it in the data dict
-                self._data_dict[p.filename] = p
-                yield p
-
-    def __len__(self):
-        return len(self._data_dict)
-
-
 # All scanners will use this progress bar
 widgets = ['Scanning: ',
            FractionWidget(),
@@ -426,9 +449,10 @@ widgets = ['Scanning: ',
 
 
 def console_scan_loop(scanners, scan_titles, verbose):
+    """ Uses all the AsyncScanner passed to scan the files and
+    print status text to the terminal. """
     try:
         for scanner, title in zip(scanners, scan_titles):
-            # Scan player files
             print "\n{0:-^60}".format(title)
             if not len(scanner):
                 print "Info: No files to scan."
@@ -496,7 +520,7 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities,
     ps = AsyncDataScanner(w.players, processes)
     ops = AsyncDataScanner(w.old_players, processes)
     ds = AsyncDataScanner(w.data_files, processes)
-    ws = AsyncWorldScanner(w, processes, entity_limit, remove_entities)
+    ws = AsyncWorldRegionScanner(w, processes, entity_limit, remove_entities)
 
     scanners = [ps, ops, ds, ws]
 
@@ -521,15 +545,16 @@ def console_scan_regionset(regionset, processes, entity_limit,
     titles = [entitle("Scanning separate region files", 0)]
     console_scan_loop(scanners, titles, verbose)
 
+
 def scan_data(scanned_dat_file):
     """ Try to parse the nbd data file, and fill the scanned object.
 
     If something is wrong it will return a tuple with useful info
     to debug the problem.
-    
+
     NOTE: idcounts.dat (number of map files) is a nbt file and
     is not compressed, we handle the  special case here.
-    
+
     """
 
     s = scanned_dat_file
@@ -539,7 +564,7 @@ def scan_data(scanned_dat_file):
             # Open the file and create a buffer, this way
             # NBT won't try to de-gzip the file
             f = open(s.path)
-            
+
             _ = nbt.NBTFile(buffer=f)
         else:
             _ = nbt.NBTFile(filename=s.path)
@@ -556,19 +581,6 @@ def scan_data(scanned_dat_file):
         s = (s, (except_type, except_class, extract_tb(tb)))
 
     return s
-
-
-def multiprocess_scan_data(data):
-    """ Does the multithread stuff for scan_data """
-    d = data
-    d = scan_data(d)
-    multiprocess_scan_data.q.put(d)
-
-
-def _mp_data_pool_init(q):
-    """ Function to initialize the multiprocessing in scan_regionset.
-    Is used to pass values to the child process. """
-    multiprocess_scan_data.q = q
 
 
 def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
@@ -653,7 +665,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         # Please note! region.py will mark both overlapping chunks
         # as bad (the one stepping outside his territory and the
         # good one). Only wrong located chunk with a overlapping
-        # flag are really BAD chunks! Use this criterion to 
+        # flag are really BAD chunks! Use this criterion to
         # discriminate
         metadata = region_file.metadata
         sharing = [k for k in metadata if (
@@ -686,7 +698,8 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         # NOTE TO SELF: do not try to return the traceback object directly!
         # A multiprocess pythonic hell comes to earth if you do so.
         except_type, except_class, tb = sys.exc_info()
-        r = (scanned_regionfile_obj, (except_type, except_class, extract_tb(tb)))
+        r = (scanned_regionfile_obj,
+             (except_type, except_class, extract_tb(tb)))
 
         return r
 
@@ -751,29 +764,6 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         num_entities = None
 
     return chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
-
-
-def _mp_pool_init(regionset, entity_limit, remove_entities, q):
-    """ Function to initialize the multiprocessing in scan_regionset.
-    Is used to pass values to the child process. """
-    multiprocess_scan_regionfile.regionset = regionset
-    multiprocess_scan_regionfile.q = q
-    multiprocess_scan_regionfile.entity_limit = entity_limit
-    multiprocess_scan_regionfile.remove_entities = remove_entities
-
-
-def multiprocess_scan_regionfile(region_file):
-    """ Does the multithread stuff for scan_region_file """
-    r = region_file
-    entity_limit = multiprocess_scan_regionfile.entity_limit
-    remove_entities = multiprocess_scan_regionfile.remove_entities
-    # call the normal scan_region_file with this parameters
-    r = scan_region_file(r, entity_limit, remove_entities)
-
-    # exceptions will be handled in scan_region_file which is in the
-    # single thread land
-
-    multiprocess_scan_regionfile.q.put(r)
 
 
 if __name__ == '__main__':
