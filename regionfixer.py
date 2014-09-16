@@ -25,14 +25,19 @@ from multiprocessing import freeze_support
 from optparse import OptionParser
 from getpass import getpass
 import sys
+import traceback
+import StringIO
 
 from regionfixer_core import world
-from regionfixer_core.scan import console_scan_world, console_scan_regionset
+from regionfixer_core.scan import console_scan_world, console_scan_regionset,\
+                                  ChildProcessException
 from regionfixer_core.interactive import InteractiveLoop
 from regionfixer_core.util import entitle, is_bare_console, parse_paths,\
                                   parse_backup_list
 from regionfixer_core import progressbar
 from regionfixer_core.version import version_string
+from regionfixer_core.bug_reporter import BugReporter
+
 
 
 class FractionWidget(progressbar.ProgressBarWidget):
@@ -482,6 +487,21 @@ def main():
 
 
 if __name__ == '__main__':
-    freeze_support()
-    value = main()
-    sys.exit(value)
+    ERROR_MSG = "\n\nOps! Something went really wrong and regionfixer crashed. I can try to send an automatic bug rerpot if you wish.\n\n"
+    try:
+        freeze_support()
+        value = main()
+        sys.exit(value)
+    except ChildProcessException as e:
+        print(ERROR_MSG)
+        bug = BugReporter(StringIO.StringIO(e.printable_traceback()))
+        bug.ask_and_send()
+    except Exception as e:
+        print(ERROR_MSG)
+        f = StringIO.StringIO("")
+        (ty, value, tb) = sys.exc_info()
+        f.write(str(ty) + "\n")
+        f.write(str(value) + "\n")
+        traceback.print_tb(tb, None, f)
+        bug = BugReporter(f)
+        bug.ask_and_send()
