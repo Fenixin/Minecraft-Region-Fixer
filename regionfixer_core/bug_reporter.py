@@ -49,5 +49,7 @@ class BugReporter(object):
             s.storlines("STOR " + error_name, self.error_file_obj)
             s.quit()
             print "Bug report uploaded successfully!"
+            return True
         except Exception as e:
             print "Couldn't send the bug report!"
+            return False

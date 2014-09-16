@@ -495,7 +495,8 @@ if __name__ == '__main__':
     except ChildProcessException as e:
         print(ERROR_MSG)
         bug = BugReporter(StringIO.StringIO(e.printable_traceback()))
-        bug.ask_and_send()
+        if not bug.ask_and_send():
+            print e.printable_traceback()
     except Exception as e:
         print(ERROR_MSG)
         f = StringIO.StringIO("")
@@ -504,4 +505,7 @@ if __name__ == '__main__':
         f.write(str(value) + "\n")
         traceback.print_tb(tb, None, f)
         bug = BugReporter(f)
-        bug.ask_and_send()
+        if not bug.ask_and_send():
+            print
+            print "Here it is the bug report:"
+            print f.getvalue()
