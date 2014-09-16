@@ -477,11 +477,11 @@ def console_scan_loop(scanners, scan_titles, verbose):
                 if not verbose:
                     pbar.finish()
     except ChildProcessException as e:
-        print "\n\nSomething went really wrong scanning a file."
-        print ("This is probably a bug! If you have the time, please report "
-               "it to the region-fixer github or in the region fixer post "
-               "in minecraft forums")
-        print e.printable_traceback
+#         print "\n\nSomething went really wrong scanning a file."
+#         print ("This is probably a bug! If you have the time, please report "
+#                "it to the region-fixer github or in the region fixer post "
+#                "in minecraft forums")
+#         print e.printable_traceback
         raise e
 
 

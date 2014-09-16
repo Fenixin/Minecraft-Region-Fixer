@@ -10,15 +10,15 @@ from StringIO import StringIO
 from util import query_yes_no
 
 
-SERVER = 'regionfixer.no-ip.org'
+SERVER = '192.168.1.3'
 USER = 'regionfixer_bugreporter'
 PASSWORD = 'supersecretpassword'
 BUGREPORTS_DIR = 'bugreports'
-QUESTION_TEXT = 'Do you want to send an anonymous bug report to the region fixer ftp?'
+
 
 class BugReporter(object):
     '''
-    Reports a bug to a ftp
+    Reports a bug to the regionfixer ftp
     '''
 
     def __init__(self, error, server=SERVER,
@@ -33,9 +33,9 @@ class BugReporter(object):
         self.user = user
         self.password = password
 
-    def ask_and_send(self):
-        if query_yes_no(QUESTION_TEXT):
-            self.send()
+    def ask_and_send(self, question_text):
+        if query_yes_no(question_text):
+            return self.send()
 
     def send(self):
         try:

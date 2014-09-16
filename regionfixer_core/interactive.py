@@ -209,7 +209,8 @@ class InteractiveLoop(Cmd):
                 elif isinstance(self.current, world.RegionSet):
                     print "\n{0:-^60}".format(' Scanning region files ')
                     console_scan_regionset(self.current, o.processes,
-                                           o.entity_limit, o.delete_entities)
+                                           o.entity_limit, o.delete_entities,
+                                           o.verbose)
             else:
                 print "No world set! Use \'set workload\'"
 

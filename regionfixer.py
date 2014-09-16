@@ -275,6 +275,13 @@ def main():
     (options, args) = parser.parse_args()
     o = options
 
+    if sys.version_info[0] > 2:
+        print()
+        print("Minecraft Region Fixer only works with python 2.x")
+        print("(And you just tried to run it in python {0})".format(sys.version))
+        print()
+        return 1
+
     if is_bare_console():
         print
         print "Minecraft Region Fixer is a command line aplication, if you want to run it"
@@ -488,15 +495,20 @@ def main():
 
 if __name__ == '__main__':
     ERROR_MSG = "\n\nOps! Something went really wrong and regionfixer crashed. I can try to send an automatic bug rerpot if you wish.\n\n"
+    QUESTION_TEXT = ('Do you want to send an anonymous bug report to the region fixer ftp?\n'
+                     '(Answering no will print the bug report)')
     try:
         freeze_support()
         value = main()
         sys.exit(value)
     except ChildProcessException as e:
         print(ERROR_MSG)
-        bug = BugReporter(StringIO.StringIO(e.printable_traceback()))
-        if not bug.ask_and_send():
-            print e.printable_traceback()
+        bug = BugReporter(StringIO.StringIO(e.printable_traceback))
+        if not bug.ask_and_send(QUESTION_TEXT):
+            print
+            print "Bug report:"
+            print
+            print e.printable_traceback
     except Exception as e:
         print(ERROR_MSG)
         f = StringIO.StringIO("")
@@ -505,7 +517,8 @@ if __name__ == '__main__':
         f.write(str(value) + "\n")
         traceback.print_tb(tb, None, f)
         bug = BugReporter(f)
-        if not bug.ask_and_send():
+        if not bug.ask_and_send(QUESTION_TEXT):
             print
-            print "Here it is the bug report:"
+            print "Bug report:"
+            print
             print f.getvalue()
