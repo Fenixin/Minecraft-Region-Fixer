@@ -7,7 +7,7 @@ from os.path import split, abspath
 from os import name as os_name
 
 from backups import BackupsWindow
-from regionfixer_core.scan import AsyncWorldScanner, AsyncDataScanner,\
+from regionfixer_core.scan import AsyncWorldRegionScanner, AsyncDataScanner,\
     ChildProcessException
 from regionfixer_core import world
 from regionfixer_core.world import World
@@ -164,6 +164,7 @@ class MainWindow(wx.Frame):
         self.help.Show(True)
 
     def OnOpen(self, e):
+        raise KeyError
         dlg = wx.DirDialog(self, "Choose a Minecraf world folder")
         # Set the last path used
         dlg.SetPath(self.last_path)
@@ -196,7 +197,7 @@ class MainWindow(wx.Frame):
         ps = AsyncDataScanner(self.world.players, processes)
         ops = AsyncDataScanner(self.world.old_players, processes)
         ds = AsyncDataScanner(self.world.data_files, processes)
-        ws = AsyncWorldScanner(self.world, processes, entity_limit,
+        ws = AsyncWorldRegionScanner(self.world, processes, entity_limit,
                        delete_entities)
 
         things_to_scan = [ws, ops, ps, ds]

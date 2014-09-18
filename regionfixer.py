@@ -504,6 +504,7 @@ if __name__ == '__main__':
     auto_reported = False
 
     try:
+        raise KeyError
         freeze_support()
         value = main()
         sys.exit(value)
@@ -511,28 +512,24 @@ if __name__ == '__main__':
     except ChildProcessException as e:
         had_exception = True
         print(ERROR_MSG)
-
-        bug_report = e.printable_traceback
-        bug_sender = BugReporter(StringIO(bug_report))
+        bug_sender = BugReporter(e.printable_traceback)
         auto_reported = bug_sender.ask_and_send(QUESTION_TEXT)
+        bug_report = bug_sender.error_str
 
     except Exception as e:
         had_exception = True
         print(ERROR_MSG)
-
-        f = StringIO("")
-        (ty, value, tb) = sys.exc_info()
-        f.write(str(ty) + "\n")
-        f.write(str(value) + "\n")
-        traceback.print_tb(tb, None, f)
-
-        bug_sender = BugReporter(f)
+        bug_sender = BugReporter()
         auto_reported = bug_sender.ask_and_send(QUESTION_TEXT)
-        bug_report = f.getvalue()
+        bug_report = bug_sender.error_str
 
     finally:
         if had_exception and not auto_reported:
+            print("Couldn't upload the bug report. While uploading I encounter the next problem:")
+            print(bug_sender.exception)
             print("")
             print("Bug report:")
             print("")
             print(bug_report)
+        else:
+            print("Bug report uploaded successfully")
