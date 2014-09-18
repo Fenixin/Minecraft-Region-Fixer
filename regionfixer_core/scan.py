@@ -49,7 +49,7 @@ TUPLE_NUM_ENTITIES = 0
 TUPLE_STATUS = 1
 
 
-# logging.basicConfig(filename='scan.log', level=logging.DEBUG)
+logging.basicConfig(filename=None, level=logging.CRITICAL)
 
 
 class ChildProcessException(Exception):
@@ -161,8 +161,8 @@ def _mp_regionset_pool_init(d):
     assert('remove_entities' in d)
     multiprocess_scan_regionfile.regionset = d['regionset']
     multiprocess_scan_regionfile.q = d['queue']
-    multiprocess_scan_regionfile.entity_limit = ['entity_limit']
-    multiprocess_scan_regionfile.remove_entities = ['remove_entities']
+    multiprocess_scan_regionfile.entity_limit = d['entity_limit']
+    multiprocess_scan_regionfile.remove_entities = d['remove_entities']
 
 
 class AsyncScanner(object):
@@ -170,6 +170,8 @@ class AsyncScanner(object):
 
     To implement a scanner you have to override:
     update_str_last_scanned()
+    Use try-finally to call terminate, if not processes will be
+    hanging in the background
      """
     def __init__(self, data_structure, processes, scan_function, init_args,
                  _mp_init_function):
@@ -198,13 +200,26 @@ class AsyncScanner(object):
 
         # TODO: make this automatic amount
         # Recommended time to sleep between polls for results
-        self.SCAN_WAIT_TIME = 0.001
+        self.SCAN_START_SLEEP_TIME = 0.001
+        self.SCAN_MIN_SLEEP_TIME = 1e-6
+        self.SCAN_MAX_SLEEP_TIME = 0.1
+        self.scan_sleep_time = self.SCAN_START_SLEEP_TIME
+        self.queries_without_results = 0
+        self.last_time = time()
+        self.MIN_QUERY_NUM = 1
+        self.MAX_QUERY_NUM = 5
 
         # Holds a friendly string with the name of the last file scanned
         self._str_last_scanned = None
 
     def scan(self):
         """ Launch the child processes and scan all the files. """
+        
+        logging.debug("########################################################")
+        logging.debug("########################################################")
+        logging.debug("Starting scan in: " + str(self))
+        logging.debug("########################################################")
+        logging.debug("########################################################")
         total_files = len(self.data_structure)
         self._results = self.pool.map_async(self.scan_function,
                                             self.list_files_to_scan, 5)
@@ -227,8 +242,12 @@ class AsyncScanner(object):
             # Copy it to the father process
             ds._replace_in_data_structure(d)
             self.update_str_last_scanned(d)
+            # Got result! Reset it!
+            self.queries_without_results = 0
             return d
         else:
+            # Count amount of queries without result
+            self.queries_without_results += 1
             return None
 
     def terminate(self):
@@ -245,6 +264,38 @@ class AsyncScanner(object):
     def update_str_last_scanned(self):
         """ Updates the string that represents the last file scanned. """
         raise NotImplemented
+
+    def sleep(self):
+        """ Sleep waiting for results.
+
+        This method will sleep less when results arrive faster and
+        more when they arrive slower.
+        """
+        # If the query number is outside of our range...
+        if not ((self.queries_without_results < self.MAX_QUERY_NUM) &
+                (self.queries_without_results > self.MIN_QUERY_NUM)):
+            # ... increase or decrease it to optimize queries
+            if (self.queries_without_results < self.MIN_QUERY_NUM):
+                self.scan_sleep_time *= 0.5
+            elif (self.queries_without_results > self.MAX_QUERY_NUM):
+                self.scan_sleep_time *= 2.0
+            # and don't go farther than max/min
+            if self.scan_sleep_time > self.SCAN_MAX_SLEEP_TIME:
+                logging.debug("Setting sleep time to MAX")
+                self.scan_sleep_time = self.SCAN_MAX_SLEEP_TIME
+            elif self.scan_sleep_time < self.SCAN_MIN_SLEEP_TIME:
+                logging.debug("Setting sleep time to MIN")
+                self.scan_sleep_time = self.SCAN_MIN_SLEEP_TIME
+
+        # Log how it's going
+        logging.debug("")
+        logging.debug("Nº of queries without result: " + str(self.queries_without_results))
+        logging.debug("Current sleep time: " + str(self.scan_sleep_time))
+        logging.debug("Time between calls to sleep(): " + str(time() - self.last_time))
+        self.last_time = time()
+
+        # Sleep, let the other processes do their job
+        sleep(self.scan_sleep_time)
 
     @property
     def str_last_scanned(self):
@@ -348,6 +399,14 @@ class AsyncWorldRegionScanner(object):
         # Holds a friendly string with the name of the last file scanned
         self.scan_wait_time = 0.001
 
+    def sleep(self):
+        """ Sleep waiting for results.
+
+        This method will sleep less when results arrive faster and
+        more when they arrive slower.
+        """
+        self._current_regionset.sleep()
+
     def scan(self):
         """ Scan and fill the given regionset. """
         cr = AsyncRegionsetScanner(self.regionsets.pop(0),
@@ -371,9 +430,8 @@ class AsyncWorldRegionScanner(object):
         process.
         """
         cr = self._current_regionset
-        logging.debug("AsyncWorldScanner: current_regionset {0}".format(cr))
+        
         if cr is not None:
-            logging.debug("AsyncWorldScanner: cr.finished {0}".format(cr.finished))
             if not cr.finished:
                 r = cr.get_last_result()
                 self._str_last_scanned = cr.str_last_scanned
@@ -461,21 +519,26 @@ def console_scan_loop(scanners, scan_titles, verbose):
                 if not verbose:
                     pbar = progressbar.ProgressBar(widgets=widgets,
                                                    maxval=total)
-                scanner.scan()
-                counter = 0
-                while not scanner.finished:
-                    sleep(scanner.scan_wait_time)
-                    result = scanner.get_last_result()
-                    if result:
-                        counter += 1
-                        if not verbose:
-                            pbar.update(counter)
-                        else:
-                            status = "(" + result.oneliner_status + ")"
-                            fn = result.filename
-                            print "Scanned {0: <12} {1:.<43} {2}/{3}".format(fn, status, counter, total)
-                if not verbose:
-                    pbar.finish()
+                try:
+                    scanner.scan()
+                    counter = 0
+                    while not scanner.finished:
+                        scanner.sleep()
+                        result = scanner.get_last_result()
+                        if result:
+                            counter += 1
+                            if not verbose:
+                                pbar.update(counter)
+                            else:
+                                status = "(" + result.oneliner_status + ")"
+                                fn = result.filename
+                                print "Scanned {0: <12} {1:.<43} {2}/{3}".format(fn, status, counter, total)
+                    if not verbose:
+                        pbar.finish()
+                except KeyboardInterrupt as e:
+                    # If not, dead processes will accumulate in windows
+                    scanner.terminate()
+                    raise e
     except ChildProcessException as e:
 #         print "\n\nSomething went really wrong scanning a file."
 #         print ("This is probably a bug! If you have the time, please report "
