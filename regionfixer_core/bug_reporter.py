@@ -60,9 +60,9 @@ class BugReporter(object):
         self.error_file_obj.seek(0)
         return s
 
-    #property
-    def exception(self):
-        return self._exception
+    @property
+    def exception_str(self):
+        return self._exception.message
 
     def ask_and_send(self, question_text):
         if query_yes_no(question_text):
@@ -81,5 +81,8 @@ class BugReporter(object):
             s.quit()
             return True
         except Exception as e:
-            self.exception = e
+            # TODO: prints shouldn't be here!
+            print("Couldn't send the bug report!")
+            self._exception = e
+            print(e)
             return False

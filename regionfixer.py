@@ -25,8 +25,6 @@ from multiprocessing import freeze_support
 from optparse import OptionParser
 from getpass import getpass
 import sys
-import traceback
-from StringIO import StringIO
 
 from regionfixer_core import world
 from regionfixer_core.scan import console_scan_world, console_scan_regionset,\
@@ -504,7 +502,6 @@ if __name__ == '__main__':
     auto_reported = False
 
     try:
-        raise KeyError
         freeze_support()
         value = main()
         sys.exit(value)
@@ -519,17 +516,16 @@ if __name__ == '__main__':
     except Exception as e:
         had_exception = True
         print(ERROR_MSG)
+        # Traceback will be taken in init
         bug_sender = BugReporter()
         auto_reported = bug_sender.ask_and_send(QUESTION_TEXT)
         bug_report = bug_sender.error_str
 
     finally:
         if had_exception and not auto_reported:
-            print("Couldn't upload the bug report. While uploading I encounter the next problem:")
-            print(bug_sender.exception)
             print("")
             print("Bug report:")
             print("")
             print(bug_report)
-        else:
+        elif had_exception and auto_reported:
             print("Bug report uploaded successfully")
