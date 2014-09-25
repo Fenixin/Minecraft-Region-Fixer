@@ -25,7 +25,16 @@ import platform
 from os.path import join, split, exists, isfile
 import sys
 import world
+import traceback
 
+
+def get_str_from_traceback(ty, value, tb):
+    """ Return a string from a traceback + exception. """
+    t = traceback.format_exception(ty, value, tb)
+    s = str(ty) + "\n"
+    for i in t:
+        s += i
+    return s
 
 # Stolen from:
 # http://stackoverflow.com/questions/3041986/python-command-line-yes-no-input

@@ -164,7 +164,7 @@ class MainWindow(wx.Frame):
         self.help.Show(True)
 
     def OnOpen(self, e):
-        raise KeyError
+        """ Called when the open world button is pressed. """
         dlg = wx.DirDialog(self, "Choose a Minecraf world folder")
         # Set the last path used
         dlg.SetPath(self.last_path)
@@ -190,6 +190,7 @@ class MainWindow(wx.Frame):
 
 
     def OnScan(self, e):
+        """ Called when the scan button is pressed. """
         processes = int(self.proc_text.GetValue())
         entity_limit = int(self.el_text.GetValue())
         delete_entities = False
@@ -222,7 +223,7 @@ class MainWindow(wx.Frame):
                 while not scanner.finished:
                     sleep(0.001)
                     result = scanner.get_last_result()
-                    
+
                     if result:
                         counter += 1
                     not_cancelled, not_skipped = progressdlg.Update(counter,
@@ -241,19 +242,25 @@ class MainWindow(wx.Frame):
                 self.update_delete_buttons_status(True)
                 self.update_replace_buttons_status(True)
         except ChildProcessException as e:
-            error_log_path = e.save_error_log()
-            filename = e.scanned_file.filename
+            # Will be handled in starter.py by _excepthook()
             scanner.terminate()
             progressdlg.Destroy()
-            error = wx.MessageDialog(self,
-                         ("Something went really wrong scanning {0}\n\n"
-                          "This is probably an error in the code. Please, "
-                          "if you have the time report it. "
-                          "I have saved all the error information in:\n\n"
-                          "{1}").format(filename, error_log_path),
-                                            "Error",
-                                            wx.ICON_ERROR)
-            error.ShowModal()
+            raise e
+            #===================================================================
+            # error_log_path = e.save_error_log()
+            # filename = e.scanned_file.filename
+            # scanner.terminate()
+            # progressdlg.Destroy()
+            # error = wx.MessageDialog(self,
+            #              ("Something went really wrong scanning {0}\n\n"
+            #               "This is probably an error in the code. Please, "
+            #               "if you have the time report it. "
+            #               "I have saved all the error information in:\n\n"
+            #               "{1}").format(filename, error_log_path),
+            #                                 "Error",
+            #                                 wx.ICON_ERROR)
+            # error.ShowModal()
+            #===================================================================
 
     def OnDeleteChunks(self, e):
         progressdlg = wx.ProgressDialog("Removing chunks", "This may take a while", 
@@ -275,6 +282,8 @@ class MainWindow(wx.Frame):
         progressdlg.Destroy()
         progressdlg.Destroy()
 
+        self.results_text.SetValue("Scan again the world for results.")
+        self.update_delete_buttons_status(False)
         self.update_delete_buttons_status(False)
 
     def OnDeleteRegions(self, e):
@@ -294,6 +303,7 @@ class MainWindow(wx.Frame):
             remove_regions(problem)
         progressdlg.Destroy()
 
+        self.results_text.SetValue("Scan again the world for results.")
         self.update_delete_buttons_status(False)
         self.update_replace_buttons_status(False)
 
@@ -319,6 +329,7 @@ class MainWindow(wx.Frame):
             replace_chunks(backups, problem, entity_limit, delete_entities)
         progressdlg.Destroy()
 
+        self.results_text.SetValue("Scan again the world for results.")
         self.update_delete_buttons_status(False)
         self.update_replace_buttons_status(False)
 
@@ -345,6 +356,7 @@ class MainWindow(wx.Frame):
             replace_regions(backups, problem, entity_limit, delete_entities)
         progressdlg.Destroy()
 
+        self.results_text.SetValue("Scan again the world for results.")
         self.update_delete_buttons_status(False)
         self.update_replace_buttons_status(False)
 

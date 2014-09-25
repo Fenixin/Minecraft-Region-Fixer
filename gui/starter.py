@@ -4,6 +4,7 @@
 import wx
 import sys
 import traceback
+from StringIO import StringIO
 
 from main import MainWindow
 from backups import BackupsWindow
@@ -12,7 +13,8 @@ from help import HelpWindow
 from error import ErrorWindow
 
 from regionfixer_core.scan import ChildProcessException
-
+from regionfixer_core.bug_reporter import BugReporter
+from regionfixer_core.util import get_str_from_traceback
 
 ERROR_MSG = "\n\nOps! Something went really wrong and regionfixer crashed.\n\nI can try to send an automatic bug rerpot if you wish.\n"
 QUESTION_TEXT = ('Do you want to send an anonymous bug report to the region fixer ftp?\n'
@@ -27,22 +29,38 @@ class MyApp(wx.App):
         return True
 
     def _excepthook(self, etype, value, tb):
-        if type is ChildProcessException:
-            print("OMG! A BUG! A BUGGGGGGGG!")
-            traceback.print_tb(tb)
-            dlg = wx.MessageDialog(self.main_window,
-                                   ERROR_MSG + "\n" + QUESTION_TEXT,
-                                   style=wx.ICON_ERROR | wx.YES_NO)
-            dlg.ShowModal()
-            # application error - display a wx.MessageBox with the error message
+        print etype
+        print value
+        print tb
+        if isinstance(etype, ChildProcessException):
+            s = "Using GUI:\n\n" + value.printable_traceback
         else:
-            print("OMG! A BUG! A BUGGGGGGGG!")
-            traceback.print_tb(tb)
-            dlg = wx.MessageDialog(self.main_window,
-                                   ERROR_MSG + "\n" + QUESTION_TEXT,
-                                   style=wx.ICON_ERROR | wx.YES_NO)
-            dlg.ShowModal()
+            s = "Using GUI:\n\n" + get_str_from_traceback(etype, value, tb)
             # bug - display a dialog with the entire exception and traceback printed out
+        traceback.print_tb(tb)
+        dlg = wx.MessageDialog(self.main_window,
+                               ERROR_MSG + "\n" + QUESTION_TEXT,
+                               style=wx.ICON_ERROR | wx.YES_NO)
+        # Get a string with the traceback and send it
+        
+        answer = dlg.ShowModal()
+        if answer == wx.ID_YES:
+            print "Sending bug report!"
+            bugsender = BugReporter(error_str=s)
+            success = bugsender.send()
+            # Dialog with success or not of the ftp uploading
+            if success:
+                msg = "The bug report was successfully uploaded."
+                style = 0
+            else:
+                msg = "Couldn't upload the bug report!\n\nPlease, try again later."
+                style = wx.ICON_ERROR
+            dlg = wx.MessageDialog(self.main_window, msg, style=style)
+            dlg.ShowModal()
+        else:
+            dlg = wx.MessageDialog(self.main_window, "Error msg:\n\n" + s,
+                               style=wx.ICON_ERROR)
+            dlg.ShowModal()
 
 
 class Starter(object):

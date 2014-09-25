@@ -619,7 +619,6 @@ def scan_data(scanned_dat_file):
     is not compressed, we handle the  special case here.
 
     """
-
     s = scanned_dat_file
     try:
         if s.filename == 'idcounts.dat':
@@ -655,7 +654,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         entiti_limit is the threshold tof entities to conisder a chunk
         with too much entities problems.
     """
-
+    raise KeyError
     try:
         r = scanned_regionfile_obj
         # counters of problems
