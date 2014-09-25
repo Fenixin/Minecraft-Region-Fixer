@@ -15,7 +15,8 @@ class HelpWindow(wx.Frame):
                 label="If you need help you can give a look to the wiki:")
         self.link_github = wx.HyperlinkCtrl(panel, wx.ID_ABOUT,
                         "https://github.com/Fenixin/Minecraft-Region-Fixer/wiki",
-                        style=wx.ALIGN_CENTER)
+                        style=wx.ALIGN_CENTER,
+                        url="https://github.com/Fenixin/Minecraft-Region-Fixer/wiki")
         self.help2 = wx.StaticText(panel,
                                     style=wx.TE_MULTILINE | wx.ALIGN_CENTER,
                                     label="Or ask in the minecraft forums:")

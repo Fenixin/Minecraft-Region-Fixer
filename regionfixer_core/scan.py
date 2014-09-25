@@ -221,9 +221,14 @@ class AsyncScanner(object):
         logging.debug("########################################################")
         logging.debug("########################################################")
         total_files = len(self.data_structure)
+        # Tests indicate that smaller amount of jobs per worker make all type
+        # of scans faster
+        jobs_per_worker = 5
+        #jobs_per_worker = max(1, total_files // self.processes
         self._results = self.pool.map_async(self.scan_function,
-                                            self.list_files_to_scan, 5)
-                                            # max(1, total_files // self.processes))
+                                            self.list_files_to_scan,
+                                            jobs_per_worker)
+                                            
         # No more tasks to the pool, exit the processes once the tasks are done
         self.pool.close()
 

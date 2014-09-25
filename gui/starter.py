@@ -28,9 +28,6 @@ class MyApp(wx.App):
         return True
 
     def _excepthook(self, etype, value, tb):
-        print etype
-        print value
-        print tb
         if isinstance(etype, ChildProcessException):
             s = "Using GUI:\n\n" + value.printable_traceback
         else:
@@ -75,7 +72,7 @@ class Starter(object):
         self.frame.backups = self.backups
         self.frame.about = self.about
         self.frame.help = HelpWindow(self.frame, "Help")
-        self.frame.error = ErrorWindow(self.frame, "Error")
+#         self.frame.error = ErrorWindow(self.frame, "Error")
 
         self.app.main_window = self.frame
 
