@@ -10,7 +10,6 @@ from main import MainWindow
 from backups import BackupsWindow
 from about import AboutWindow
 from help import HelpWindow
-from error import ErrorWindow
 
 from regionfixer_core.scan import ChildProcessException
 from regionfixer_core.bug_reporter import BugReporter
