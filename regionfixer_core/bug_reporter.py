@@ -11,7 +11,7 @@ from StringIO import StringIO
 from util import query_yes_no, get_str_from_traceback
 
 
-SERVER = '192.168.1.3'
+SERVER = 'regionfixer.no-ip.org'
 USER = 'regionfixer_bugreporter'
 PASSWORD = 'supersecretpassword'
 BUGREPORTS_DIR = 'bugreports'
