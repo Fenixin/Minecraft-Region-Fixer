@@ -654,7 +654,6 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         entiti_limit is the threshold tof entities to conisder a chunk
         with too much entities problems.
     """
-    raise KeyError
     try:
         r = scanned_regionfile_obj
         # counters of problems
