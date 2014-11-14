@@ -86,6 +86,9 @@ TUPLE_STATUS = 1
 # Dimension names:
 DIMENSION_NAMES = { "region":"Overworld", "DIM1":"The End", "DIM-1":"Nether" }
 
+class InvalidFileName(IOError):
+    pass
+
 class ScannedDatFile(object):
     def __init__(self, path = None, readable = None, status_text = None):
         self.path = path
@@ -232,8 +235,11 @@ class ScannedRegionFile(object):
             splited = split(self.filename)
             filename = splited[1]
             l = filename.split('.')
-            coordX = int(l[1])
-            coordZ = int(l[2])
+            try:
+                coordX = int(l[1])
+                coordZ = int(l[2])
+            except ValueError:
+                raise InvalidFileName()
 
             return coordX, coordZ
 
@@ -356,7 +362,10 @@ class RegionSet(object):
             self.region_list = region_list
         self.regions = {}
         for path in self.region_list:
-            r = ScannedRegionFile(path)
+            try:
+                r = ScannedRegionFile(path)
+            except InvalidFileName as e:
+                print "Warning: The file {0} is not a valid name for a region. I'll skip it.".format(path)
             self.regions[r.get_coords()] = r
         self.corrupted_chunks = 0
         self.wrong_located_chunks = 0
