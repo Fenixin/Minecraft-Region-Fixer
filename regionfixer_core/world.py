@@ -813,11 +813,15 @@ class World(object):
         for regionset in self.regionsets:
 
             title = regionset.get_name()
+            final += "\n" + title + ":\n"
 
             # don't add text if there aren't broken chunks
             text = regionset.summary()
-            chunk_info += (title + text) if text else ""
-        final += chunk_info if chunk_info else "All the chunks are ok."
+            print len(text)
+            chunk_info += text if text else ""
+            final += chunk_info if chunk_info else "All the chunks are ok."
+            
+        
 
         return final
 
