@@ -121,7 +121,7 @@ class ScannedDataFile(object):
 
     @property
     def oneliner_status(self):
-        return "Readable" if self.readable else "Unreadable"
+        return "File: \"" + self.filename + "\"; status: " + ("Readable" if self.readable else "Unreadable")
 
 
 class ScannedChunk(object):
@@ -394,6 +394,10 @@ class ScannedRegionFile(object):
 class DataSet(object):
     """ Stores data items to be scanned by AsyncScanner in scan.py. """
 
+    def summary(self):
+        """ Return a summary of problems found in this set. """
+        raise NotImplemented
+
     def _replace_in_data_structure(self, data):
         raise NotImplemented
 
@@ -419,9 +423,10 @@ class DataFileSet(DataSet):
 
     DataSets are scanned using scan.AsyncScanner
     """
-    def __init__(self, path, *args, **kwargs):
+    def __init__(self, path, title, *args, **kwargs):
         DataSet.__init__(self, *args, **kwargs)
 
+        self.title = title
         self.path = path
         data_files_path = glob(join(path, "*.dat"))
         self.data_files = d = {}
@@ -436,6 +441,15 @@ class DataFileSet(DataSet):
 
     def __len__(self):
         return len(self.data_files)
+
+    def summary(self):
+        """ Return a summary of problems found in this set. """
+        text = ""
+        bad_data_files = [i for i in self.data_files.values() if not i.readable]
+        for f in bad_data_files:
+            text += "\t" + f.oneliner_status
+            text += "\n"
+        return text
 
 
 class RegionSet(DataSet):
@@ -728,9 +742,13 @@ class World(object):
         PLAYERS_DIRECTORY = 'players'
         OLD_PLAYERS_DIRECTORY = ' playerdata'
         STRUCTURES_DIRECTORY = 'data'
-        self.players = DataFileSet(join(self.path, PLAYERS_DIRECTORY))
-        self.old_players = DataFileSet(join(self.path, OLD_PLAYERS_DIRECTORY))
-        self.data_files = DataFileSet(join(self.path, STRUCTURES_DIRECTORY))
+
+        self.players = DataFileSet(join(self.path, PLAYERS_DIRECTORY),
+                                   "\nPlayer UUID files:\n")
+        self.old_players = DataFileSet(join(self.path, OLD_PLAYERS_DIRECTORY),
+                                       "\nOld format player files:\n")
+        self.data_files = DataFileSet(join(self.path, STRUCTURES_DIRECTORY),
+                                      "\nStructures and map data files:\n")
 
         # Does it look like a world folder?
         region_files = False
@@ -772,39 +790,23 @@ class World(object):
         final += "{0:#^60}\n".format(" World name: {0} ".format(self.name))
         final += "{0:#^60}\n".format('')
 
-        # leve.dat files info
+        # leve.dat and data files
         final += "\nlevel.dat:\n"
         if self.scanned_level.readable:
             final += "\t\'level.dat\' is readable\n"
         else:
             final += "\t[WARNING]: \'level.dat\' isn't readable, error: {0}\n".format(self.scanned_level.status_text)
 
-        all_ok = True
-        final += "\nPlayer UUID files:\n"
-        for p in self.players.values():
-            if not p.readable:
-                all_ok = False
-                final += "\t-[WARNING]: Player file {0} has problems.\n\t\tError: {1}\n\n".format(p.filename, p.status_text)
-        if all_ok:
-            final += "\tAll player files are readable.\n\n"
+        sets = [self.players,
+                self.old_players,
+                self.data_files]
 
-        all_ok = True
-        final += "\nOld format player files:\n"
-        for p in self.old_players.values():
-            if not p.readable:
-                all_ok = False
-                final += "\t-[WARNING]: Player file {0} has problems.\n\t\tError: {1}\n\n".format(p.filename, p.status_text)
-        if all_ok:
-            final += "\tAll player files are readable.\n\n"
+        for set in sets:
+            final += set.title
+            text = set.summary()
+            final += text if text else "All files ok.\n"
 
-        all_ok = True
-        final += "\nStructures and map data files:\n"
-        for d in self.data_files.values():
-            if not d.readable:
-                all_ok = False
-                final += "\t-[WARNING]: File {0} has problems.\n\t\tError: {1}\n\n".format(d.filename, d.status_text)
-        if all_ok:
-            final += "\tAll data files are readable.\n\n"
+        final += "\n"
 
         # chunk info
         chunk_info = ""
