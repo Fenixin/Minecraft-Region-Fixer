@@ -118,7 +118,7 @@ class ChunkMetadata(object):
         - STATUS_CHUNK_OK
         - STATUS_CHUNK_NOT_CREATED"""
     def __str__(self):
-        return "%s(%d, %d, sector=%s, length=%s, timestamp=%s, lenght=%s, compression=%s, status=%s)" % \
+        return "%s(%d, %d, sector=%s, blocklength=%s, timestamp=%s, bytelength=%s, compression=%s, status=%s)" % \
             (self.__class__.__name__, self.x, self.z, self.blockstart, self.blocklength, self.timestamp, \
             self.length, self.compression, self.status)
     def __repr__(self):
@@ -183,8 +183,8 @@ class RegionFile(object):
     
     def __init__(self, filename=None, fileobj=None):
         """
-        Read a region file by filename of file object. 
-        If a fileobj is specified, it is not closed after use; it is the callers responibility to close that.
+        Read a region file by filename or file object. 
+        If a fileobj is specified, it is not closed after use; it is the callers responibility to close it.
         """
         self.file = None
         self.filename = None
@@ -263,9 +263,15 @@ class RegionFile(object):
         sectors, remainder = divmod(bsize, sectorlength)
         return sectors if remainder == 0 else sectors + 1
     
-    def __del__(self):
+    def close(self):
         if self._closefile:
-            self.file.close()
+            try:
+                self.file.close()
+            except IOError:
+                pass
+
+    def __del__(self):
+        self.close()
         # Parent object() has no __del__ method, otherwise it should be called here.
 
     def _init_file(self):
@@ -302,7 +308,7 @@ class RegionFile(object):
             m = self.metadata[x, z]
             
             self.file.seek(index)
-            offset, length = unpack(">IB", b"\0"+self.file.read(4))
+            offset, length = unpack(">IB", b"\0" + self.file.read(4))
             m.blockstart, m.blocklength = offset, length
             self.file.seek(index + SECTOR_LENGTH)
             m.timestamp = unpack(">I", self.file.read(4))[0]
@@ -335,6 +341,8 @@ class RegionFile(object):
                 m = self.metadata[x, z]
                 if m.status not in (STATUS_CHUNK_OK, STATUS_CHUNK_OVERLAPPING, \
                                     STATUS_CHUNK_MISMATCHED_LENGTHS):
+                    # skip to next if status is NOT_CREATED, OUT_OF_FILE, IN_HEADER,
+                    # ZERO_LENGTH or anything else.
                     continue
                 try:
                     self.file.seek(m.blockstart*SECTOR_LENGTH) # offset comes in sectors of 4096 bytes
@@ -345,7 +353,9 @@ class RegionFile(object):
                 except IOError:
                     m.status = STATUS_CHUNK_OUT_OF_FILE
                     continue
-                if m.length <= 1: # chunk can't be zero length
+                if m.blockstart*SECTOR_LENGTH + m.length + 4 > self.size:
+                    m.status = STATUS_CHUNK_OUT_OF_FILE
+                elif m.length <= 1: # chunk can't be zero length
                     m.status = STATUS_CHUNK_ZERO_LENGTH
                 elif m.length + 4 > m.blocklength * SECTOR_LENGTH:
                     # There are not enough sectors allocated for the whole block
@@ -365,9 +375,10 @@ class RegionFile(object):
             if ignore_chunk == m:
                 continue
             if m.blocklength and m.blockstart:
-                for b in range(m.blockstart, m.blockstart + max(m.blocklength, m.requiredblocks())):
-                    if 2 <= b < sectorsize:
-                        sectors[b].append(m)
+                blockend = m.blockstart + max(m.blocklength, m.requiredblocks())
+                # Ensure 2 <= b < sectorsize, as well as m.blockstart <= b < blockend
+                for b in range(max(m.blockstart, 2), min(blockend, sectorsize)):
+                    sectors[b].append(m)
         return sectors
 
     def _locate_free_sectors(self, ignore_chunk=None):
@@ -462,33 +473,45 @@ class RegionFile(object):
         return len(self.get_metadata())
 
     def get_blockdata(self, x, z):
-        """Return the decompressed binary data representing a chunk."""
+        """
+        Return the decompressed binary data representing a chunk.
+        
+        May raise a RegionFileFormatError().
+        If decompression of the data succeeds, all available data is returned, 
+        even if it is shorter than what is specified in the header (e.g. in case
+        of a truncated while and non-compressed data).
+        """
         # read metadata block
         m = self.metadata[x, z]
         if m.status == STATUS_CHUNK_NOT_CREATED:
             raise InconceivedChunk("Chunk is not created")
         elif m.status == STATUS_CHUNK_IN_HEADER:
             raise RegionHeaderError('Chunk %d,%d is in the region header' % (x,z))
-        elif m.status == STATUS_CHUNK_OUT_OF_FILE:
+        elif m.status == STATUS_CHUNK_OUT_OF_FILE and (m.length <= 1 or m.compression == None):
+            # Chunk header is outside of the file.
             raise RegionHeaderError('Chunk %d,%d is partially/completely outside the file' % (x,z))
         elif m.status == STATUS_CHUNK_ZERO_LENGTH:
             if m.blocklength == 0:
                 raise RegionHeaderError('Chunk %d,%d has zero length' % (x,z))
             else:
                 raise ChunkHeaderError('Chunk %d,%d has zero length' % (x,z))
+        elif m.blockstart * SECTOR_LENGTH + 5 >= self.size:
+            raise RegionHeaderError('Chunk %d,%d is partially/completely outside the file' % (x,z))
 
-        # status is STATUS_CHUNK_OK, STATUS_CHUNK_MISMATCHED_LENGTHS or STATUS_CHUNK_OVERLAPPING.
+        # status is STATUS_CHUNK_OK, STATUS_CHUNK_MISMATCHED_LENGTHS, STATUS_CHUNK_OVERLAPPING
+        # or STATUS_CHUNK_OUT_OF_FILE.
         # The chunk is always read, but in case of an error, the exception may be different 
         # based on the status.
 
-        # offset comes in sectors of 4096 bytes + length bytes + compression byte
-        self.file.seek(m.blockstart * SECTOR_LENGTH + 5)
-        chunk = self.file.read(m.length-1) # the length in the file includes the compression byte
-
         err = None
-        if m.compression > 2:
-            raise ChunkDataError('Unknown chunk compression/format (%d)' % m.compression)
         try:
+            # offset comes in sectors of 4096 bytes + length bytes + compression byte
+            self.file.seek(m.blockstart * SECTOR_LENGTH + 5)
+            # Do not read past the length of the file.
+            # The length in the file includes the compression byte, hence the -1.
+            length = min(m.length - 1, self.size - (m.blockstart * SECTOR_LENGTH + 5))
+            chunk = self.file.read(length)
+            
             if (m.compression == COMPRESSION_GZIP):
                 # Python 3.1 and earlier do not yet support gzip.decompress(chunk)
                 f = gzip.GzipFile(fileobj=BytesIO(chunk))
@@ -496,11 +519,16 @@ class RegionFile(object):
                 f.close()
             elif (m.compression == COMPRESSION_ZLIB):
                 chunk = zlib.decompress(chunk)
+            elif m.compression != COMPRESSION_NONE:
+                raise ChunkDataError('Unknown chunk compression/format (%s)' % m.compression)
+            
             return chunk
+        except RegionFileFormatError:
+            raise
         except Exception as e:
             # Deliberately catch the Exception and re-raise.
             # The details in gzip/zlib/nbt are irrelevant, just that the data is garbled.
-            err = str(e)
+            err = '%s' % e # avoid str(e) due to Unicode issues in Python 2.
         if err:
             # don't raise during exception handling to avoid the warning 
             # "During handling of the above exception, another exception occurred".
@@ -524,7 +552,7 @@ class RegionFile(object):
             return NBTFile(buffer=data)
             # this may raise a MalformedFileError. Convert to ChunkDataError.
         except MalformedFileError as e:
-            err = str(e)
+            err = '%s' % e # avoid str(e) due to Unicode issues in Python 2.
         if err:
             raise ChunkDataError(err)
 
@@ -560,6 +588,13 @@ class RegionFile(object):
         current = self.metadata[x, z]
         free_sectors = self._locate_free_sectors(ignore_chunk=current)
         sector = self._find_free_location(free_sectors, nsectors, preferred=current.blockstart)
+
+        # If file is smaller than sector*SECTOR_LENGTH (it was truncated), pad it with zeroes.
+        if self.size < sector*SECTOR_LENGTH:
+            # jump to end of file
+            self.file.seek(0, SEEK_END)
+            self.file.write((sector*SECTOR_LENGTH - self.size) * b"\x00")
+            assert self.file.tell() == sector*SECTOR_LENGTH
 
         # write out chunk to region
         self.file.seek(sector*SECTOR_LENGTH)
@@ -601,7 +636,8 @@ class RegionFile(object):
                 self.file.write(SECTOR_LENGTH*b'\x00')
         
         # update file size and header information
-        self.size = self.get_size()
+        self.size = max((sector + nsectors)*SECTOR_LENGTH, self.size)
+        assert self.get_size() == self.size
         current.blockstart = sector
         current.blocklength = nsectors
         current.status = STATUS_CHUNK_OK
