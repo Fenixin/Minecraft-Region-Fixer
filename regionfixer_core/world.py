@@ -474,15 +474,17 @@ class RegionSet(DataSet):
         for path in self.region_list:
             try:
                 r = ScannedRegionFile(path)
+                self.regions[r.get_coords()] = r
+                self.corrupted_chunks = 0
+                self.wrong_located_chunks = 0
+                self.entities_problems = 0
+                self.shared_header = 0
+                self.bad_list = []
+                self.scanned = False
+
             except InvalidFileName as e:
                 print "Warning: The file {0} is not a valid name for a region. I'll skip it.".format(path)
-            self.regions[r.get_coords()] = r
-        self.corrupted_chunks = 0
-        self.wrong_located_chunks = 0
-        self.entities_problems = 0
-        self.shared_header = 0
-        self.bad_list = []
-        self.scanned = False
+            
 
     def get_name(self):
         """ Return a string with the name of the dimension, the
