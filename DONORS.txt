@@ -8,6 +8,7 @@ Andrew Van Hise
 Eugene Sterner
 Udell Ross Burton
 Powercraft Network
+David Wilczewski
 
 Sponsors:
 Initial development was sponsored by: NITRADO Servers (http://nitrado.net)
