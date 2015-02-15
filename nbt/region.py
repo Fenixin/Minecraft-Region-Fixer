@@ -359,7 +359,7 @@ class RegionFile(object):
         sectors = [[] for s in range(sectorsize)]
         sectors[0] = True # locations
         sectors[1] = True # timestamps
-        for m in self.metadata.values():
+        for m in list(self.metadata.values()):
             if not m.is_created():
                 continue
             if ignore_chunk == m:
@@ -405,7 +405,7 @@ class RegionFile(object):
         This includes chunks which may not be readable for whatever reason,
         but excludes chunks that are not yet defined.
         """
-        return [m for m in self.metadata.values() if m.is_created()]
+        return [m for m in list(self.metadata.values()) if m.is_created()]
 
     def get_chunks(self):
         """
