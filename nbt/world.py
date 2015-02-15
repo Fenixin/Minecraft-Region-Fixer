@@ -79,7 +79,7 @@ class _BaseWorldFolder(object):
         return self.regions[(x,z)]
 
     def iter_regions(self):
-        for x,z in self.regionfiles.keys():
+        for x,z in list(self.regionfiles.keys()):
             yield self.get_region(x,z)
 
     def iter_nbt(self):
@@ -158,7 +158,7 @@ class _BaseWorldFolder(object):
         make up this world save
         """
         b = BoundingBox()
-        for rx,rz in self.regionfiles.keys():
+        for rx,rz in list(self.regionfiles.keys()):
             region = self.get_region(rx,rz)
             rx,rz = 32*rx,32*rz
             for cc in region.get_chunk_coords():
@@ -173,7 +173,7 @@ class _BaseWorldFolder(object):
         """
         # TODO: make sure this test succeeds (at least True,True,False, preferable True,True,True)
         # TODO: Move this function to test class.
-        for rx,rz in self.regionfiles.keys():
+        for rx,rz in list(self.regionfiles.keys()):
             region = self.get_region(rx,rz)
             rx,rz = 32*rx,32*rz
             for cc in region.get_chunk_coords():
