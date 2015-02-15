@@ -4,7 +4,7 @@
 #
 #   Region Fixer.
 #   Fix your region files with a backup copy of your Minecraft world.
-#   Copyright (C) 2011  Alejandro Aguilera (Fenixin)
+#   Copyright (C) 2011  Alejandro Aguilera (Fenixin), 2015  Jouni Järvinen (rautamiekka)
 #   https://github.com/Fenixin/Minecraft-Region-Fixer
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -45,16 +45,16 @@ class ChildProcessException(Exception):
     def __init__(self, error):
         # Helps to see wich one is the child process traceback
         traceback = error[2]
-        print "*"*10
-        print "*** Error while scanning:"
-        print "*** ", error[0]
-        print "*"*10
-        print "*** Printing the child's Traceback:"
-        print "*** Exception:", traceback[0], traceback[1]
+        print("*"*10)
+        print("*** Error while scanning:")
+        print("*** ", error[0])
+        print("*"*10)
+        print("*** Printing the child's Traceback:")
+        print("*** Exception:", traceback[0], traceback[1])
         for tb in traceback[2]:
-            print "*"*10
-            print "*** File {0}, line {1}, in {2} \n***   {3}".format(*tb)
-        print "*"*10
+            print("*"*10)
+            print("*** File {0}, line {1}, in {2} \n***   {3}".format(*tb))
+        print("*"*10)
 
 class FractionWidget(progressbar.ProgressBarWidget):
     """ Convenience class to use the progressbar.py """
@@ -69,52 +69,52 @@ def scan_world(world_obj, options):
         level.dat. While scanning prints status messages. """
     w = world_obj
     # scan the world dir
-    print "Scanning directory..."
+    print("Scanning directory...")
 
     if not w.scanned_level.path:
-        print "Warning: No \'level.dat\' file found!"
+        print("Warning: No 'level.dat' file found!")
 
     if w.players:
-        print "There are {0} region files and {1} player files in the world directory.".format(\
-            w.get_number_regions(), len(w.players))
+        print("There are {0} region files and {1} player files in the world directory.".format(\
+            w.get_number_regions(), len(w.players)))
     else:
-        print "There are {0} region files in the world directory.".format(\
-            w.get_number_regions())
+        print("There are {0} region files in the world directory.".format(\
+            w.get_number_regions()))
 
     # check the level.dat file and the *.dat files in players directory
-    print "\n{0:-^60}".format(' Checking level.dat ')
+    print("\n{0:-^60}".format(' Checking level.dat '))
 
     if not w.scanned_level.path:
-        print "[WARNING!] \'level.dat\' doesn't exist!"
+        print("[WARNING!] 'level.dat' doesn't exist!")
     else:
         if w.scanned_level.readable == True:
-            print "\'level.dat\' is readable"
+            print("'level.dat' is readable")
         else:
-            print "[WARNING!]: \'level.dat\' is corrupted with the following error/s:"
-            print "\t {0}".format(w.scanned_level.status_text)
+            print("[WARNING!]: 'level.dat' is corrupted with the following error/s:")
+            print("\t {0}".format(w.scanned_level.status_text))
 
-    print "\n{0:-^60}".format(' Checking player files ')
+    print("\n{0:-^60}".format(' Checking player files '))
     # TODO multiprocessing!
     # Probably, create a scanner object with a nice buffer of logger for text and logs and debugs
     if not w.players:
-        print "Info: No player files to scan."
+        print("Info: No player files to scan.")
     else:
         scan_all_players(w)
         all_ok = True
         for name in w.players:
             if w.players[name].readable == False:
-                print "[WARNING]: Player file {0} has problems.\n\tError: {1}".format(w.players[name].filename, w.players[name].status_text)
+                print("[WARNING]: Player file {0} has problems.\n\tError: {1}".format(w.players[name].filename, w.players[name].status_text))
                 all_ok = False
         if all_ok:
-            print "All player files are readable."
+            print("All player files are readable.")
 
     # SCAN ALL THE CHUNKS!
     if w.get_number_regions == 0:
-        print "No region files to scan!"
+        print("No region files to scan!")
     else:
         for r in w.regionsets:
             if r.regions:
-                print "\n{0:-^60}".format(' Scanning the {0} '.format(r.get_name()))
+                print("\n{0:-^60}".format(' Scanning the {0} '.format(r.get_name())))
                 scan_regionset(r, options)
     w.scanned = True
 
@@ -127,7 +127,7 @@ def scan_player(scanned_dat_file):
     try:
         player_dat = nbt.NBTFile(filename = s.path)
         s.readable = True
-    except Exception, e:
+    except Exception as e:
         s.readable = False
         s.status_text = e
 
@@ -170,18 +170,18 @@ def scan_region_file(scanned_regionfile_obj, options):
         except region.NoRegionHeader: # the region has no header
             r.status = world.REGION_TOO_SMALL
             return r
-        except IOError, e:
-            print "\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(filename,e)
+        except IOError as e:
+            print("\nWARNING: I can't open the file {0} !\nThe error is \"{1}\".\nTypical causes are file blocked or problems in the file system.\n".format(filename,e))
             r.status = world.REGION_UNREADABLE
             r.scan_time = time.time()
-            print "Note: this region file won't be scanned and won't be taken into acount in the summaries"
+            print("Note: this region file won't be scanned and won't be taken into acount in the summaries")
             # TODO count also this region files
             return r
         except: # whatever else print an error and ignore for the scan
                 # not really sure if this is a good solution...
-            print "\nWARNING: The region file \'{0}\' had an error and couldn't be parsed as region file!\nError:{1}\n".format(join(split(split(r.path)[0])[1], split(r.path)[1]),sys.exc_info()[0])
-            print "Note: this region file won't be scanned and won't be taken into acount."
-            print "Also, this may be a bug. Please, report it if you have the time.\n"
+            print("\nWARNING: The region file '{0}' had an error and couldn't be parsed as region file!\nError:{1}\n".format(join(split(split(r.path)[0])[1], split(r.path)[1]),sys.exc_info()[0]))
+            print("Note: this region file won't be scanned and won't be taken into acount.")
+            print("Also, this may be a bug. Please, report it if you have the time.\n")
             return None
 
         try:# start the scanning of chunks
@@ -203,7 +203,7 @@ def scan_region_file(scanned_regionfile_obj, options):
                         # takes a long time, and once detected is better to fix it at once.
                         if delete_entities:
                             world.delete_entities(region_file, x, z)
-                            print "Deleted {0} entities in chunk ({1},{2}) of the region file: {3}".format(c[TUPLE_NUM_ENTITIES], x, z, r.filename)
+                            print("Deleted {0} entities in chunk ({1},{2}) of the region file: {3}".format(c[TUPLE_NUM_ENTITIES], x, z, r.filename))
                             # entities removed, change chunk status to OK
                             r.chunks[(x,z)] = (0, world.CHUNK_OK)
 
@@ -237,7 +237,7 @@ def scan_region_file(scanned_regionfile_obj, options):
                 shared_counter += 1
 
         except KeyboardInterrupt:
-            print "\nInterrupted by user\n"
+            print("\nInterrupted by user\n")
             # TODO this should't exit
             sys.exit(1)
 
@@ -421,7 +421,7 @@ def scan_regionset(regionset, options):
                     stats = "(Error: not a region file)"
                   elif r.status == world.REGION_UNREADABLE:
                     stats = "(Error: unreadable region file)"
-                  print "Scanned {0: <12} {1:.<43} {2}/{3}".format(filename, stats, region_counter, total_regions)
+                  print("Scanned {0: <12} {1:.<43} {2}/{3}".format(filename, stats, region_counter, total_regions))
                 else:
                     pbar.update(region_counter)
 
