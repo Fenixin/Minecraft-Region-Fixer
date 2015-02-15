@@ -4,7 +4,7 @@
 #
 #   Region Fixer.
 #   Fix your region files with a backup copy of your Minecraft world.
-#   Copyright (C) 2011  Alejandro Aguilera (Fenixin)
+#   Copyright (C) 2011  Alejandro Aguilera (Fenixin), 2015  Jouni Järvinen (rautamiekka)
 #   https://github.com/Fenixin/Minecraft-Region-Fixer
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -117,14 +117,14 @@ def parse_chunk_list(chunk_list, world_obj):
         try:
             chunk = eval(line)
         except:
-            print "The chunk {0} is not valid.".format(line)
+            print("The chunk {0} is not valid.".format(line))
             continue
         region_name = world.get_chunk_region(chunk[0], chunk[1])
         fullpath = join(world_obj.world_path, "region", region_name)
         if fullpath in world_obj.all_mca_files:
             parsed_list.append((fullpath, chunk[0], chunk[1]))
         else:
-            print "The chunk {0} should be in the region file {1} and this region files doesn't extist!".format(chunk, fullpath)
+            print("The chunk {0} should be in the region file {1} and this region files doesn't extist!".format(chunk, fullpath))
 
     return parsed_list
 
@@ -141,7 +141,7 @@ def parse_paths(args):
             region_list.append(arg)
         elif arg[-4:] == ".mcr": # ignore pre-anvil region files
             if not warning:
-                print "Warning: Region-Fixer only works with anvil format region files. Ignoring *.mcr files"
+                print("Warning: Region-Fixer only works with anvil format region files. Ignoring *.mcr files")
                 warning = True
         else:
             world_list.append(arg)
@@ -153,9 +153,9 @@ def parse_paths(args):
             if isfile(f):
                 region_list_tmp.append(f)
             else:
-                print "Warning: \"{0}\" is not a file. Skipping it and scanning the rest.".format(f)
+                print("Warning: \"{0}\" is not a file. Skipping it and scanning the rest.".format(f))
         else:
-            print "Warning: The region file {0} doesn't exists. Skipping it and scanning the rest.".format(f)
+            print("Warning: The region file {0} doesn't exists. Skipping it and scanning the rest.".format(f))
     region_list = region_list_tmp
 
     # init the world objects
@@ -174,9 +174,9 @@ def parse_world_list(world_path_list):
             if w.isworld:
                 tmp.append(w)
             else:
-                print "Warning: The folder {0} doesn't look like a minecraft world. I'll skip it.".format(d)
+                print("Warning: The folder {0} doesn't look like a minecraft world. I'll skip it.".format(d))
         else:
-            print "Warning: The folder {0} doesn't exist. I'll skip it.".format(d)
+            print("Warning: The folder {0} doesn't exist. I'll skip it.".format(d))
     return tmp
 
 
