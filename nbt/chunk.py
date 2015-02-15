@@ -15,11 +15,11 @@ class Chunk(object):
 
     def get_coords(self):
         """Return the coordinates of this chunk."""
-        return (self.coords[0].value,self.coords[1].value)
+        return (self.coords[0].value, self.coords[1].value)
 
     def __repr__(self):
         """Return a representation of this Chunk."""
-        return "Chunk("+str(self.coords[0])+","+str(self.coords[1])+")"
+        return "Chunk({0},{1})".format(str(self.coords[0]), str(self.coords[1]))
 
 
 class BlockArray(object):
@@ -65,12 +65,12 @@ class BlockArray(object):
         cur_z = 0
         blocks = {}
         for block_id in self.blocksList:
-            blocks[(cur_x,cur_y,cur_z)] = block_id
+            blocks[(cur_x, cur_y, cur_z)] = block_id
             cur_y += 1
-            if (cur_y > 127):
+            if cur_y > 127:
                 cur_y = 0
                 cur_z += 1
-                if (cur_z > 15):
+                if cur_z > 15:
                     cur_z = 0
                     cur_x += 1
         return blocks
@@ -103,10 +103,10 @@ class BlockArray(object):
                 for x in range(16):
                     for y in range(127, -1, -1):
                         offset = y + z*128 + x*128*16
-                        if (self.blocksList[offset] not in non_solids or y == 0):
+                        if self.blocksList[offset] not in non_solids or y == 0:
                             bytes.append(y+1)
                             break
-            if (as_array):
+            if as_array:
                 return bytes
             else:
                 return array.array('B', bytes).tostring()
@@ -127,10 +127,10 @@ class BlockArray(object):
                     for y in range(128):
                         coord = x,y,z
                         offset = y + z*128 + x*128*16
-                        if (coord in dict):
+                        if coord in dict:
                             list.append(dict[coord])
                         else:
-                            if (self.blocksList[offset] and not fill_air):
+                            if self.blocksList[offset] and not fill_air:
                                 list.append(self.blocksList[offset])
                             else:
                                 list.append(0) # Air
@@ -144,7 +144,7 @@ class BlockArray(object):
         """Sets the block a x, y, z to the specified id, and optionally data."""
         offset = y + z*128 + x*128*16
         self.blocksList[offset] = id
-        if (offset % 2 == 1):
+        if offset % 2 == 1:
             # offset is odd
             index = (offset-1)//2
             b = self.dataList[index]
@@ -171,17 +171,17 @@ class BlockArray(object):
                 blocks.append(Block(x,y,z))
         """
 
-        offset = y + z*128 + x*128*16 if (coord == False) else coord[1] + coord[2]*128 + coord[0]*128*16
+        offset = y + z*128 + x*128*16 if coord == False else coord[1] + coord[2]*128 + coord[0]*128*16
         return self.blocksList[offset]
 
     # Get a given X,Y,Z or a tuple of three coordinates
     def get_data(self, x,y,z, coord=False):
         """Return the data of the block at x, y, z."""
-        offset = y + z*128 + x*128*16 if (coord == False) else coord[1] + coord[2]*128 + coord[0]*128*16
+        offset = y + z*128 + x*128*16 if coord == False else coord[1] + coord[2]*128 + coord[0]*128*16
         # The first byte of the Blocks arrays correspond
         # to the LEAST significant bits of the first byte of the Data.
         # NOT to the MOST significant bits, as you might expected.
-        if (offset % 2 == 1):
+        if offset % 2 == 1:
             # offset is odd
             index = (offset-1)//2
             b = self.dataList[index]
@@ -194,5 +194,5 @@ class BlockArray(object):
 
     def get_block_and_data(self, x,y,z, coord=False):
         """Return the tuple of (id, data) for the block at x, y, z"""
-        return (self.get_block(x,y,z,coord),self.get_data(x,y,z,coord))
+        return (self.get_block(x,y,z,coord), self.get_data(x,y,z,coord))
 
