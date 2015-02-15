@@ -2,7 +2,7 @@
 # -*- coding: iso-8859-1 -*-
 #
 # progressbar  - Text progressbar library for python.
-# Copyright (c) 2005 Nilton Volpato
+# Copyright (c) 2005 Nilton Volpato, 2015  Jouni Järvinen (rautamiekka)
 # 
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -46,6 +46,7 @@ __version__ = "2.2"
 
 # Changelog
 #
+# 2015-02-15: Made compatible with 3+ in addition to the original Python 2.7+
 # 2006-05-07: v2.2 fixed bug in windows
 # 2005-12-04: v2.1 autodetect terminal width, added start method
 # 2005-12-04: v2.0 everything is now a widget (wow!)
@@ -155,7 +156,7 @@ class Bar(ProgressBarWidgetHFill):
         self.left = left
         self.right = right
     def _format_marker(self, pbar):
-        if isinstance(self.marker, (str, unicode)):
+        if isinstance(self.marker, str):
             return self.marker
         else:
             return self.marker.update(pbar)
@@ -249,7 +250,7 @@ class ProgressBar(object):
                 r.append(w)
                 hfill_inds.append(i)
                 num_hfill += 1
-            elif isinstance(w, (str, unicode)):
+            elif isinstance(w, str):
                 r.append(w)
                 currwidth += len(w)
             else:
@@ -318,7 +319,7 @@ if __name__=='__main__':
             # do something
             pbar.update(10*i+1)
         pbar.finish()
-        print
+        print()
 
     def example2():
         class CrazyFileTransferSpeed(FileTransferSpeed):
@@ -337,7 +338,7 @@ if __name__=='__main__':
             # do something
             pbar.update(5*i+1)
         pbar.finish()
-        print
+        print()
 
     def example3():
         widgets = [Bar('>'), ' ', ETA(), ' ', ReverseBar('<')]
@@ -346,7 +347,7 @@ if __name__=='__main__':
             # do something
             pbar.update(10*i+1)
         pbar.finish()
-        print
+        print()
 
     def example4():
         widgets = ['Test: ', Percentage(), ' ',
@@ -358,7 +359,7 @@ if __name__=='__main__':
             time.sleep(0.2)
             pbar.update(i)
         pbar.finish()
-        print
+        print()
 
 
     example1()
