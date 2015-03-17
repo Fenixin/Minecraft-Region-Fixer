@@ -7,3 +7,4 @@ Contributors (in no particular order):
 aheadley (Alex Headley) - First multiprocessing version of Region Fixer.
 carlallen (Carl Allen) - Fix problem in MacOS
 kbn (Kristian Berge) - Small fixes
+macfreek (Freek Dijkstra) - Fixes and lots of help
