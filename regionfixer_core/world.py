@@ -751,8 +751,8 @@ class World(object):
                                                  "The file doesn't exist")
 
         # Player files
-        PLAYERS_DIRECTORY = 'players'
-        OLD_PLAYERS_DIRECTORY = ' playerdata'
+        PLAYERS_DIRECTORY = 'playerdata'
+        OLD_PLAYERS_DIRECTORY = ' players'
         STRUCTURES_DIRECTORY = 'data'
 
         self.players = DataFileSet(join(self.path, PLAYERS_DIRECTORY),
