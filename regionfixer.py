@@ -27,19 +27,17 @@ from getpass import getpass
 import sys
 
 from regionfixer_core import world
-from regionfixer_core.scan import console_scan_world, console_scan_regionset,\
-                                  ChildProcessException
+from regionfixer_core.scan import console_scan_world, console_scan_regionset, ChildProcessException
 from regionfixer_core.interactive import InteractiveLoop
-from regionfixer_core.util import entitle, is_bare_console, parse_paths,\
-                                  parse_backup_list
+from regionfixer_core.util import entitle, is_bare_console, parse_paths, parse_backup_list
 from regionfixer_core import progressbar
 from regionfixer_core.version import version_string
 from regionfixer_core.bug_reporter import BugReporter
 
 
-
 class FractionWidget(progressbar.ProgressBarWidget):
     """ Convenience class to use the progressbar.py """
+
     def __init__(self, sep=' / '):
         self.sep = sep
 
@@ -53,10 +51,7 @@ def delete_bad_chunks(options, scanned_obj):
     problems iterating through all the possible problems. """
     print("")
     # In the same order as in CHUNK_PROBLEMS
-    options_delete = [options.delete_corrupted,
-                      options.delete_wrong_located,
-                      options.delete_entities,
-                      options.delete_shared_offset]
+    options_delete = [options.delete_corrupted, options.delete_wrong_located, options.delete_entities, options.delete_shared_offset]
     deleting = zip(options_delete, world.CHUNK_PROBLEMS)
     for delete, problem in deleting:
         status = world.CHUNK_STATUS_TEXT[problem]
@@ -66,8 +61,7 @@ def delete_bad_chunks(options, scanned_obj):
                 text = ' Deleting chunks with status: {0} '.format(status)
                 print("\n{0:#^60}".format(text))
                 counter = scanned_obj.remove_problematic_chunks(problem)
-                print("\nDeleted {0} chunks with status: {1}".format(counter,
-                                                                     status))
+                print("\nDeleted {0} chunks with status: {1}".format(counter, status))
             else:
                 print("No chunks to delete with status: {0}".format(status))
 
@@ -87,14 +81,12 @@ def delete_bad_regions(options, scanned_obj):
                 text = ' Deleting regions with status: {0} '.format(status)
                 print("{0:#^60}".format(text))
                 counter = scanned_obj.remove_problematic_regions(problem)
-                print("Deleted {0} regions with status: {1}".format(counter,
-                                                                    status))
+                print("Deleted {0} regions with status: {1}".format(counter, status))
             else:
                 print("No regions to delete with status: {0}".format(status))
 
 
 def main():
-
     usage = ('usage: \n%prog [options] <world-path> '
              '<other-world-path> ... <region-files> ...')
     epilog = ('Copyright (C) 2011  Alejandro Aguilera (Fenixin)\n'
@@ -107,168 +99,84 @@ def main():
     parser = OptionParser(description=('Program to check the integrity of '
                                        'Minecraft worlds and fix them when '
                                        'possible. It uses NBT by twoolie. '
-                                       'Author: Alejandro Aguilera (Fenixin)'),
-                          prog='region_fixer',
-                          version=version_string,
-                          usage=usage,
-                          epilog=epilog)
+                                       'Author: Alejandro Aguilera (Fenixin)'), prog='region_fixer', version=version_string, usage=usage, epilog=epilog)
 
     add_option = parser.add_option
 
-    add_option('--backups',
-               '-b',
-               help=('List of backup directories of the Minecraft world '
-                    'to use to fix corrupted chunks and/or wrong located '
-                    'chunks. Warning! Region-Fixer is not going to check if'
-                    'it\'s the same world, be careful! This argument can be a'
-                    ' comma separated list (but never with spaces between '
-                    'elements!). This option can be only used scanning one '
-                    'world.'),
-               metavar='<backups>',
-               type=str,
-               dest='backups',
-               default=None)
+    add_option('--backups', '-b', help=('List of backup directories of the Minecraft world '
+                                        'to use to fix corrupted chunks and/or wrong located '
+                                        'chunks. Warning! Region-Fixer is not going to check if'
+                                        'it\'s the same world, be careful! This argument can be a'
+                                        ' comma separated list (but never with spaces between '
+                                        'elements!). This option can be only used scanning one '
+                                        'world.'), metavar='<backups>', type=str, dest='backups', default=None)
 
-    add_option('--replace-corrupted',
-               '--rc',
-               help='Tries to replace the corrupted chunks using the backup'
-                    ' directories. This option can be only used scanning one'
-                    ' world.',
-               default=False,
-               dest='replace_corrupted',
-               action='store_true')
+    add_option('--replace-corrupted', '--rc', help='Tries to replace the corrupted chunks using the backup'
+                                                   ' directories. This option can be only used scanning one'
+                                                   ' world.', default=False, dest='replace_corrupted', action='store_true')
 
-    add_option('--replace-wrong-located',
-               '--rw',
-               help='Tries to replace the wrong located chunks using the '
-                    'backup directories. This option can be only used scanning'
-                    ' one world.',
-               default=False,
-               dest='replace_wrong_located',
-               action='store_true')
+    add_option('--replace-wrong-located', '--rw', help='Tries to replace the wrong located chunks using the '
+                                                       'backup directories. This option can be only used scanning'
+                                                       ' one world.', default=False, dest='replace_wrong_located', action='store_true')
 
-    add_option('--replace-entities',
-               '--re',
-               help='Tries to replace the chunks with too many entities using '
-                    'the backup directories. This option can be only used '
-                    'scanning one world.',
-               default=False,
-               dest='replace_entities',
-               action='store_true')
+    add_option('--replace-entities', '--re', help='Tries to replace the chunks with too many entities using '
+                                                  'the backup directories. This option can be only used '
+                                                  'scanning one world.', default=False, dest='replace_entities', action='store_true')
 
-    add_option('--replace-shared-offset',
-               '--rs',
-               help='Tries to replace the chunks with a shared offset using '
-                    'the backup directories. This option can be only used'
-                    'scanning one world.',
-               default=False,
-               dest='replace_shared_offset',
-               action='store_true')
+    add_option('--replace-shared-offset', '--rs', help='Tries to replace the chunks with a shared offset using '
+                                                       'the backup directories. This option can be only used'
+                                                       'scanning one world.', default=False, dest='replace_shared_offset', action='store_true')
 
-    add_option('--replace-too-small',
-               '--rt',
-               help='Tries to replace the region files that are too small to '
-                    'be actually be a region file using the backup '
-                    'directories. This option can be only used scanning one '
-                    'world.',
-               default=False,
-               dest='replace_too_small',
-               action='store_true')
+    add_option('--replace-too-small', '--rt', help='Tries to replace the region files that are too small to '
+                                                   'be actually be a region file using the backup '
+                                                   'directories. This option can be only used scanning one '
+                                                   'world.', default=False, dest='replace_too_small', action='store_true')
 
-    add_option('--delete-corrupted',
-               '--dc',
-               help='[WARNING!] This option deletes! This option will delete '
-                    'all the corrupted chunks. Used with --replace-corrupted '
-                    'or --replace-wrong-located it will delete all the '
-                    'non-replaced chunks.',
-               action='store_true',
-               default=False)
+    add_option('--delete-corrupted', '--dc', help='[WARNING!] This option deletes! This option will delete '
+                                                  'all the corrupted chunks. Used with --replace-corrupted '
+                                                  'or --replace-wrong-located it will delete all the '
+                                                  'non-replaced chunks.', action='store_true', default=False)
 
-    add_option('--delete-wrong-located',
-               '--dw',
-               help=('[WARNING!] This option deletes!'
-                     'The same as --delete-corrupted but for wrong '
-                     'located chunks'),
-               action='store_true',
-               default=False,
-               dest='delete_wrong_located')
+    add_option('--delete-wrong-located', '--dw', help=('[WARNING!] This option deletes!'
+                                                       'The same as --delete-corrupted but for wrong '
+                                                       'located chunks'), action='store_true', default=False, dest='delete_wrong_located')
 
-    add_option('--delete-entities',
-               '--de',
-               help='[WARNING!] This option deletes! This option deletes ALL '
-                    'the entities in chunks with more entities than '
-                    '--entity-limit (300 by default). In a Minecraft '
-                    'entities are mostly mobs and items dropped in the '
-                    'grond, items in chests and other stuff won\'t be '
-                    'touched. Read the README for more info. Region-Fixer '
-                    'will delete the entities while scanning so you can '
-                    'stop and resume the process',
-               action='store_true',
-               default=False,
-               dest='delete_entities')
+    add_option('--delete-entities', '--de', help='[WARNING!] This option deletes! This option deletes ALL '
+                                                 'the entities in chunks with more entities than '
+                                                 '--entity-limit (300 by default). In a Minecraft '
+                                                 'entities are mostly mobs and items dropped in the '
+                                                 'grond, items in chests and other stuff won\'t be '
+                                                 'touched. Read the README for more info. Region-Fixer '
+                                                 'will delete the entities while scanning so you can '
+                                                 'stop and resume the process', action='store_true', default=False, dest='delete_entities')
 
-    add_option('--delete-shared-offset',
-               '--ds',
-               help='[WARNING!] This option deletes! This option will delete '
-                    'all the chunk with status shared offset. It will remove '
-                    'the region header for the false chunk, note that you '
-                    'don\'t loos any chunk doing this.',
-               action='store_true',
-               default=False,
-               dest='delete_shared_offset')
+    add_option('--delete-shared-offset', '--ds', help='[WARNING!] This option deletes! This option will delete '
+                                                      'all the chunk with status shared offset. It will remove '
+                                                      'the region header for the false chunk, note that you '
+                                                      'don\'t loos any chunk doing this.', action='store_true', default=False, dest='delete_shared_offset')
 
-    add_option('--delete-too-small',
-               '--dt',
-               help='[WARNING!] This option deletes! Removes any region files '
-                    'found to be too small to actually be a region file.',
-               dest='delete_too_small',
-               default=False,
-               action='store_true')
+    add_option('--delete-too-small', '--dt', help='[WARNING!] This option deletes! Removes any region files '
+                                                  'found to be too small to actually be a region file.', dest='delete_too_small', default=False, action='store_true')
 
-    add_option('--entity-limit',
-               '--el',
-               help='Specify the limit for the --delete-entities option '
-                    '(default = 300).',
-               dest='entity_limit',
-               default=300,
-               action='store',
-               type=int)
+    add_option('--entity-limit', '--el', help='Specify the limit for the --delete-entities option '
+                                              '(default = 300).', dest='entity_limit', default=300, action='store', type=int)
 
-    add_option('--processes',
-               '-p',
-               help='Set the number of workers to use for scanning. (defaulta '
-                    '= 1, not use multiprocessing at all)',
-               action='store',
-               type=int,
-               default=1)
+    add_option('--processes', '-p', help='Set the number of workers to use for scanning. (defaulta '
+                                         '= 1, not use multiprocessing at all)', action='store', type=int, default=1)
 
-    add_option('--verbose',
-               '-v',
-               help='Don\'t use a progress bar, instead print a line per '
-                    'scanned region file with results information. The '
-                    'letters mean c: corrupted; w: wrong located; t: total of '
-                    'chunksm; tme: too many entities problem',
-              action='store_true',
-              default=False)
+    add_option('--verbose', '-v', help='Don\'t use a progress bar, instead print a line per '
+                                       'scanned region file with results information. The '
+                                       'letters mean c: corrupted; w: wrong located; t: total of '
+                                       'chunksm; tme: too many entities problem', action='store_true', default=False)
 
-    add_option('--interactive',
-               '-i',
-               help='Enter in interactive mode, where you can scan, see the '
-                    'problems, and fix them in a terminal like mode',
-               dest='interactive',
-               default=False,
-               action='store_true',)
+    add_option('--interactive', '-i', help='Enter in interactive mode, where you can scan, see the '
+                                           'problems, and fix them in a terminal like mode', dest='interactive', default=False, action='store_true', )
 
-    add_option('--log',
-               '-l',
-               help='Saves a log of all the problems found in the spicifyed '
-                    'file. The log file contains all the problems found with '
-                    'this information: region file, chunk coordinates and '
-                    'problem. Use \'-\' as name to show the log at the end '
-                    'of the scan.',
-               type=str,
-               default=None,
-               dest='summary')
+    add_option('--log', '-l', help='Saves a log of all the problems found in the spicifyed '
+                                   'file. The log file contains all the problems found with '
+                                   'this information: region file, chunk coordinates and '
+                                   'problem. Use \'-\' as name to show the log at the end '
+                                   'of the scan.', type=str, default=None, dest='summary')
 
     (options, args) = parser.parse_args()
     o = options
@@ -303,28 +211,15 @@ def main():
         return 1
 
     # Check basic options compatibilities
-    any_chunk_replace_option = o.replace_corrupted or \
-                               o.replace_wrong_located or \
-                               o.replace_entities or \
-                               o.replace_shared_offset
-    any_chunk_delete_option = o.delete_corrupted or \
-                              o.delete_wrong_located or \
-                              o.delete_entities or \
-                              o.delete_shared_offset
+    any_chunk_replace_option = o.replace_corrupted or o.replace_wrong_located or o.replace_entities or o.replace_shared_offset
+    any_chunk_delete_option = o.delete_corrupted or o.delete_wrong_located or o.delete_entities or o.delete_shared_offset
     any_region_replace_option = o.replace_too_small
     any_region_delete_option = o.delete_too_small
 
     error = parser.error
 
     # All scanners will use this progress bar
-    widgets = ['Scanning: ',
-               FractionWidget(),
-               ' ',
-               progressbar.Percentage(),
-               ' ',
-               progressbar.Bar(left='[', right=']'),
-               ' ',
-               progressbar.ETA()]
+    widgets = ['Scanning: ', FractionWidget(), ' ', progressbar.Percentage(), ' ', progressbar.Bar(left='[', right=']'), ' ', progressbar.ETA()]
 
     if o.interactive or o.summary:
         if any_chunk_replace_option or any_region_replace_option:
@@ -377,8 +272,7 @@ def main():
         summary_text = ""
         # Scan the separate region files
         if len(regionset.regions) > 0:
-            console_scan_regionset(regionset, o.processes, o.entity_limit,
-                                   o.delete_entities, o.verbose)
+            console_scan_regionset(regionset, o.processes, o.entity_limit, o.delete_entities, o.verbose)
             print(regionset.generate_report(True))
 
             # Delete chunks
@@ -403,26 +297,22 @@ def main():
             w_name = w.get_name()
             print(entitle(' Scanning world: {0} '.format(w_name), 0))
 
-            console_scan_world(w, o.processes, o.entity_limit,
-                               o.delete_entities, o.verbose)
+            console_scan_world(w, o.processes, o.entity_limit, o.delete_entities, o.verbose)
 
             print("")
             print(entitle('Scan results for: {0}'.format(w_name), 0))
             print(w.generate_report(True))
 
-#             corrupted, wrong_located, entities_prob, shared_prob,\
-#             total_chunks, too_small_region, unreadable_region, total_regions\
-#             = w.generate_report(standalone = False)
+            #             corrupted, wrong_located, entities_prob, shared_prob,\
+            #             total_chunks, too_small_region, unreadable_region, total_regions\
+            #             = w.generate_report(standalone = False)
 
             print("")
             # Replace chunks
             if backup_worlds and not len(world_list) > 1:
                 del_ent = options.delete_entities
                 ent_lim = options.entity_limit
-                options_replace = [o.replace_corrupted,
-                                   o.replace_wrong_located,
-                                   o.replace_entities,
-                                   o.replace_shared_offset]
+                options_replace = [o.replace_corrupted, o.replace_wrong_located, o.replace_entities, o.replace_shared_offset]
                 replacing = zip(options_replace, world.CHUNK_PROBLEMS_ITERATOR)
                 for replace, (problem, status, arg) in replacing:
                     if replace:

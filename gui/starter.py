@@ -1,16 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import wx
 import sys
 import traceback
-from StringIO import StringIO
 
+import wx
 from main import MainWindow
 from backups import BackupsWindow
 from about import AboutWindow
 from help import HelpWindow
-
 from regionfixer_core.scan import ChildProcessException
 from regionfixer_core.bug_reporter import BugReporter
 from regionfixer_core.util import get_str_from_traceback
@@ -18,6 +16,7 @@ from regionfixer_core.util import get_str_from_traceback
 ERROR_MSG = "\n\nOps! Something went really wrong and regionfixer crashed.\n\nI can try to send an automatic bug rerpot if you wish.\n"
 QUESTION_TEXT = ('Do you want to send an anonymous bug report to the region fixer ftp?\n'
                  '(Answering no will print the bug report)')
+
 
 # Thanks to:
 # http://wxpython-users.1045709.n5.nabble.com/Exception-handling-strategies-td2369185.html
@@ -34,11 +33,9 @@ class MyApp(wx.App):
             s = "Using GUI:\n\n" + get_str_from_traceback(etype, value, tb)
             # bug - display a dialog with the entire exception and traceback printed out
         traceback.print_tb(tb)
-        dlg = wx.MessageDialog(self.main_window,
-                               ERROR_MSG + "\n" + QUESTION_TEXT,
-                               style=wx.ICON_ERROR | wx.YES_NO)
+        dlg = wx.MessageDialog(self.main_window, ERROR_MSG + "\n" + QUESTION_TEXT, style=wx.ICON_ERROR | wx.YES_NO)
         # Get a string with the traceback and send it
-        
+
         answer = dlg.ShowModal()
         if answer == wx.ID_YES:
             print "Sending bug report!"
@@ -54,8 +51,7 @@ class MyApp(wx.App):
             dlg = wx.MessageDialog(self.main_window, msg, style=style)
             dlg.ShowModal()
         else:
-            dlg = wx.MessageDialog(self.main_window, "Error msg:\n\n" + s,
-                               style=wx.ICON_ERROR)
+            dlg = wx.MessageDialog(self.main_window, "Error msg:\n\n" + s, style=wx.ICON_ERROR)
             dlg.ShowModal()
 
 
@@ -72,7 +68,7 @@ class Starter(object):
         self.frame.backups = self.backups
         self.frame.about = self.about
         self.frame.help = HelpWindow(self.frame, "Help")
-#         self.frame.error = ErrorWindow(self.frame, "Error")
+        #         self.frame.error = ErrorWindow(self.frame, "Error")
 
         self.app.main_window = self.frame
 

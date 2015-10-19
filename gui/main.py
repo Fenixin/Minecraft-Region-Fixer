@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import wx
 from time import sleep
 from os.path import split, abspath
 from os import name as os_name
 
+import wx
 from backups import BackupsWindow
-from regionfixer_core.scan import AsyncWorldRegionScanner, AsyncDataScanner,\
-    ChildProcessException
+from regionfixer_core.scan import AsyncWorldRegionScanner, AsyncDataScanner, ChildProcessException
 from regionfixer_core import world
 from regionfixer_core.world import World
 
@@ -16,6 +15,7 @@ if os_name == 'nt':
     # Proper way to set an icon in windows 7 and above
     # Thanks to http://stackoverflow.com/a/15923439
     import ctypes
+
     myappid = 'Fenixin.region-fixer.gui.100'  # arbitrary string
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
@@ -48,7 +48,7 @@ class MainWindow(wx.Frame):
         # Add elements to filemenu
         menuOpen = filemenu.Append(wx.ID_OPEN, "&Open", "Open a Minecraft world")
         filemenu.AppendSeparator()
-        menuExit = filemenu.Append(wx.ID_EXIT, "E&xit","Terminate program")
+        menuExit = filemenu.Append(wx.ID_EXIT, "E&xit", "Terminate program")
 
         # Add elements to helpmenu
         menuHelp = helpmenu.Append(wx.ID_HELP, "&Help", "Where to find help")
@@ -57,13 +57,13 @@ class MainWindow(wx.Frame):
 
         # Add elements to windowsmenu
         menuBackups = windowsmenu.Append(-1, "&Backups", "Manage list of backups")
-#         menuAdvanced = windowsmenu.Append(-1, "A&dvanced actions", "Manage list of backups")
+        #         menuAdvanced = windowsmenu.Append(-1, "A&dvanced actions", "Manage list of backups")
 
         # Create a menu bar
         menuBar = wx.MenuBar()
-        menuBar.Append(filemenu,"&File")
-        menuBar.Append(windowsmenu,"&View")
-        menuBar.Append(helpmenu,"&Help")
+        menuBar.Append(filemenu, "&File")
+        menuBar.Append(windowsmenu, "&View")
+        menuBar.Append(helpmenu, "&Help")
         self.SetMenuBar(menuBar)
 
         # Create elements in the window
@@ -73,7 +73,7 @@ class MainWindow(wx.Frame):
         self.scan_button = wx.Button(panel, label="Scan")
         self.scan_button.Disable()
         self.firstrow_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.firstrow_sizer.Add(self.status_text, 1,  wx.ALIGN_CENTER)
+        self.firstrow_sizer.Add(self.status_text, 1, wx.ALIGN_CENTER)
         self.firstrow_sizer.Add(self.open_button, 0, wx.EXPAND)
         self.firstrow_sizer.Add(self.scan_button, 0, wx.EXPAND)
         self.firstrow_static_box = wx.StaticBox(panel, label="World loaded")
@@ -83,7 +83,7 @@ class MainWindow(wx.Frame):
         # Second row:
         self.proc_info_text = wx.StaticText(panel, label="Processes to use: ")
         self.proc_text = wx.TextCtrl(panel, value="1", size=(30, 24), style=wx.TE_CENTER)
-        self.el_info_text = wx.StaticText(panel, label="Entity limit: " )
+        self.el_info_text = wx.StaticText(panel, label="Entity limit: ")
         self.el_text = wx.TextCtrl(panel, value="150", size=(50, 24), style=wx.TE_CENTER)
         self.secondrow_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.secondrow_sizer.Add(self.proc_info_text, flag=wx.ALIGN_CENTER)
@@ -96,25 +96,25 @@ class MainWindow(wx.Frame):
         # Third row:
         # Note: In order to use a static box add it directly to a 
         # static box sizer and add to the same sizer it's contents
-        self.results_text = wx.TextCtrl(panel, style=wx.TE_READONLY | wx.TE_MULTILINE, value="Scan the world to get results", size = (500,200))
+        self.results_text = wx.TextCtrl(panel, style=wx.TE_READONLY | wx.TE_MULTILINE, value="Scan the world to get results", size=(500, 200))
         # Lets try to create a monospaced font:
         ffont = wx.Font(9, wx.FONTFAMILY_MODERN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
-#         print ffont.IsFixedWidth()
-        textattr = wx.TextAttr(font = ffont)
+        #         print ffont.IsFixedWidth()
+        textattr = wx.TextAttr(font=ffont)
         self.results_text.SetFont(ffont)
-        self.results_text_box = wx.StaticBox(panel, label="Results", size = (100,100))
+        self.results_text_box = wx.StaticBox(panel, label="Results", size=(100, 100))
         self.results_text_box_sizer = wx.StaticBoxSizer(self.results_text_box)
         self.results_text_box_sizer.Add(self.results_text, 1, wx.EXPAND)
 
-        self.delete_all_chunks_button = wx.Button(panel, label = "Delete all bad chunks")
-        self.replace_all_chunks_button = wx.Button(panel, label = "Replace all bad chunks (using backups)")
-        self.delete_all_regions_button = wx.Button(panel, label = "Delete all bad regions")
-        self.replace_all_regions_button = wx.Button(panel, label = "Replace all bad regions (using backups)")
+        self.delete_all_chunks_button = wx.Button(panel, label="Delete all bad chunks")
+        self.replace_all_chunks_button = wx.Button(panel, label="Replace all bad chunks (using backups)")
+        self.delete_all_regions_button = wx.Button(panel, label="Delete all bad regions")
+        self.replace_all_regions_button = wx.Button(panel, label="Replace all bad regions (using backups)")
         self.update_delete_buttons_status(False)
         self.update_replace_buttons_status(False)
 
         self.thirdrow_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.thirdrow_actions_box = wx.StaticBox(panel, label="Actions", size = (-1,-1))
+        self.thirdrow_actions_box = wx.StaticBox(panel, label="Actions", size=(-1, -1))
         self.thirdrow_buttons_box_sizer = wx.StaticBoxSizer(self.thirdrow_actions_box)
         self.thirdrow_buttons_sizer = wx.BoxSizer(wx.VERTICAL)
         self.thirdrow_buttons_sizer.Add(self.delete_all_chunks_button, 1, wx.EXPAND)
@@ -159,7 +159,7 @@ class MainWindow(wx.Frame):
 
     def OnAbout(self, e):
         self.about.Show(True)
-    
+
     def OnHelp(self, e):
         self.help.Show(True)
 
@@ -188,7 +188,6 @@ class MainWindow(wx.Frame):
         # Rest the results textctrl
         self.results_text.SetValue("")
 
-
     def OnScan(self, e):
         """ Called when the scan button is pressed. """
         processes = int(self.proc_text.GetValue())
@@ -198,23 +197,14 @@ class MainWindow(wx.Frame):
         ps = AsyncDataScanner(self.world.players, processes)
         ops = AsyncDataScanner(self.world.old_players, processes)
         ds = AsyncDataScanner(self.world.data_files, processes)
-        ws = AsyncWorldRegionScanner(self.world, processes, entity_limit,
-                       delete_entities)
+        ws = AsyncWorldRegionScanner(self.world, processes, entity_limit, delete_entities)
 
         things_to_scan = [ws, ops, ps, ds]
-        dialog_texts = ["Scanning region files",
-                        "Scanning old format player files",
-                        "Scanning players",
-                        "Scanning data files"]
+        dialog_texts = ["Scanning region files", "Scanning old format player files", "Scanning players", "Scanning data files"]
         try:
             for scanner, dialog_title in zip(things_to_scan, dialog_texts):
-                progressdlg = wx.ProgressDialog(
-                            dialog_title,
-                            "Last scanned:\n starting...",
-                            len(scanner), self,
-                            style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME |
-                                  wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT |
-                                  wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
+                progressdlg = wx.ProgressDialog(dialog_title, "Last scanned:\n starting...", len(scanner), self,
+                    style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT | wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
                 scanner.scan()
                 counter = 0
                 # NOTE TO SELF: ShowModal behaves different in windows and Linux!
@@ -226,8 +216,7 @@ class MainWindow(wx.Frame):
 
                     if result:
                         counter += 1
-                    not_cancelled, not_skipped = progressdlg.Update(counter,
-                                       "Last scanned:\n" + scanner.str_last_scanned)
+                    not_cancelled, not_skipped = progressdlg.Update(counter, "Last scanned:\n" + scanner.str_last_scanned)
                     if not not_cancelled:
                         # User pressed cancel
                         scanner.terminate()
@@ -246,7 +235,7 @@ class MainWindow(wx.Frame):
             scanner.terminate()
             progressdlg.Destroy()
             raise e
-            #===================================================================
+            # ===================================================================
             # error_log_path = e.save_error_log()
             # filename = e.scanned_file.filename
             # scanner.terminate()
@@ -260,19 +249,11 @@ class MainWindow(wx.Frame):
             #                                 "Error",
             #                                 wx.ICON_ERROR)
             # error.ShowModal()
-            #===================================================================
+            # ===================================================================
 
     def OnDeleteChunks(self, e):
-        progressdlg = wx.ProgressDialog("Removing chunks", "This may take a while", 
-            self.world.count_regions(), self,
-            style=wx.PD_ELAPSED_TIME |
-                wx.PD_ESTIMATED_TIME |
-                wx.PD_REMAINING_TIME |
-                wx.PD_CAN_SKIP |
-                wx.PD_CAN_ABORT |
-                wx.PD_AUTO_HIDE |
-                wx.PD_SMOOTH
-            )
+        progressdlg = wx.ProgressDialog("Removing chunks", "This may take a while", self.world.count_regions(), self,
+                                        style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_SKIP | wx.PD_CAN_ABORT | wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
         progressdlg = progressdlg
         progressdlg.Pulse()
         remove_chunks = self.world.remove_problematic_chunks
@@ -287,14 +268,8 @@ class MainWindow(wx.Frame):
         self.update_delete_buttons_status(False)
 
     def OnDeleteRegions(self, e):
-        progressdlg = wx.ProgressDialog("Removing regions", "This may take a while...", 
-            self.world.count_regions(), self,
-            style=wx.PD_ELAPSED_TIME |
-            wx.PD_ESTIMATED_TIME |
-            wx.PD_REMAINING_TIME |
-            wx.PD_AUTO_HIDE |
-            wx.PD_SMOOTH
-            )
+        progressdlg = wx.ProgressDialog("Removing regions", "This may take a while...", self.world.count_regions(), self,
+                                        style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
         progressdlg = progressdlg
         progressdlg.Pulse()
         remove_regions = self.world.remove_problematic_regions
@@ -312,14 +287,8 @@ class MainWindow(wx.Frame):
         entity_limit = int(self.el_text.GetValue())
         delete_entities = False
 
-        progressdlg = wx.ProgressDialog("Removing chunks", "Removing...",
-            self.world.count_regions(), self,
-            style=wx.PD_ELAPSED_TIME |
-            wx.PD_ESTIMATED_TIME |
-            wx.PD_REMAINING_TIME |
-            wx.PD_AUTO_HIDE |
-            wx.PD_SMOOTH
-            )
+        progressdlg = wx.ProgressDialog("Removing chunks", "Removing...", self.world.count_regions(), self,
+                                        style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
         progressdlg = progressdlg
         backups = self.backups.world_list
         progressdlg.Pulse()
@@ -337,16 +306,10 @@ class MainWindow(wx.Frame):
         # Get options
         entity_limit = int(self.el_text.GetValue())
         delete_entities = False
-        progressdlg = wx.ProgressDialog("Removing regions", "Removing...", 
-            self.world.count_regions(), self, 
-            style = wx.PD_ELAPSED_TIME | 
-            wx.PD_ESTIMATED_TIME | 
-            wx.PD_REMAINING_TIME | 
-            #~ wx.PD_CAN_SKIP | 
-            #~ wx.PD_CAN_ABORT | 
-            wx.PD_AUTO_HIDE |
-            wx.PD_SMOOTH
-            )
+        progressdlg = wx.ProgressDialog("Removing regions", "Removing...", self.world.count_regions(), self,
+                                        style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME |  # ~ wx.PD_CAN_SKIP |
+                                              # ~ wx.PD_CAN_ABORT |
+                                              wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
         progressdlg = progressdlg
         backups = self.backups.world_list
         progressdlg.Pulse()

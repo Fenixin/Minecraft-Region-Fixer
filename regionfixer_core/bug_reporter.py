@@ -8,8 +8,8 @@ import sys
 import ftplib
 import datetime
 from StringIO import StringIO
-from util import query_yes_no, get_str_from_traceback
 
+from util import query_yes_no, get_str_from_traceback
 
 SERVER = 'regionfixer.no-ip.org'
 USER = 'regionfixer_bugreporter'
@@ -28,8 +28,7 @@ class BugReporter(object):
     will be uploaded as a text file.
     '''
 
-    def __init__(self, error_str=None, server=SERVER,
-                 user=USER, password=PASSWORD):
+    def __init__(self, error_str=None, server=SERVER, user=USER, password=PASSWORD):
         '''
         Constructor
         '''
@@ -81,8 +80,7 @@ class BugReporter(object):
         exception_str.
         '''
         try:
-            s = ftplib.FTP(self.server, self.user,
-                           self.password)
+            s = ftplib.FTP(self.server, self.user, self.password)
 
             s.cwd(BUGREPORTS_DIR)
 

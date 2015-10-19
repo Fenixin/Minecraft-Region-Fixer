@@ -2,16 +2,20 @@
 Handles a Minecraft world save using either the Anvil or McRegion format.
 """
 
-import os, glob, re
+import os
+import glob
+import re
+
 from . import region
 from . import chunk
 from .region import InconceivedChunk
 
+
 class UnknownWorldFormat(Exception):
     """Unknown or invalid world folder."""
+
     def __init__(self, msg=""):
         self.msg = msg
-
 
 
 class _BaseWorldFolder(object):
@@ -26,8 +30,8 @@ class _BaseWorldFolder(object):
         """Initialize a WorldFolder."""
         self.worldfolder = world_folder
         self.regionfiles = {}
-        self.regions     = {}
-        self.chunks  = None
+        self.regions = {}
+        self.chunks = None
         # os.listdir triggers an OSError for non-existant directories or permission errors.
         # This is needed, because glob.glob silently returns no files.
         os.listdir(world_folder)
@@ -35,7 +39,7 @@ class _BaseWorldFolder(object):
 
     def get_filenames(self):
         # Warning: glob returns a empty list if the directory is unreadable, without raising an Exception
-        return list(glob.glob(os.path.join(self.worldfolder,'region','r.*.*.'+self.extension)))
+        return list(glob.glob(os.path.join(self.worldfolder, 'region', 'r.*.*.' + self.extension)))
 
     def set_regionfiles(self, filenames):
         """
@@ -44,7 +48,7 @@ class _BaseWorldFolder(object):
         """
         for filename in filenames:
             # Assume that filenames have the name r.<x-digit>.<z-digit>.<extension>
-            m = re.match(r"r.(\-?\d+).(\-?\d+)."+self.extension, os.path.basename(filename))
+            m = re.match(r"r.(\-?\d+).(\-?\d+)." + self.extension, os.path.basename(filename))
             if m:
                 x = int(m.group(1))
                 z = int(m.group(2))
@@ -57,7 +61,7 @@ class _BaseWorldFolder(object):
                 # raise UnknownWorldFormat("Unrecognized filename format %s" % os.path.basename(filename))
                 # TODO: log to stderr using logging facility.
                 pass
-            self.regionfiles[(x,z)] = filename
+            self.regionfiles[(x, z)] = filename
 
     def nonempty(self):
         """Return True is the world is non-empty."""
@@ -67,20 +71,20 @@ class _BaseWorldFolder(object):
         """Return a list of full path of all region files."""
         return list(self.regionfiles.values())
 
-    def get_region(self, x,z):
+    def get_region(self, x, z):
         """Get a region using x,z coordinates of a region. Cache results."""
-        if (x,z) not in self.regions:
-            if (x,z) in self.regionfiles:
-                self.regions[(x,z)] = region.RegionFile(self.regionfiles[(x,z)])
+        if (x, z) not in self.regions:
+            if (x, z) in self.regionfiles:
+                self.regions[(x, z)] = region.RegionFile(self.regionfiles[(x, z)])
             else:
                 # Return an empty RegionFile object
                 # TODO: this does not yet allow for saving of the region file
-                self.regions[(x,z)] = region.RegionFile()
-        return self.regions[(x,z)]
+                self.regions[(x, z)] = region.RegionFile()
+        return self.regions[(x, z)]
 
     def iter_regions(self):
-        for x,z in self.regionfiles.keys():
-            yield self.get_region(x,z)
+        for x, z in self.regionfiles.keys():
+            yield self.get_region(x, z)
 
     def iter_nbt(self):
         """
@@ -106,19 +110,19 @@ class _BaseWorldFolder(object):
         for c in self.iter_nbt():
             yield self.chunkclass(c)
 
-    def get_nbt(self,x,z):
+    def get_nbt(self, x, z):
         """
         Return a NBT specified by the chunk coordinates x,z. Raise InconceivedChunk
         if the NBT file is not yet generated. To get a Chunk object, use get_chunk.
         """
-        rx,x = divmod(x,32)
-        rz,z = divmod(z,32)
-        nbt = self.get_region(rx,rz).get_chunk(x,z)
+        rx, x = divmod(x, 32)
+        rz, z = divmod(z, 32)
+        nbt = self.get_region(rx, rz).get_chunk(x, z)
         if nbt == None:
-            raise InconceivedChunk("Chunk %s,%s not present in world" % (32*rx+x,32*rz+z))
+            raise InconceivedChunk("Chunk %s,%s not present in world" % (32 * rx + x, 32 * rz + z))
         return nbt
 
-    def set_nbt(self,x,z,nbt):
+    def set_nbt(self, x, z, nbt):
         """
         Set a chunk. Overrides the NBT if it already existed. If the NBT did not exists,
         adds it to the Regionfile. May create a new Regionfile if that did not exist yet.
@@ -127,7 +131,7 @@ class _BaseWorldFolder(object):
         raise NotImplemented()
         # TODO: implement
 
-    def get_chunk(self,x,z):
+    def get_chunk(self, x, z):
         """
         Return a chunk specified by the chunk coordinates x,z. Raise InconceivedChunk
         if the chunk is not yet generated. To get the raw NBT data, use get_nbt.
@@ -158,12 +162,12 @@ class _BaseWorldFolder(object):
         make up this world save
         """
         b = BoundingBox()
-        for rx,rz in self.regionfiles.keys():
-            region = self.get_region(rx,rz)
-            rx,rz = 32*rx,32*rz
+        for rx, rz in self.regionfiles.keys():
+            region = self.get_region(rx, rz)
+            rx, rz = 32 * rx, 32 * rz
             for cc in region.get_chunk_coords():
-                x,z = (rx+cc['x'],rz+cc['z'])
-                b.expand(x,None,z)
+                x, z = (rx + cc['x'], rz + cc['z'])
+                b.expand(x, None, z)
         return b
 
     def cache_test(self):
@@ -173,21 +177,21 @@ class _BaseWorldFolder(object):
         """
         # TODO: make sure this test succeeds (at least True,True,False, preferable True,True,True)
         # TODO: Move this function to test class.
-        for rx,rz in self.regionfiles.keys():
-            region = self.get_region(rx,rz)
-            rx,rz = 32*rx,32*rz
+        for rx, rz in self.regionfiles.keys():
+            region = self.get_region(rx, rz)
+            rx, rz = 32 * rx, 32 * rz
             for cc in region.get_chunk_coords():
-                x,z = (rx+cc['x'],rz+cc['z'])
-                c1 = self.chunkclass(region.get_chunk(cc['x'],cc['z']))
-                c2 = self.get_chunk(x,z)
-                correct_coords = (c2.get_coords() == (x,z))
-                is_comparable = (c1 == c2) # test __eq__ function
-                is_equal = (id(c1) == id(c2)) # test if they point to the same memory location
+                x, z = (rx + cc['x'], rz + cc['z'])
+                c1 = self.chunkclass(region.get_chunk(cc['x'], cc['z']))
+                c2 = self.get_chunk(x, z)
+                correct_coords = (c2.get_coords() == (x, z))
+                is_comparable = (c1 == c2)  # test __eq__ function
+                is_equal = (id(c1) == id(c2))  # test if they point to the same memory location
                 # DEBUG (prints a tuple)
-                print((x,z,c1,c2,correct_coords,is_comparable,is_equal))
+                print((x, z, c1, c2, correct_coords, is_comparable, is_equal))
 
     def __repr__(self):
-        return "%s(%r)" % (self.__class__.__name__,self.worldfolder)
+        return "%s(%r)" % (self.__class__.__name__, self.worldfolder)
 
 
 class McRegionWorldFolder(_BaseWorldFolder):
@@ -196,6 +200,7 @@ class McRegionWorldFolder(_BaseWorldFolder):
     extension = 'mcr'
     chunkclass = chunk.Chunk
     # chunkclass = chunk.McRegionChunk  # TODO: change to McRegionChunk when done
+
 
 class AnvilWorldFolder(_BaseWorldFolder):
     """Represents a world save using the new Anvil format."""
@@ -209,14 +214,17 @@ class _WorldFolderFactory():
     """Factory class: instantiate the subclassses in order, and the first instance 
     whose nonempty() method returns True is returned. If no nonempty() returns True,
     a UnknownWorldFormat exception is raised."""
+
     def __init__(self, subclasses):
         self.subclasses = subclasses
+
     def __call__(self, *args, **kwargs):
         for cls in self.subclasses:
             wf = cls(*args, **kwargs)
-            if wf.nonempty(): # Check if the world is non-empty
+            if wf.nonempty():  # Check if the world is non-empty
                 return wf
         raise UnknownWorldFormat("Empty world or unknown format: %r" % world_folder)
+
 
 WorldFolder = _WorldFolderFactory([AnvilWorldFolder, McRegionWorldFolder])
 """
@@ -225,14 +233,15 @@ instance, or raise a UnknownWorldFormat.
 """
 
 
-
 class BoundingBox(object):
     """A bounding box of x,y,z coordinates."""
+
     def __init__(self, minx=None, maxx=None, miny=None, maxy=None, minz=None, maxz=None):
-        self.minx,self.maxx = minx, maxx
-        self.miny,self.maxy = miny, maxy
-        self.minz,self.maxz = minz, maxz
-    def expand(self,x,y,z):
+        self.minx, self.maxx = minx, maxx
+        self.miny, self.maxy = miny, maxy
+        self.minz, self.maxz = minz, maxz
+
+    def expand(self, x, y, z):
         """
         Expands the bounding
         """
@@ -251,12 +260,15 @@ class BoundingBox(object):
                 self.minz = z
             if self.maxz is None or z > self.maxz:
                 self.maxz = z
+
     def lenx(self):
-        return self.maxx-self.minx+1
+        return self.maxx - self.minx + 1
+
     def leny(self):
-        return self.maxy-self.miny+1
+        return self.maxy - self.miny + 1
+
     def lenz(self):
-        return self.maxz-self.minz+1
+        return self.maxz - self.minz + 1
+
     def __repr__(self):
-        return "%s(%s,%s,%s,%s,%s,%s)" % (self.__class__.__name__,self.minx,self.maxx,
-                self.miny,self.maxy,self.minz,self.maxz)
+        return "%s(%s,%s,%s,%s,%s,%s)" % (self.__class__.__name__, self.minx, self.maxx, self.miny, self.maxy, self.minz, self.maxz)
