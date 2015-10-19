@@ -8,14 +8,15 @@
 # Let's start with some default (for me) imports...
 
 from distutils.core import setup
-import py2exe
 import glob
 import os
 import zlib
 import shutil
 
+import py2exe
 from regionfixer_core import version as cli_version
 from gui import version as gui_version
+
 
 
 # Remove the build folder
@@ -70,13 +71,15 @@ MANIFEST_TEMPLATE = """
 </assembly>
 """
 
+
 class Target(object):
     """ A simple class that holds information on our executable file. """
+
     def __init__(self, **kw):
         """ Default class constructor. Update as you need. """
         self.__dict__.update(kw)
-        
-        
+
+
 # Ok, let's explain why I am doing that.
 # Often, data_files, excludes and dll_excludes (but also resources)
 # can be very long list of things, and this will clutter too much
@@ -86,13 +89,9 @@ class Target(object):
 data_files = ['COPYING.txt', 'README.rst', 'CONTRIBUTORS.txt', 'DONORS.txt', 'icon.ico']
 
 includes = []
-excludes = ['_gtkagg', '_tkagg', 'bsddb', 'curses', 'email', 'pywin.debugger',
-            'pywin.debugger.dbgcon', 'pywin.dialogs', 'tcl',
-            'Tkconstants', 'Tkinter']
+excludes = ['_gtkagg', '_tkagg', 'bsddb', 'curses', 'email', 'pywin.debugger', 'pywin.debugger.dbgcon', 'pywin.dialogs', 'tcl', 'Tkconstants', 'Tkinter']
 packages = []
-dll_excludes = ['libgdk-win32-2.0-0.dll', 'libgobject-2.0-0.dll', 'tcl84.dll',
-                'tk84.dll', 
-                'MSVCP90.dll', 'mswsock.dll', 'powrprof.dll']
+dll_excludes = ['libgdk-win32-2.0-0.dll', 'libgobject-2.0-0.dll', 'tcl84.dll', 'tk84.dll', 'MSVCP90.dll', 'mswsock.dll', 'powrprof.dll']
 icon_resources = [(1, 'icon.ico')]
 bitmap_resources = []
 other_resources = []
@@ -117,7 +116,7 @@ other_resources = [(24, 1, MANIFEST_TEMPLATE % dict(prog="MyAppName"))]
 py26MSdll = glob.glob(r"c:\Dev\Py26MSdlls-9.0.21022.8\msvc\*.*")
 
 # install the MSVC 9 runtime dll's into the application folder
-data_files += [("", py26MSdll),]
+data_files += [("", py26MSdll), ]
 
 # I found on some systems one has to put them into sub-folders.
 ##data_files += [("Microsoft.VC90.CRT", py26MSdll),
@@ -128,31 +127,13 @@ data_files += [("", py26MSdll),]
 # Ok, now we are going to build our target class.
 # I chose this building strategy as it works perfectly for me :-D
 
-GUI_Target = Target(
-    # what to build
-    script = "regionfixer_gui.py",
-    icon_resources = icon_resources,
-    bitmap_resources = bitmap_resources,
-    other_resources = other_resources,
-    dest_base = "regionfixer_gui",
-    version = gui_version.version_string,
-    company_name = "No Company",
-    copyright = "Copyright (C) 2011  Alejandro Aguilera",
-    name = "Region Fixer GUI"
-    )
+GUI_Target = Target(# what to build
+    script="regionfixer_gui.py", icon_resources=icon_resources, bitmap_resources=bitmap_resources, other_resources=other_resources, dest_base="regionfixer_gui", version=gui_version.version_string,
+    company_name="No Company", copyright="Copyright (C) 2011  Alejandro Aguilera", name="Region Fixer GUI")
 
-CLI_Target = Target(
-    # what to build
-    script = "regionfixer.py",
-    icon_resources = icon_resources,
-    bitmap_resources = bitmap_resources,
-    other_resources = other_resources,
-    dest_base = "regionfixer",
-    version = cli_version.version_string,
-    company_name = "No Company",
-    copyright = "Copyright (C) 2011  Alejandro Aguilera",
-    name = "Region Fixer"
-    )
+CLI_Target = Target(# what to build
+    script="regionfixer.py", icon_resources=icon_resources, bitmap_resources=bitmap_resources, other_resources=other_resources, dest_base="regionfixer", version=cli_version.version_string,
+    company_name="No Company", copyright="Copyright (C) 2011  Alejandro Aguilera", name="Region Fixer")
 
 
 # That's serious now: we have all (or almost all) the options py2exe
@@ -161,27 +142,13 @@ CLI_Target = Target(
 
 setup(
 
-    data_files = data_files,
+    data_files=data_files,
 
-    options = {"py2exe": {"compressed": 2, 
-                          "optimize": 2,
-                          "includes": includes,
-                          "excludes": excludes,
-                          "packages": packages,
-                          "dll_excludes": dll_excludes,
-                          "bundle_files": 2,
-                          "dist_dir": "dist",
-                          "xref": False,
-                          "skip_archive": False,
-                          "ascii": False,
-                          "custom_boot_script": '',
-                         }
-              },
+    options={
+        "py2exe": {"compressed": 2, "optimize": 2, "includes": includes, "excludes": excludes, "packages": packages, "dll_excludes": dll_excludes, "bundle_files": 2, "dist_dir": "dist", "xref": False,
+                   "skip_archive": False, "ascii": False, "custom_boot_script": '', }},
 
-    zipfile = "lib\library.zip",
-    console = [CLI_Target],
-    windows = [GUI_Target]
-    )
+    zipfile="lib\library.zip", console=[CLI_Target], windows=[GUI_Target])
 
 # This is a place where any post-compile code may go.
 # You can add as much code as you want, which can be used, for example,
@@ -189,4 +156,3 @@ setup(
 # actions.
 
 # And we are done. That's a setup script :-D
-

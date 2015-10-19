@@ -22,9 +22,9 @@
 #
 
 
-import world
-
 from cmd import Cmd
+
+import world
 from scan import console_scan_world, console_scan_regionset
 
 
@@ -33,7 +33,7 @@ class InteractiveLoop(Cmd):
         Cmd.__init__(self)
         self.world_list = world_list
         self.regionset = regionset
-        self.world_names = [str(i.name)  for i in self.world_list]
+        self.world_names = [str(i.name) for i in self.world_list]
         # if there's only one world use it
         if len(self.world_list) == 1 and len(self.regionset) == 0:
             self.current = world_list[0]
@@ -70,7 +70,7 @@ class InteractiveLoop(Cmd):
     #################################################
     # Do methods
     #################################################
-    def do_set(self,arg):
+    def do_set(self, arg):
         """ Command to change some options and variables in interactive
             mode """
         args = arg.split()
@@ -106,14 +106,14 @@ class InteractiveLoop(Cmd):
                         number += 1
                         # add a tab and print
                         for i in w.__str__().split("\n"): print "\t" + i
-                        print 
+                        print
                     print "   ### regionset ###"
                     for i in self.regionset.__str__().split("\n"): print "\t" + i
                     print "\n(Use \"set workload world1\" or name_of_the_world or regionset to choose one)"
 
                 else:
                     a = args[1]
-                    if len(a) == 6 and a[:5] == "world" and int(a[-1]) >= 1 :
+                    if len(a) == 6 and a[:5] == "world" and int(a[-1]) >= 1:
                         # get the number and choos the correct world from the list
                         number = int(args[1][-1]) - 1
                         try:
@@ -187,8 +187,10 @@ class InteractiveLoop(Cmd):
     def do_current_workload(self, arg):
         """ Prints the info of the current workload """
         if len(arg) == 0:
-            if self.current: print self.current
-            else: print "No world/region-set is set! Use \'set workload\' to set a world/regionset to work with."
+            if self.current:
+                print self.current
+            else:
+                print "No world/region-set is set! Use \'set workload\' to set a world/regionset to work with."
         else:
             print "This command doesn't use any arguments."
 
@@ -203,14 +205,10 @@ class InteractiveLoop(Cmd):
             if self.current:
                 if isinstance(self.current, world.World):
                     self.current = world.World(self.current.path)
-                    console_scan_world(self.current, o.processes,
-                                       o.entity_limit, o.delete_entities,
-                                       o.verbose)
+                    console_scan_world(self.current, o.processes, o.entity_limit, o.delete_entities, o.verbose)
                 elif isinstance(self.current, world.RegionSet):
                     print "\n{0:-^60}".format(' Scanning region files ')
-                    console_scan_regionset(self.current, o.processes,
-                                           o.entity_limit, o.delete_entities,
-                                           o.verbose)
+                    console_scan_regionset(self.current, o.processes, o.entity_limit, o.delete_entities, o.verbose)
             else:
                 print "No world set! Use \'set workload\'"
 
@@ -285,7 +283,8 @@ class InteractiveLoop(Cmd):
                     self.current.rescan_entities(self.options)
                 elif answer == 'no':
                     print "Ok!"
-                else: print "Invalid answer, use \'yes\' or \'no\' the next time!."
+                else:
+                    print "Invalid answer, use \'yes\' or \'no\' the next time!."
         else:
             print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
 
@@ -349,7 +348,7 @@ class InteractiveLoop(Cmd):
                     print "Unknown argument."
         else:
             print "The world hasn't be scanned (or it needs a rescan). Use \'scan\' to scan it."
-        
+
     def do_remove_regions(self, arg):
         if self.current and self.current.scanned:
             if len(arg.split()) == 0:
@@ -395,11 +394,11 @@ class InteractiveLoop(Cmd):
     def complete_set(self, text, line, begidx, endidx):
         if "workload " in line:
             # return the list of world names plus 'regionset' plus a list of world1, world2...
-            possible_args = tuple(self.world_names) + ('regionset',) + tuple([ 'world' + str(i+1) for i in range(len(self.world_names))])
+            possible_args = tuple(self.world_names) + ('regionset',) + tuple(['world' + str(i + 1) for i in range(len(self.world_names))])
         elif 'verbose ' in line:
-            possible_args = ('True','False')
+            possible_args = ('True', 'False')
         else:
-            possible_args = ('entity-limit','verbose','processes','workload')
+            possible_args = ('entity-limit', 'verbose', 'processes', 'workload')
         return self.complete_arg(text, possible_args)
 
     def complete_count_chunks(self, text, line, begidx, endidx):
@@ -446,24 +445,28 @@ class InteractiveLoop(Cmd):
                "   workload\n"
                "If you input a few worlds you can choose wich one will be "
                "scanned using this command.\n")
+
     def help_current_workload(self):
         print "\nPrints information of the current region-set/world. This will be the region-set/world to scan and fix.\n"
+
     def help_scan(self):
         print "\nScans the current world set or the region set.\n"
 
     def help_count_chunks(self):
         print "\n   Prints out the number of chunks with the given status. For example"
         print "\'count corrupted\' prints the number of corrupted chunks in the world."
-        print 
+        print
         print "Possible status are: {0}\n".format(self.possible_chunk_args_text)
+
     def help_remove_entities(self):
         print "\nRemove all the entities in chunks that have more than entity-limit entities."
-        print 
+        print
         print "This chunks are the ones with status \'too many entities\'.\n"
+
     def help_remove_chunks(self):
         print "\nRemoves bad chunks with the given problem."
         print
-        print "Please, be careful, when used with the status too-many-entities this will" 
+        print "Please, be careful, when used with the status too-many-entities this will"
         print "REMOVE THE CHUNKS with too many entities problems, not the entities."
         print "To remove only the entities see the command remove_entities."
         print
@@ -471,6 +474,7 @@ class InteractiveLoop(Cmd):
         print
         print "Possible status are: {0}\n".format(self.possible_chunk_args_text)
         print
+
     def help_replace_chunks(self):
         print "\nReplaces bad chunks with the given status using the backups directories."
         print
@@ -485,8 +489,9 @@ class InteractiveLoop(Cmd):
     def help_count_regions(self):
         print "\n   Prints out the number of regions with the given status. For example "
         print "\'count_regions too-small\' prints the number of region with \'too-small\' status."
-        print 
+        print
         print "Possible status are: {0}\n".format(self.possible_region_args_text)
+
     def help_remove_regions(self):
         print "\nRemoves regions with the given status."
         print
@@ -497,6 +502,7 @@ class InteractiveLoop(Cmd):
         print "Possible status are: {0}".format(self.possible_region_args_text)
         print
         print "Note: after removing any regions you have to rescan the world.\n"
+
     def help_replace_regions(self):
         print "\nReplaces regions with the given status."
         print
@@ -511,11 +517,15 @@ class InteractiveLoop(Cmd):
 
     def help_summary(self):
         print "\nPrints a summary of all the problems found in the current workload.\n"
+
     def help_quit(self):
         print "\nQuits interactive mode, exits region-fixer. Same as \'EOF\' and \'exit\' commands.\n"
+
     def help_EOF(self):
         print "\nQuits interactive mode, exits region-fixer. Same as \'quit\' and \'exit\' commands\n"
+
     def help_exit(self):
         print "\nQuits interactive mode, exits region-fixer. Same as \'quit\' and \'EOF\' commands\n"
+
     def help_help(self):
         print "Prints help help."

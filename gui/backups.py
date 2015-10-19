@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import wx
 import os
+
+import wx
+
 
 # TODO: just copied this file to this module, is a cutre solution
 # improve it! See Importing python modules from relative paths, or
@@ -21,9 +23,8 @@ class BackupsWindow(wx.Frame):
         self.all_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # Text with help in the top
-        self.help_text = wx.StaticText(panel, style=wx.TE_MULTILINE,
-                                       label=("Region-Fixer will use the worlds in\n"
-                                              "this list in top-down order."))
+        self.help_text = wx.StaticText(panel, style=wx.TE_MULTILINE, label=("Region-Fixer will use the worlds in\n"
+                                                                            "this list in top-down order."))
 
         # List of worlds to use as backups
         self.world_list_box = wx.ListBox(panel, size=(180, 100))
@@ -45,12 +46,9 @@ class BackupsWindow(wx.Frame):
         self.buttons_sizer.Add(self.move_down, 0, 0)
 
         # Add things to the general sizer
-        self.all_sizer.Add(self.help_text, proportion=0,
-                           flag=wx.GROW | wx.ALL, border=10)
-        self.all_sizer.Add(self.world_list_box, proportion=1,
-                           flag=wx.EXPAND | wx.ALL, border=10)
-        self.all_sizer.Add(self.buttons_sizer, proportion=0,
-                           flag=wx.ALIGN_CENTER | wx.ALL, border=10)
+        self.all_sizer.Add(self.help_text, proportion=0, flag=wx.GROW | wx.ALL, border=10)
+        self.all_sizer.Add(self.world_list_box, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
+        self.all_sizer.Add(self.buttons_sizer, proportion=0, flag=wx.ALIGN_CENTER | wx.ALL, border=10)
 
         # Layout sizers
         panel.SetSizerAndFit(self.all_sizer)
@@ -100,8 +98,8 @@ class BackupsWindow(wx.Frame):
                 self.world_list.append(w)
                 index = self.world_list.index(w)
                 # TODO check if it's a minecraft world
-                self.world_list_box.InsertItems([w.name], pos = index)
-        
+                self.world_list_box.InsertItems([w.name], pos=index)
+
         # Properly recover the last path used
         self.last_path = os.path.split(dlg.GetPath())[0]
         dlg.Destroy()
@@ -127,7 +125,7 @@ class BackupsWindow(wx.Frame):
         l.insert(index, tmp)
 
         return index
-        
+
     def move_right_inlist(self, l, index):
         """ Move the element in the list with index to the right. 
 
@@ -145,7 +143,7 @@ class BackupsWindow(wx.Frame):
             l.insert(index, tmp)
 
         return index
-    
+
     def get_names_from_worlds(self, world_list):
         """ Return a list of names from a list of worlds in order. """
 
@@ -161,7 +159,7 @@ class BackupsWindow(wx.Frame):
 
         if index is not None:
             index = self.move_left_inlist(self.world_list, index)
-            #~ self.world_list_box.Set(self.world_list)
+            # ~ self.world_list_box.Set(self.world_list)
             self.world_list_box.Set(self.get_names_from_worlds(self.world_list))
             self.world_list_box.Select(index)
 
@@ -174,7 +172,7 @@ class BackupsWindow(wx.Frame):
         if index is not None:
             index = self.move_right_inlist(self.world_list, index)
             self.world_list_box.Set(self.get_names_from_worlds(self.world_list))
-            #~ self.world_list_box.Set(self.world_list)
+            # ~ self.world_list_box.Set(self.world_list)
             self.world_list_box.Select(index)
 
     def OnClose(self, e):

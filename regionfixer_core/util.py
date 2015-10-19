@@ -22,10 +22,11 @@
 #
 
 import platform
-from os.path import join, split, exists, isfile
+from os.path import join, exists, isfile
 import sys
-import world
 import traceback
+
+import world
 
 
 def get_str_from_traceback(ty, value, tb):
@@ -35,6 +36,7 @@ def get_str_from_traceback(ty, value, tb):
     for i in t:
         s += i
     return s
+
 
 # Stolen from:
 # http://stackoverflow.com/questions/3041986/python-command-line-yes-no-input
@@ -48,8 +50,7 @@ def query_yes_no(question, default="yes"):
 
     The "answer" return value is one of "yes" or "no".
     """
-    valid = {"yes": True, "y": True, "ye": True,
-             "no": False, "n": False}
+    valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
     if default is None:
         prompt = " [y/n] "
     elif default == "yes":
@@ -91,7 +92,7 @@ def is_bare_console():
     return False
 
 
-def entitle(text, level = 0):
+def entitle(text, level=0):
     """ Put the text in a title with lot's of hashes everywhere. """
     t = ''
     if level == 0:
@@ -128,24 +129,24 @@ def table(columns):
     # get the total width of the table:
     ml_total = 0
     for i in range(len(ml)):
-        ml_total += ml[i] + 2 # size of each word + 2 spaces
-    ml_total += 1 + 2# +1 for the separator | and +2 for the borders
-    text += "-"*ml_total + "\n"
+        ml_total += ml[i] + 2  # size of each word + 2 spaces
+    ml_total += 1 + 2  # +1 for the separator | and +2 for the borders
+    text += "-" * ml_total + "\n"
     # all the columns have the same number of rows
     row = get_max_len(columns)
     for r in range(row):
         line = "|"
         # put all the elements in this row together with spaces
         for i in range(len(columns)):
-            line += "{0: ^{width}}".format(columns[i][r],width = ml[i] + 2)
+            line += "{0: ^{width}}".format(columns[i][r], width=ml[i] + 2)
             # add a separator for the first column
             if i == 0:
                 line += "|"
 
         text += line + "|" + "\n"
         if r == 0:
-            text += "-"*ml_total + "\n"
-    text += "-"*ml_total
+            text += "-" * ml_total + "\n"
+    text += "-" * ml_total
     return text
 
 
@@ -187,7 +188,7 @@ def parse_paths(args):
     for arg in args:
         if arg[-4:] == ".mca":
             region_list.append(arg)
-        elif arg[-4:] == ".mcr": # ignore pre-anvil region files
+        elif arg[-4:] == ".mcr":  # ignore pre-anvil region files
             if not warning:
                 print "Warning: Region-Fixer only works with anvil format region files. Ignoring *.mcr files"
                 warning = True
@@ -209,13 +210,13 @@ def parse_paths(args):
     # init the world objects
     world_list = parse_world_list(world_list)
 
-    return world_list, world.RegionSet(region_list = region_list)
+    return world_list, world.RegionSet(region_list=region_list)
 
 
 def parse_world_list(world_path_list):
     """ Parses a world list checking if they exists and are a minecraft
         world folders. Returns a list of World objects. """
-    
+
     tmp = []
     for d in world_path_list:
         if exists(d):

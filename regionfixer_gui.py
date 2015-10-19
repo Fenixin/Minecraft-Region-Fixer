@@ -5,10 +5,9 @@ from multiprocessing import freeze_support
 import sys
 
 # Needed for the gui
-import regionfixer_core
-import nbt
 
 from gui import Starter
+
 if __name__ == '__main__':
     freeze_support()
     s = Starter()
