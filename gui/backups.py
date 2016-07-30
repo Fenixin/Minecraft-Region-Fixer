@@ -84,7 +84,7 @@ class BackupsWindow(wx.Frame):
     def OnAddWorld(self, e):
         """ Called when the buttom Add is clicked. """
 
-        dlg = wx.DirDialog(self, "Choose a Minecraf world folder")
+        dlg = wx.DirDialog(self, "Choose a Minecraft world folder")
         # Set the last path used
         dlg.SetPath(self.last_path)
         if dlg.ShowModal() == wx.ID_OK:
