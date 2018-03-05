@@ -57,7 +57,7 @@ with your world.
 
 Usage
 =====
-You can read the program help running: "python region-fixer.py --help"
+You can read the program help running: "python regionfixer.py --help"
 
 For usage examples and more info visit the wiki:
 
