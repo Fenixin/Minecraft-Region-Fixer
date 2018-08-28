@@ -612,6 +612,7 @@ def console_scan_regionset(regionset, processes, entity_limit,
     scanners = [rs]
     titles = [entitle("Scanning separate region files", 0)]
     console_scan_loop(scanners, titles, verbose)
+    regionset.scanned = True
 
 
 def scan_data(scanned_dat_file):
