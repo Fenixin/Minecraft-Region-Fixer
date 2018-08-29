@@ -6,7 +6,6 @@ http://www.minecraftwiki.net/wiki/Region_file_format
 
 from .nbt import NBTFile, MalformedFileError
 from struct import pack, unpack
-from gzip import GzipFile
 from collections import Mapping
 import zlib
 import gzip
@@ -20,6 +19,8 @@ from os import SEEK_END
 SECTOR_LENGTH = 4096
 """Constant indicating the length of a sector. A Region file is divided in sectors of 4096 bytes each."""
 
+# TODO: move status codes to an (Enum) object
+
 # Status is a number representing:
 # -5 = Error, the chunk is overlapping with another chunk
 # -4 = Error, the chunk length is too large to fit in the sector length in the region header
@@ -29,7 +30,7 @@ SECTOR_LENGTH = 4096
 #  0 = Ok
 #  1 = Chunk non-existant yet
 STATUS_CHUNK_OVERLAPPING = -5
-"""Constant indicating an error status: the chunk is allocated a sector already occupied by another chunk"""
+"""Constant indicating an error status: the chunk is allocated to a sector already occupied by another chunk"""
 STATUS_CHUNK_MISMATCHED_LENGTHS = -4
 """Constant indicating an error status: the region header length and the chunk length are incompatible"""
 STATUS_CHUNK_ZERO_LENGTH = -3
@@ -44,11 +45,11 @@ STATUS_CHUNK_NOT_CREATED = 1
 """Constant indicating an normal status: the chunk does not exist"""
 
 COMPRESSION_NONE = 0
-"""Constant indicating tha tthe chunk is not compressed."""
+"""Constant indicating that the chunk is not compressed."""
 COMPRESSION_GZIP = 1
-"""Constant indicating tha tthe chunk is GZip compressed."""
+"""Constant indicating that the chunk is GZip compressed."""
 COMPRESSION_ZLIB = 2
-"""Constant indicating tha tthe chunk is zlib compressed."""
+"""Constant indicating that the chunk is zlib compressed."""
 
 
 # TODO: reconsider these errors. where are they catched? Where would an implementation make a difference in handling the different exceptions.
@@ -139,7 +140,7 @@ class _HeaderWrapper(Mapping):
         m = self.metadata[xz]
         return (m.blockstart, m.blocklength, m.timestamp, m.status)
     def __iter__(self):
-        return iter(self.metadata) # iterates of the keys
+        return iter(self.metadata) # iterates over the keys
     def __len__(self):
         return len(self.metadata)
 class _ChunkHeaderWrapper(Mapping):
@@ -150,16 +151,24 @@ class _ChunkHeaderWrapper(Mapping):
         m = self.metadata[xz]
         return (m.length if m.length > 0 else None, m.compression, m.status)
     def __iter__(self):
-        return iter(self.metadata) # iterates of the keys
+        return iter(self.metadata) # iterates over the keys
     def __len__(self):
         return len(self.metadata)
+
+class Location(object):
+    def __init__(self, x=None, y=None, z=None):
+        self.x = x
+        self.y = y
+        self.z = z
+    def __str__(self):
+        return "%s(x=%s, y=%s, z=%s)" % (self.__class__.__name__, self.x, self.y, self.z)
 
 class RegionFile(object):
     """A convenience class for extracting NBT files from the Minecraft Beta Region Format."""
     
     # Redefine constants for backward compatibility.
     STATUS_CHUNK_OVERLAPPING = STATUS_CHUNK_OVERLAPPING
-    """Constant indicating an error status: the chunk is allocated a sector
+    """Constant indicating an error status: the chunk is allocated to a sector
     already occupied by another chunk. 
     Deprecated. Use :const:`nbt.region.STATUS_CHUNK_OVERLAPPING` instead."""
     STATUS_CHUNK_MISMATCHED_LENGTHS = STATUS_CHUNK_MISMATCHED_LENGTHS
@@ -244,6 +253,9 @@ class RegionFile(object):
         Deprecated. Use :attr:`metadata` instead.
         """
 
+        self.loc = Location()
+        """Optional: x,z location of a region within a world."""
+        
         self._init_header()
         self._parse_header()
         self._parse_chunk_headers()
@@ -264,6 +276,13 @@ class RegionFile(object):
         return sectors if remainder == 0 else sectors + 1
     
     def close(self):
+        """
+        Clean up resources after use.
+        
+        Note that the instance is no longer readable nor writable after calling close().
+        The method is automatically called by garbage collectors, but made public to
+        allow explicit cleanup.
+        """
         if self._closefile:
             try:
                 self.file.close()
@@ -463,9 +482,15 @@ class RegionFile(object):
         return self.iter_chunks()
 
     def get_timestamp(self, x, z):
-        """Return the timestamp of when this region file was last modified."""
-        # TODO: raise an exception if chunk does not exist?
-        # TODO: return a datetime.datetime object using datetime.fromtimestamp()
+        """
+        Return the timestamp of when this region file was last modified.
+        
+        Note that this returns the timestamp as-is. A timestamp may exist, 
+        while the chunk does not, or it may return a timestamp of 0 even 
+        while the chunk exists.
+        
+        To convert to an actual date, use `datetime.fromtimestamp()`.
+        """
         return self.metadata[x,z].timestamp
 
     def chunk_count(self):
@@ -484,7 +509,7 @@ class RegionFile(object):
         # read metadata block
         m = self.metadata[x, z]
         if m.status == STATUS_CHUNK_NOT_CREATED:
-            raise InconceivedChunk("Chunk is not created")
+            raise InconceivedChunk("Chunk %d,%d is not present in region" % (x,z))
         elif m.status == STATUS_CHUNK_IN_HEADER:
             raise RegionHeaderError('Chunk %d,%d is in the region header' % (x,z))
         elif m.status == STATUS_CHUNK_OUT_OF_FILE and (m.length <= 1 or m.compression == None):
@@ -545,11 +570,18 @@ class RegionFile(object):
         Return a NBTFile of the specified chunk.
         Raise InconceivedChunk if the chunk is not included in the file.
         """
+        # TODO: cache results?
         data = self.get_blockdata(x, z) # This may raise a RegionFileFormatError.
         data = BytesIO(data)
         err = None
         try:
-            return NBTFile(buffer=data)
+            nbt = NBTFile(buffer=data)
+            if self.loc.x != None:
+                x += self.loc.x*32
+            if self.loc.z != None:
+                z += self.loc.z*32
+            nbt.loc = Location(x=x, z=z)
+            return nbt
             # this may raise a MalformedFileError. Convert to ChunkDataError.
         except MalformedFileError as e:
             err = '%s' % e # avoid str(e) due to Unicode issues in Python 2.
@@ -566,12 +598,24 @@ class RegionFile(object):
         """
         return self.get_nbt(x, z)
 
-    def write_blockdata(self, x, z, data):
+    def write_blockdata(self, x, z, data, compression=COMPRESSION_ZLIB):
         """
         Compress the data, write it to file, and add pointers in the header so it 
         can be found as chunk(x,z).
         """
-        data = zlib.compress(data) # use zlib compression, rather than Gzip
+        if compression == COMPRESSION_GZIP:
+            # Python 3.1 and earlier do not yet support `data = gzip.compress(data)`.
+            compressed_file = BytesIO()
+            f = gzip.GzipFile(fileobj=compressed_file)
+            f.write(data)
+            f.close()
+            compressed_file.seek(0)
+            data = compressed_file.read()
+            del compressed_file
+        elif compression == COMPRESSION_ZLIB:
+            data = zlib.compress(data) # use zlib compression, rather than Gzip
+        elif compression != COMPRESSION_NONE:
+            raise ValueError("Unknown compression type %d" % compression)
         length = len(data)
 
         # 5 extra bytes are required for the chunk block header
@@ -599,7 +643,7 @@ class RegionFile(object):
         # write out chunk to region
         self.file.seek(sector*SECTOR_LENGTH)
         self.file.write(pack(">I", length + 1)) #length field
-        self.file.write(pack(">B", COMPRESSION_ZLIB)) #compression field
+        self.file.write(pack(">B", compression)) #compression field
         self.file.write(data) #compressed data
 
         # Write zeros up to the end of the chunk

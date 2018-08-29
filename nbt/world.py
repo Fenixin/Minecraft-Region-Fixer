@@ -5,13 +5,12 @@ Handles a Minecraft world save using either the Anvil or McRegion format.
 import os, glob, re
 from . import region
 from . import chunk
-from .region import InconceivedChunk
+from .region import InconceivedChunk, Location
 
 class UnknownWorldFormat(Exception):
     """Unknown or invalid world folder."""
     def __init__(self, msg=""):
         self.msg = msg
-
 
 
 class _BaseWorldFolder(object):
@@ -21,6 +20,8 @@ class _BaseWorldFolder(object):
     Simply calling WorldFolder() will do this automatically.
     """
     type = "Generic"
+    extension = ''
+    chunkclass = chunk.Chunk
 
     def __init__(self, world_folder):
         """Initialize a WorldFolder."""
@@ -34,6 +35,9 @@ class _BaseWorldFolder(object):
         self.set_regionfiles(self.get_filenames())
 
     def get_filenames(self):
+        """Find all matching file names in the world folder.
+        
+        This method is private, and it's use it deprecated. Use get_regionfiles() instead."""
         # Warning: glob returns a empty list if the directory is unreadable, without raising an Exception
         return list(glob.glob(os.path.join(self.worldfolder,'region','r.*.*.'+self.extension)))
 
@@ -59,13 +63,13 @@ class _BaseWorldFolder(object):
                 pass
             self.regionfiles[(x,z)] = filename
 
-    def nonempty(self):
-        """Return True is the world is non-empty."""
-        return len(self.regionfiles) > 0
-
     def get_regionfiles(self):
         """Return a list of full path of all region files."""
         return list(self.regionfiles.values())
+
+    def nonempty(self):
+        """Return True is the world is non-empty."""
+        return len(self.regionfiles) > 0
 
     def get_region(self, x,z):
         """Get a region using x,z coordinates of a region. Cache results."""
@@ -75,12 +79,72 @@ class _BaseWorldFolder(object):
             else:
                 # Return an empty RegionFile object
                 # TODO: this does not yet allow for saving of the region file
+                # TODO: this currently fails with a ValueError!
+                # TODO: generate the correct name, and create the file
+                # and add the fie to self.regionfiles
                 self.regions[(x,z)] = region.RegionFile()
+            self.regions[(x,z)].loc = Location(x=x,z=z)
         return self.regions[(x,z)]
 
     def iter_regions(self):
+        """
+        Return an iterable list of all region files. Use this function if you only
+        want to loop through each region files once, and do not want to cache the results.
+        """
+        # TODO: Implement BoundingBox
+        # TODO: Implement sort order
         for x,z in self.regionfiles.keys():
-            yield self.get_region(x,z)
+            close_after_use = False
+            if (x,z) in self.regions:
+                regionfile = self.regions[(x,z)]
+            else:
+                # It is not yet cached.
+                # Get file, but do not cache later.
+                regionfile = region.RegionFile(self.regionfiles[(x,z)])
+                regionfile.loc = Location(x=x,z=z)
+                close_after_use = True
+            try:
+                yield regionfile
+            finally:
+                if close_after_use:
+                    regionfile.close()
+
+    def call_for_each_region(self, callback_function, boundingbox=None):
+        """
+        Return an iterable that calls callback_function for each region file 
+        in the world. This is equivalent to:
+        ```
+        for the_region in iter_regions():
+                yield callback_function(the_region)
+        ````
+        
+        This function is threaded. It uses pickle to pass values between threads.
+        See [What can be pickled and unpickled?](https://docs.python.org/library/pickle.html#what-can-be-pickled-and-unpickled) in the Python documentation
+        for limitation on the output of `callback_function()`.
+        """
+        raise NotImplemented()
+
+    def get_nbt(self,x,z):
+        """
+        Return a NBT specified by the chunk coordinates x,z. Raise InconceivedChunk
+        if the NBT file is not yet generated. To get a Chunk object, use get_chunk.
+        """
+        rx,cx = divmod(x,32)
+        rz,cz = divmod(z,32)
+        if (rx,rz) not in self.regions and (rx,rz) not in self.regionfiles:
+            raise InconceivedChunk("Chunk %s,%s is not present in world" % (x,z))
+        nbt = self.get_region(rx,rz).get_nbt(cx,cz)
+        assert nbt != None
+        return nbt
+
+    def set_nbt(self,x,z,nbt):
+        """
+        Set a chunk. Overrides the NBT if it already existed. If the NBT did not exists,
+        adds it to the Regionfile. May create a new Regionfile if that did not exist yet.
+        nbt must be a nbt.NBTFile instance, not a Chunk or regular TAG_Compound object.
+        """
+        raise NotImplemented()
+        # TODO: implement
 
     def iter_nbt(self):
         """
@@ -93,39 +157,20 @@ class _BaseWorldFolder(object):
             for c in region.iter_chunks():
                 yield c
 
-    def iter_chunks(self):
+    def call_for_each_nbt(self, callback_function, boundingbox=None):
         """
-        Return an iterable list of all chunks. Use this function if you only
-        want to loop through the chunks once or have a very large world.
-        Use get_chunks() if you access the chunk list frequently and want to cache
-        the results. Use iter_nbt() if you are concerned about speed and don't want
-        to parse the block data.
-        """
-        # TODO: Implement BoundingBox
-        # TODO: Implement sort order
-        for c in self.iter_nbt():
-            yield self.chunkclass(c)
-
-    def get_nbt(self,x,z):
-        """
-        Return a NBT specified by the chunk coordinates x,z. Raise InconceivedChunk
-        if the NBT file is not yet generated. To get a Chunk object, use get_chunk.
-        """
-        rx,x = divmod(x,32)
-        rz,z = divmod(z,32)
-        nbt = self.get_region(rx,rz).get_chunk(x,z)
-        if nbt == None:
-            raise InconceivedChunk("Chunk %s,%s not present in world" % (32*rx+x,32*rz+z))
-        return nbt
-
-    def set_nbt(self,x,z,nbt):
-        """
-        Set a chunk. Overrides the NBT if it already existed. If the NBT did not exists,
-        adds it to the Regionfile. May create a new Regionfile if that did not exist yet.
-        nbt must be a nbt.NBTFile instance, not a Chunk or regular TAG_Compound object.
+        Return an iterable that calls callback_function for each NBT structure 
+        in the world. This is equivalent to:
+        ```
+        for the_nbt in iter_nbt():
+                yield callback_function(the_nbt)
+        ````
+        
+        This function is threaded. It uses pickle to pass values between threads.
+        See [What can be pickled and unpickled?](https://docs.python.org/library/pickle.html#what-can-be-pickled-and-unpickled) in the Python documentation
+        for limitation on the output of `callback_function()`.
         """
         raise NotImplemented()
-        # TODO: implement
 
     def get_chunk(self,x,z):
         """
@@ -144,6 +189,19 @@ class _BaseWorldFolder(object):
         if self.chunks == None:
             self.chunks = list(self.iter_chunks())
         return self.chunks
+
+    def iter_chunks(self):
+        """
+        Return an iterable list of all chunks. Use this function if you only
+        want to loop through the chunks once or have a very large world.
+        Use get_chunks() if you access the chunk list frequently and want to cache
+        the results. Use iter_nbt() if you are concerned about speed and don't want
+        to parse the block data.
+        """
+        # TODO: Implement BoundingBox
+        # TODO: Implement sort order
+        for c in self.iter_nbt():
+            yield self.chunkclass(c)
 
     def chunk_count(self):
         """Return a count of the chunks in this world folder."""
@@ -166,26 +224,6 @@ class _BaseWorldFolder(object):
                 b.expand(x,None,z)
         return b
 
-    def cache_test(self):
-        """
-        Debug routine: loop through all chunks, fetch them again by coordinates,
-        and check if the same object is returned.
-        """
-        # TODO: make sure this test succeeds (at least True,True,False, preferable True,True,True)
-        # TODO: Move this function to test class.
-        for rx,rz in self.regionfiles.keys():
-            region = self.get_region(rx,rz)
-            rx,rz = 32*rx,32*rz
-            for cc in region.get_chunk_coords():
-                x,z = (rx+cc['x'],rz+cc['z'])
-                c1 = self.chunkclass(region.get_chunk(cc['x'],cc['z']))
-                c2 = self.get_chunk(x,z)
-                correct_coords = (c2.get_coords() == (x,z))
-                is_comparable = (c1 == c2) # test __eq__ function
-                is_equal = (id(c1) == id(c2)) # test if they point to the same memory location
-                # DEBUG (prints a tuple)
-                print((x,z,c1,c2,correct_coords,is_comparable,is_equal))
-
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__,self.worldfolder)
 
@@ -194,8 +232,8 @@ class McRegionWorldFolder(_BaseWorldFolder):
     """Represents a world save using the old McRegion format."""
     type = "McRegion"
     extension = 'mcr'
-    chunkclass = chunk.Chunk
-    # chunkclass = chunk.McRegionChunk  # TODO: change to McRegionChunk when done
+    chunkclass = chunk.McRegionChunk
+
 
 class AnvilWorldFolder(_BaseWorldFolder):
     """Represents a world save using the new Anvil format."""
@@ -205,7 +243,7 @@ class AnvilWorldFolder(_BaseWorldFolder):
     # chunkclass = chunk.AnvilChunk  # TODO: change to AnvilChunk when done
 
 
-class _WorldFolderFactory():
+class _WorldFolderFactory(object):
     """Factory class: instantiate the subclassses in order, and the first instance 
     whose nonempty() method returns True is returned. If no nonempty() returns True,
     a UnknownWorldFormat exception is raised."""
@@ -252,10 +290,16 @@ class BoundingBox(object):
             if self.maxz is None or z > self.maxz:
                 self.maxz = z
     def lenx(self):
+        if self.maxx is None or self.minx is None:
+            return 0
         return self.maxx-self.minx+1
     def leny(self):
+        if self.maxy is None or self.miny is None:
+            return 0
         return self.maxy-self.miny+1
     def lenz(self):
+        if self.maxz is None or self.minz is None:
+            return 0
         return self.maxz-self.minz+1
     def __repr__(self):
         return "%s(%s,%s,%s,%s,%s,%s)" % (self.__class__.__name__,self.minx,self.maxx,

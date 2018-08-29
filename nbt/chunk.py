@@ -1,6 +1,13 @@
 """
 Handles a single chunk of data (16x16x128 blocks) from a Minecraft save.
-Chunk is currently McRegion only.
+
+WARNING: Chunk is currently McRegion only.
+You likely should not use chunk, but instead just get the NBT datastructure,
+and do the appropriate lookups and block conversions yourself.
+
+The authors decided to focus on NBT datastructure and Region files, 
+and are not actively working on chunk.py.
+Code contributions to chunk.py are welcomed!
 """
 from io import BytesIO
 from struct import pack, unpack
@@ -11,7 +18,6 @@ class Chunk(object):
     def __init__(self, nbt):
         chunk_data = nbt['Level']
         self.coords = chunk_data['xPos'],chunk_data['zPos']
-        self.blocks = BlockArray(chunk_data['Blocks'].value, chunk_data['Data'].value)
 
     def get_coords(self):
         """Return the coordinates of this chunk."""
@@ -21,6 +27,13 @@ class Chunk(object):
         """Return a representation of this Chunk."""
         return "Chunk("+str(self.coords[0])+","+str(self.coords[1])+")"
 
+
+class McRegionChunk(Chunk):
+    def __init__(self, nbt):
+        Chunk.__init__(self, nbt)
+        self.blocks = BlockArray(nbt['Level']['Blocks'].value, nbt['Level']['Data'].value)
+
+# TODO: Add class AnvilChunk(Chunk)
 
 class BlockArray(object):
     """Convenience class for dealing with a Block/data byte array."""
