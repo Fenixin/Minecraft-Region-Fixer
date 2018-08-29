@@ -903,7 +903,7 @@ class World(object):
                             # The backups world doesn't change, check if the
                             # region_file is already scanned:
                             try:
-                                coords = get_region_coords(backup_region_path.split()[1])
+                                coords = get_region_coords(split(backup_region_path)[1]) 
                                 r = scanned_regions[coords]
                             except KeyError:
                                 from scan import scan_region_file
