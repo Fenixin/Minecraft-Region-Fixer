@@ -8,6 +8,7 @@ From The spec:
 read the full spec at http://www.minecraft.net/docs/NBT.txt
 
 [![Build Status](https://secure.travis-ci.org/twoolie/NBT.png?branch=master)](http://travis-ci.org/#!/twoolie/NBT)
+[![Test Coverage Status](https://coveralls.io/repos/twoolie/NBT/badge.svg)](https://coveralls.io/r/twoolie/NBT)
 
 Usage:
  1) Reading files.
