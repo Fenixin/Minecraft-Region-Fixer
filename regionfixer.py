@@ -32,19 +32,8 @@ from regionfixer_core.scan import console_scan_world, console_scan_regionset,\
 from regionfixer_core.interactive import InteractiveLoop
 from regionfixer_core.util import entitle, is_bare_console, parse_paths,\
                                   parse_backup_list
-from regionfixer_core import progressbar
 from regionfixer_core.version import version_string
 from regionfixer_core.bug_reporter import BugReporter
-
-
-
-class FractionWidget(progressbar.ProgressBarWidget):
-    """ Convenience class to use the progressbar.py """
-    def __init__(self, sep=' / '):
-        self.sep = sep
-
-    def update(self, pbar):
-        return '%2d%s%2d' % (pbar.currval, self.sep, pbar.maxval)
 
 
 def delete_bad_chunks(options, scanned_obj):
@@ -316,15 +305,6 @@ def main():
 
     error = parser.error
 
-    # All scanners will use this progress bar
-    widgets = ['Scanning: ',
-               FractionWidget(),
-               ' ',
-               progressbar.Percentage(),
-               ' ',
-               progressbar.Bar(left='[', right=']'),
-               ' ',
-               progressbar.ETA()]
 
     if o.interactive or o.summary:
         if any_chunk_replace_option or any_region_replace_option:

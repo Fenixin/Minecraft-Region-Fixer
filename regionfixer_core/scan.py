@@ -36,7 +36,7 @@ import nbt.nbt as nbt
 from nbt.nbt import MalformedFileError
 from nbt.region import ChunkDataError, ChunkHeaderError,\
                        RegionHeaderError, InconceivedChunk
-from . import progressbar
+from progressbar import ProgressBar, Bar, AdaptiveETA, SimpleProgress
 from . import world
 
 from regionfixer_core.util import entitle
@@ -97,15 +97,6 @@ class ChildProcessException(Exception):
         f.close()
 
         return error_log_path
-
-
-class FractionWidget(progressbar.ProgressBarWidget):
-    """ Convenience class to use the progressbar.py """
-    def __init__(self, sep=' / '):
-        self.sep = sep
-
-    def update(self, pbar):
-        return '%2d%s%2d' % (pbar.currval, self.sep, pbar.maxval)
 
 
 def multiprocess_scan_data(data):
@@ -500,17 +491,6 @@ class AsyncWorldRegionScanner(object):
         return l
 
 
-# All scanners will use this progress bar
-widgets = ['Scanning: ',
-           FractionWidget(),
-           ' ',
-           progressbar.Percentage(),
-           ' ',
-           progressbar.Bar(left='[', right=']'),
-           ' ',
-           progressbar.ETA()]
-
-
 def console_scan_loop(scanners, scan_titles, verbose):
     """ Uses all the AsyncScanner passed to scan the files and
     print status text to the terminal. """
@@ -522,8 +502,7 @@ def console_scan_loop(scanners, scan_titles, verbose):
             else:
                 total = len(scanner)
                 if not verbose:
-                    pbar = progressbar.ProgressBar(widgets=widgets,
-                                                   maxval=total)
+                    pbar = ProgressBar(widgets=[SimpleProgress(), Bar(), AdaptiveETA()], maxval=total).start()
                 try:
                     scanner.scan()
                     counter = 0
