@@ -25,7 +25,7 @@
 import sys
 import logging
 import multiprocessing
-from multiprocessing.queues import SimpleQueue
+from multiprocessing import SimpleQueue
 from os.path import split, abspath
 from time import sleep, time
 from copy import copy
@@ -36,8 +36,8 @@ import nbt.nbt as nbt
 from nbt.nbt import MalformedFileError
 from nbt.region import ChunkDataError, ChunkHeaderError,\
                        RegionHeaderError, InconceivedChunk
-import progressbar
-import world
+from . import progressbar
+from . import world
 
 from regionfixer_core.util import entitle
 
@@ -516,9 +516,9 @@ def console_scan_loop(scanners, scan_titles, verbose):
     print status text to the terminal. """
     try:
         for scanner, title in zip(scanners, scan_titles):
-            print "\n{0:-^60}".format(title)
+            print("\n{0:-^60}".format(title))
             if not len(scanner):
-                print "Info: No files to scan."
+                print("Info: No files to scan.")
             else:
                 total = len(scanner)
                 if not verbose:
@@ -537,7 +537,7 @@ def console_scan_loop(scanners, scan_titles, verbose):
                             else:
                                 status = "(" + result.oneliner_status + ")"
                                 fn = result.filename
-                                print "Scanned {0: <12} {1:.<43} {2}/{3}".format(fn, status, counter, total)
+                                print("Scanned {0: <12} {1:.<43} {2}/{3}".format(fn, status, counter, total))
                     if not verbose:
                         pbar.finish()
                 except KeyboardInterrupt as e:
@@ -565,25 +565,25 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities,
     # because of this.
     w = world_obj
     # Scan the world directory
-    print "World info:"
+    print("World info:")
 
-    print ("There are {0} region files, {1} player files and {2} data"
+    print(("There are {0} region files, {1} player files and {2} data"
            " files in the world directory.").format(
                                      w.get_number_regions(),
                                      len(w.players) + len(w.old_players),
-                                     len(w.data_files))
+                                     len(w.data_files)))
 
     # check the level.dat
-    print "\n{0:-^60}".format(' Checking level.dat ')
+    print("\n{0:-^60}".format(' Checking level.dat '))
 
     if not w.scanned_level.path:
-        print "[WARNING!] \'level.dat\' doesn't exist!"
+        print("[WARNING!] \'level.dat\' doesn't exist!")
     else:
         if w.scanned_level.readable == True:
-            print "\'level.dat\' is readable"
+            print("\'level.dat\' is readable")
         else:
-            print "[WARNING!]: \'level.dat\' is corrupted with the following error/s:"
-            print "\t {0}".format(w.scanned_level.status_text)
+            print("[WARNING!]: \'level.dat\' is corrupted with the following error/s:")
+            print("\t {0}".format(w.scanned_level.status_text))
 
     ps = AsyncDataScanner(w.players, processes)
     ops = AsyncDataScanner(w.old_players, processes)
@@ -679,7 +679,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
             r.scan_time = time()
             r.scanned = True
             return r
-        except IOError, e:
+        except IOError as e:
             r.status = world.REGION_UNREADABLE
             r.scan_time = time()
             r.scanned = True
@@ -708,9 +708,9 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
                     # and once detected is better to fix it at once.
                     if delete_entities:
                         world.delete_entities(region_file, x, z)
-                        print ("Deleted {0} entities in chunk"
+                        print(("Deleted {0} entities in chunk"
                                " ({1},{2}) of the region file: {3}").format(
-                                    c[TUPLE_NUM_ENTITIES], x, z, r.filename)
+                                    c[TUPLE_NUM_ENTITIES], x, z, r.filename))
                         # entities removed, change chunk status to OK
                         r.chunks[(x, z)] = (0, world.CHUNK_OK)
 
@@ -754,7 +754,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         return r
 
     except KeyboardInterrupt:
-        print "\nInterrupted by user\n"
+        print("\nInterrupted by user\n")
         # TODO this should't exit. It should return to interactive
         # mode if we are in it.
         sys.exit(1)

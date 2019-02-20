@@ -7,8 +7,8 @@ Created on 16/09/2014
 import sys
 import ftplib
 import datetime
-from StringIO import StringIO
-from util import query_yes_no, get_str_from_traceback
+from io import StringIO
+from .util import query_yes_no, get_str_from_traceback
 
 
 SERVER = 'regionfixer.no-ip.org'

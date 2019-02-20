@@ -6,7 +6,7 @@ from time import sleep
 from os.path import split, abspath
 from os import name as os_name
 
-from backups import BackupsWindow
+from .backups import BackupsWindow
 from regionfixer_core.scan import AsyncWorldRegionScanner, AsyncDataScanner,\
     ChildProcessException
 from regionfixer_core import world

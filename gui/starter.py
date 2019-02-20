@@ -4,12 +4,12 @@
 import wx
 import sys
 import traceback
-from StringIO import StringIO
+from io import StringIO
 
-from main import MainWindow
-from backups import BackupsWindow
-from about import AboutWindow
-from help import HelpWindow
+from .main import MainWindow
+from .backups import BackupsWindow
+from .about import AboutWindow
+from .help import HelpWindow
 
 from regionfixer_core.scan import ChildProcessException
 from regionfixer_core.bug_reporter import BugReporter
@@ -41,7 +41,7 @@ class MyApp(wx.App):
         
         answer = dlg.ShowModal()
         if answer == wx.ID_YES:
-            print "Sending bug report!"
+            print("Sending bug report!")
             bugsender = BugReporter(error_str=s)
             success = bugsender.send()
             # Dialog with success or not of the ftp uploading

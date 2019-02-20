@@ -23,7 +23,7 @@
 
 import nbt.region as region
 import nbt.nbt as nbt
-from util import table
+from .util import table
 
 from glob import glob
 from os.path import join, split, exists
@@ -239,7 +239,7 @@ class ScannedRegionFile(object):
         self.chunks[key] = value
 
     def keys(self):
-        return self.chunks.keys()
+        return list(self.chunks.keys())
 
     def get_counters(self):
         """ Returns integers with all the problem counters in this
@@ -257,7 +257,7 @@ class ScannedRegionFile(object):
             If problem is omited or None, counts all the chunks. Returns
             an integer with the counter. """
         counter = 0
-        for coords in self.keys():
+        for coords in list(self.keys()):
             if self[coords] and (self[coords][TUPLE_STATUS] == problem or problem == None):
                 counter += 1
 
@@ -298,7 +298,7 @@ class ScannedRegionFile(object):
             returns all the existent chunks in the region file """
 
         l = []
-        for c in self.keys():
+        for c in list(self.keys()):
             t = self[c]
             if status == t[TUPLE_STATUS]:
                 l.append((self.get_global_chunk_coords(*c), t))
@@ -314,7 +314,7 @@ class ScannedRegionFile(object):
         if self.status == REGION_TOO_SMALL:
             text += " |- This region file is too small in size to actually be a region file.\n"
         else:
-            for c in self.keys():
+            for c in list(self.keys()):
                 if self[c][TUPLE_STATUS] == CHUNK_OK or self[c][TUPLE_STATUS] == CHUNK_NOT_CREATED: continue
                 status = self[c][TUPLE_STATUS]
                 h_coords = c
@@ -379,7 +379,7 @@ class ScannedRegionFile(object):
     def rescan_entities(self, options):
         """ Updates the status of all the chunks in the region file when
             the the option entity limit is changed. """
-        for c in self.keys():
+        for c in list(self.keys()):
             # for safety reasons use a temporary list to generate the
             # new tuple
             t = [0,0]
@@ -441,7 +441,7 @@ class DataFileSet(DataSet):
             d[path] = ScannedDataFile(path)
 
     def _get_list(self):
-        return self.data_files.values()
+        return list(self.data_files.values())
 
     def _replace_in_data_structure(self, data):
         self.data_files[data.path] = data
@@ -452,7 +452,7 @@ class DataFileSet(DataSet):
     def summary(self):
         """ Return a summary of problems found in this set. """
         text = ""
-        bad_data_files = [i for i in self.data_files.values() if not i.readable]
+        bad_data_files = [i for i in list(self.data_files.values()) if not i.readable]
         for f in bad_data_files:
             text += "\t" + f.oneliner_status
             text += "\n"
@@ -483,7 +483,7 @@ class RegionSet(DataSet):
                 self.scanned = False
 
             except InvalidFileName as e:
-                print "Warning: The file {0} is not a valid name for a region. I'll skip it.".format(path)
+                print("Warning: The file {0} is not a valid name for a region. I'll skip it.".format(path))
             
 
     def get_name(self):
@@ -533,13 +533,13 @@ class RegionSet(DataSet):
         return len(self.regions)
 
     def _get_list(self):
-        return self.regions.values()
+        return list(self.regions.values())
 
     def _replace_in_data_structure(self, data):
         self.regions[data.get_coords()] = data
 
     def keys(self):
-        return self.regions.keys()
+        return list(self.regions.keys())
 
     def list_regions(self, status=None):
         """ Returns a list of all the ScannedRegionFile objects stored
@@ -552,9 +552,9 @@ class RegionSet(DataSet):
             #~ print self.regions.values()
             #~ print "El diccionario es si es:"
             #~ print self.regions
-            return self.regions.values()
+            return list(self.regions.values())
         t = []
-        for coords in self.regions.keys():
+        for coords in list(self.regions.keys()):
             r = self.regions[coords]
             if r.status == status:
                 t.append(r)
@@ -566,7 +566,7 @@ class RegionSet(DataSet):
             Possible status are: empty, too_small """
 
         counter = 0
-        for r in self.keys():
+        for r in list(self.keys()):
             if status == self[r].status:
                 counter += 1
             elif status == None:
@@ -577,7 +577,7 @@ class RegionSet(DataSet):
         """ Returns the number of chunks with the given problem. If
             problem is None returns the number of chunks. """
         counter = 0
-        for r in self.keys():
+        for r in list(self.keys()):
             counter += self[r].count_chunks(problem)
         return counter
 
@@ -586,7 +586,7 @@ class RegionSet(DataSet):
             with the given status. If status = None returns all the
             chunks. """
         l = []
-        for r in self.keys():
+        for r in list(self.keys()):
             l.extend(self[r].list_chunks(status))
         return l
 
@@ -595,7 +595,7 @@ class RegionSet(DataSet):
             regionset. The summary is a string with global coords,
             local coords, data coords and status. """
         text = ""
-        for r in self.keys():
+        for r in list(self.keys()):
             if not (self[r].count_chunks(CHUNK_CORRUPTED) or \
                     self[r].count_chunks(CHUNK_TOO_MANY_ENTITIES) or \
                     self[r].count_chunks(CHUNK_WRONG_LOCATED) or \
@@ -632,10 +632,10 @@ class RegionSet(DataSet):
 
         counter = 0
         if self.count_chunks():
-            print ' Deleting chunks in region set \"{0}\":'.format(self._get_dimension_directory())
-            for r in self.regions.keys():
+            print(' Deleting chunks in region set \"{0}\":'.format(self._get_dimension_directory()))
+            for r in list(self.regions.keys()):
                 counter += self.regions[r].remove_problematic_chunks(problem)
-            print "Removed {0} chunks in this regionset.\n".format(counter)
+            print("Removed {0} chunks in this regionset.\n".format(counter))
 
         return counter
 
@@ -643,14 +643,14 @@ class RegionSet(DataSet):
         """ Removes entities in chunks with the status
             TOO_MANY_ENTITIES. """
         counter = 0
-        for r in self.regions.keys():
+        for r in list(self.regions.keys()):
             counter += self.regions[r].remove_entities()
         return counter
 
     def rescan_entities(self, options):
         """ Updates the status of all the chunks in the regionset when
             the option entity limit is changed. """
-        for r in self.keys():
+        for r in list(self.keys()):
             self[r].rescan_entities(options)
 
     def generate_report(self, standalone):
@@ -738,7 +738,7 @@ class World(object):
                 self.scanned_level = ScannedDataFile(level_dat_path,
                                                     readable=True,
                                                     status_text="OK")
-            except Exception, e:
+            except Exception as e:
                 self.name = None
                 self.scanned_level = ScannedDataFile(level_dat_path,
                                                     readable=False,
@@ -885,19 +885,19 @@ class World(object):
                 bad_chunks = regionset.list_chunks(problem)
 
                 if bad_chunks and b_regionset._get_dimension_directory() != regionset._get_dimension_directory():
-                    print "The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dimension_directory())
+                    print("The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dimension_directory()))
                 else:
                     for c in bad_chunks:
                         global_coords = c[0]
                         status_tuple = c[1]
                         local_coords = _get_local_chunk_coords(*global_coords)
-                        print "\n{0:-^60}".format(' New chunk to replace. Coords: x = {0}; z = {1} '.format(*global_coords))
+                        print("\n{0:-^60}".format(' New chunk to replace. Coords: x = {0}; z = {1} '.format(*global_coords)))
 
                         # search for the region file
                         backup_region_path, local_coords = b_regionset.locate_chunk(global_coords)
                         tofix_region_path, _ = regionset.locate_chunk(global_coords)
                         if exists(backup_region_path):
-                            print "Backup region file found in:\n  {0}".format(backup_region_path)
+                            print("Backup region file found in:\n  {0}".format(backup_region_path))
                             # Scan the whole region file, pretty slow, but
                             # absolutely needed to detect sharing offset chunks
                             # The backups world doesn't change, check if the
@@ -906,7 +906,7 @@ class World(object):
                                 coords = get_region_coords(split(backup_region_path)[1]) 
                                 r = scanned_regions[coords]
                             except KeyError:
-                                from scan import scan_region_file
+                                from .scan import scan_region_file
                                 r = scan_region_file(ScannedRegionFile(backup_region_path), entity_limit, delete_entities)
                                 scanned_regions[r.coords] = r
                             try:
@@ -924,7 +924,7 @@ class World(object):
                                 backup_region_file = region.RegionFile(backup_region_path)
                                 working_chunk = backup_region_file.get_chunk(local_coords[0],local_coords[1])
 
-                                print "Replacing..."
+                                print("Replacing...")
                                 # the chunk exists and is healthy, fix it!
                                 tofix_region_file = region.RegionFile(tofix_region_path)
                                 # first unlink the chunk, second write the chunk.
@@ -933,14 +933,14 @@ class World(object):
                                 tofix_region_file.unlink_chunk(*local_coords)
                                 tofix_region_file.write_chunk(local_coords[0], local_coords[1],working_chunk)
                                 counter += 1
-                                print "Chunk replaced using backup dir: {0}".format(backup.path)
+                                print("Chunk replaced using backup dir: {0}".format(backup.path))
 
                             else:
-                                print "Can't use this backup directory, the chunk has the status: {0}".format(CHUNK_STATUS_TEXT[status])
+                                print("Can't use this backup directory, the chunk has the status: {0}".format(CHUNK_STATUS_TEXT[status]))
                                 continue
 
                         else:
-                            print "The region file doesn't exist in the backup directory: {0}".format(backup_region_path)
+                            print("The region file doesn't exist in the backup directory: {0}".format(backup_region_path))
 
         return counter
 
@@ -967,10 +967,10 @@ class World(object):
 
                 bad_regions = regionset.list_regions(problem)
                 if bad_regions and b_regionset._get_dimension_directory() != regionset._get_dimension_directory():
-                    print "The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dimension_directory())
+                    print("The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dimension_directory()))
                 else:
                     for r in bad_regions:
-                        print "\n{0:-^60}".format(' New region file to replace! Coords {0} '.format(r.get_coords()))
+                        print("\n{0:-^60}".format(' New region file to replace! Coords {0} '.format(r.get_coords())))
 
                         # search for the region file
 
@@ -981,21 +981,21 @@ class World(object):
                         tofix_region_path = r.get_path()
 
                         if backup_region_path != None and exists(backup_region_path):
-                            print "Backup region file found in:\n  {0}".format(backup_region_path)
+                            print("Backup region file found in:\n  {0}".format(backup_region_path))
                             # check the region file, just open it.
                             try:
                                 backup_region_file = region.RegionFile(backup_region_path)
                             except region.NoRegionHeader as e:
-                                print "Can't use this backup directory, the error while opening the region file: {0}".format(e)
+                                print("Can't use this backup directory, the error while opening the region file: {0}".format(e))
                                 continue
                             except Exception as e:
-                                print "Can't use this backup directory, unknown error: {0}".format(e)
+                                print("Can't use this backup directory, unknown error: {0}".format(e))
                                 continue
                             copy(backup_region_path, tofix_region_path)
-                            print "Region file replaced!"
+                            print("Region file replaced!")
                             counter += 1
                         else:
-                            print "The region file doesn't exist in the backup directory: {0}".format(backup_region_path)
+                            print("The region file doesn't exist in the backup directory: {0}".format(backup_region_path))
 
         return counter
 

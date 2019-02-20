@@ -57,19 +57,19 @@ def delete_bad_chunks(options, scanned_obj):
                       options.delete_wrong_located,
                       options.delete_entities,
                       options.delete_shared_offset]
-    deleting = zip(options_delete, world.CHUNK_PROBLEMS)
+    deleting = list(zip(options_delete, world.CHUNK_PROBLEMS))
     for delete, problem in deleting:
         status = world.CHUNK_STATUS_TEXT[problem]
         total = scanned_obj.count_chunks(problem)
         if delete:
             if total:
                 text = ' Deleting chunks with status: {0} '.format(status)
-                print("\n{0:#^60}".format(text))
+                print(("\n{0:#^60}".format(text)))
                 counter = scanned_obj.remove_problematic_chunks(problem)
-                print("\nDeleted {0} chunks with status: {1}".format(counter,
-                                                                     status))
+                print(("\nDeleted {0} chunks with status: {1}".format(counter,
+                                                                     status)))
             else:
-                print("No chunks to delete with status: {0}".format(status))
+                print(("No chunks to delete with status: {0}".format(status)))
 
 
 def delete_bad_regions(options, scanned_obj):
@@ -78,19 +78,19 @@ def delete_bad_regions(options, scanned_obj):
     with problems iterating through all the possible problems. """
     print("")
     options_delete = [options.delete_too_small]
-    deleting = zip(options_delete, world.REGION_PROBLEMS)
+    deleting = list(zip(options_delete, world.REGION_PROBLEMS))
     for delete, problem in deleting:
         status = world.REGION_STATUS_TEXT[problem]
         total = scanned_obj.count_regions(problem)
         if delete:
             if total:
                 text = ' Deleting regions with status: {0} '.format(status)
-                print("{0:#^60}".format(text))
+                print(("{0:#^60}".format(text)))
                 counter = scanned_obj.remove_problematic_regions(problem)
-                print("Deleted {0} regions with status: {1}".format(counter,
-                                                                    status))
+                print(("Deleted {0} regions with status: {1}".format(counter,
+                                                                    status)))
             else:
-                print("No regions to delete with status: {0}".format(status))
+                print(("No regions to delete with status: {0}".format(status)))
 
 
 def main():
@@ -273,10 +273,10 @@ def main():
     (options, args) = parser.parse_args()
     o = options
 
-    if sys.version_info[0] > 2:
+    if sys.version_info[0] > 5:
         print("")
         print("Minecraft Region Fixer only works with python 2.x")
-        print("(And you just tried to run it in python {0})".format(sys.version))
+        print(("(And you just tried to run it in python {0})".format(sys.version)))
         print("")
         return 1
 
@@ -357,7 +357,7 @@ def main():
         error("The entity limit must be at least 0!")
 
     print("\nWelcome to Region Fixer!")
-    print("(version: {0})".format(parser.version))
+    print(("(version: {0})".format(parser.version)))
 
     # Do things with the option options args
     # Create a list of worlds containing the backups of the region files
@@ -379,7 +379,7 @@ def main():
         if len(regionset.regions) > 0:
             console_scan_regionset(regionset, o.processes, o.entity_limit,
                                    o.delete_entities, o.verbose)
-            print(regionset.generate_report(True))
+            print((regionset.generate_report(True)))
 
             # Delete chunks
             delete_bad_chunks(options, regionset)
@@ -401,14 +401,14 @@ def main():
         # scan all the world folders
         for w in world_list:
             w_name = w.get_name()
-            print(entitle(' Scanning world: {0} '.format(w_name), 0))
+            print((entitle(' Scanning world: {0} '.format(w_name), 0)))
 
             console_scan_world(w, o.processes, o.entity_limit,
                                o.delete_entities, o.verbose)
 
             print("")
-            print(entitle('Scan results for: {0}'.format(w_name), 0))
-            print(w.generate_report(True))
+            print((entitle('Scan results for: {0}'.format(w_name), 0)))
+            print((w.generate_report(True)))
 
 #             corrupted, wrong_located, entities_prob, shared_prob,\
 #             total_chunks, too_small_region, unreadable_region, total_regions\
@@ -423,17 +423,17 @@ def main():
                                    o.replace_wrong_located,
                                    o.replace_entities,
                                    o.replace_shared_offset]
-                replacing = zip(options_replace, world.CHUNK_PROBLEMS_ITERATOR)
+                replacing = list(zip(options_replace, world.CHUNK_PROBLEMS_ITERATOR))
                 for replace, (problem, status, arg) in replacing:
                     if replace:
                         total = w.count_chunks(problem)
                         if total:
                             text = " Replacing chunks with status: {0} ".format(status)
-                            print("{0:#^60}".format(text))
+                            print(("{0:#^60}".format(text)))
                             fixed = w.replace_problematic_chunks(backup_worlds, problem, ent_lim, del_ent)
-                            print("\n{0} replaced of a total of {1} chunks with status: {2}".format(fixed, total, status))
+                            print(("\n{0} replaced of a total of {1} chunks with status: {2}".format(fixed, total, status)))
                         else:
-                            print("No chunks to replace with status: {0}".format(status))
+                            print(("No chunks to replace with status: {0}".format(status)))
 
             elif any_chunk_replace_option and not backup_worlds:
                 print("Info: Won't replace any chunk.")
@@ -447,17 +447,17 @@ def main():
                 del_ent = options.delete_entities
                 ent_lim = options.entity_limit
                 options_replace = [o.replace_too_small]
-                replacing = zip(options_replace, world.REGION_PROBLEMS_ITERATOR)
+                replacing = list(zip(options_replace, world.REGION_PROBLEMS_ITERATOR))
                 for replace, (problem, status, arg) in replacing:
                     if replace:
                         total = w.count_regions(problem)
                         if total:
                             text = " Replacing regions with status: {0} ".format(status)
-                            print("{0:#^60}".format(text))
+                            print(("{0:#^60}".format(text)))
                             fixed = w.replace_problematic_regions(backup_worlds, problem, ent_lim, del_ent)
-                            print("\n{0} replaced of a total of {1} regions with status: {2}".format(fixed, total, status))
+                            print(("\n{0} replaced of a total of {1} regions with status: {2}".format(fixed, total, status)))
                         else:
-                            print("No region to replace with status: {0}".format(status))
+                            print(("No region to replace with status: {0}".format(status)))
 
             elif any_region_replace_option and not backup_worlds:
                 print("Info: Won't replace any regions.")
@@ -487,7 +487,7 @@ def main():
                 f.write(summary_text)
                 f.write('\n')
                 f.close()
-                print("Log file saved in \'{0}\'.".format(options.summary))
+                print(("Log file saved in \'{0}\'.".format(options.summary)))
             except:
                 print("Something went wrong while saving the log file!")
 
