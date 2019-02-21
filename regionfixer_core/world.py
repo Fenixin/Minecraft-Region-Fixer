@@ -43,22 +43,26 @@ CHUNK_CORRUPTED = 1
 CHUNK_WRONG_LOCATED = 2
 CHUNK_TOO_MANY_ENTITIES = 3
 CHUNK_SHARED_OFFSET = 4
+CHUNK_MISSING_TAG = 5
 CHUNK_STATUS_TEXT = {CHUNK_NOT_CREATED: "Not created",
                      CHUNK_OK: "OK",
                      CHUNK_CORRUPTED: "Corrupted",
                      CHUNK_WRONG_LOCATED: "Wrong located",
                      CHUNK_TOO_MANY_ENTITIES: "Too many entities",
-                     CHUNK_SHARED_OFFSET: "Sharing offset"}
+                     CHUNK_SHARED_OFFSET: "Sharing offset",
+                     CHUNK_MISSING_TAG: "Missing Entities tag"}
 
 CHUNK_PROBLEMS = [CHUNK_CORRUPTED,
                   CHUNK_WRONG_LOCATED,
                   CHUNK_TOO_MANY_ENTITIES,
-                  CHUNK_SHARED_OFFSET]
+                  CHUNK_SHARED_OFFSET,
+                  CHUNK_MISSING_TAG]
 
 CHUNK_PROBLEMS_ARGS = {CHUNK_CORRUPTED: 'corrupted',
                        CHUNK_WRONG_LOCATED: 'wrong',
                        CHUNK_TOO_MANY_ENTITIES: 'entities',
-                       CHUNK_SHARED_OFFSET: 'sharing'}
+                       CHUNK_SHARED_OFFSET: 'sharing',
+                       CHUNK_MISSING_TAG: 'miss-tag'}
 # list with problem, status-text, problem arg tuples
 CHUNK_PROBLEMS_ITERATOR = []
 for problem in CHUNK_PROBLEMS:
@@ -663,6 +667,7 @@ class RegionSet(DataSet):
         wrong_located = self.count_chunks(CHUNK_WRONG_LOCATED)
         entities_prob = self.count_chunks(CHUNK_TOO_MANY_ENTITIES)
         shared_prob = self.count_chunks(CHUNK_SHARED_OFFSET)
+        miss_tag_prob = self.count_chunks(CHUNK_MISSING_TAG)
         total_chunks = self.count_chunks()
 
         too_small_region = self.count_regions(REGION_TOO_SMALL)
@@ -674,13 +679,25 @@ class RegionSet(DataSet):
 
             # Print all this info in a table format
             # chunks
-            chunk_errors = ("Problem","Corrupted","Wrong l.","Etities","Shared o.", "Total chunks")
-            chunk_counters = ("Counts",corrupted, wrong_located, entities_prob, shared_prob, total_chunks)
+            chunk_errors = ("Problem",
+                            "Corrupted",
+                            "Wrong l.",
+                            "Entities",
+                            "Shared o.",
+                            "Missing tag",
+                            "Total chunks")
+            chunk_counters = ("Counts",
+                              corrupted,
+                              wrong_located,
+                              entities_prob,
+                              shared_prob,
+                              miss_tag_prob,
+                              total_chunks)
             table_data = []
             for i, j in zip(chunk_errors, chunk_counters):
                 table_data.append([i,j])
             text += "\nChunk problems:\n"
-            if corrupted or wrong_located or entities_prob or shared_prob:
+            if corrupted or wrong_located or entities_prob or shared_prob or miss_tag_prob:
                 text += table(table_data)
             else:
                 text += "No problems found.\n"
@@ -1023,12 +1040,16 @@ class World(object):
             regionset.rescan_entities(options)
 
     def generate_report(self, standalone):
+        """ Generates a report with the results of the scan. """
 
         # collect data
         corrupted = self.count_chunks(CHUNK_CORRUPTED)
         wrong_located = self.count_chunks(CHUNK_WRONG_LOCATED)
         entities_prob = self.count_chunks(CHUNK_TOO_MANY_ENTITIES)
         shared_prob = self.count_chunks(CHUNK_SHARED_OFFSET)
+        miss_tag_prob = self.count_chunks(CHUNK_MISSING_TAG)
+        print("miss tag prob {0}".format(miss_tag_prob))
+        print("WHAT THE ACTUAL FFFF")
         total_chunks = self.count_chunks()
 
         too_small_region = self.count_regions(REGION_TOO_SMALL)
@@ -1065,18 +1086,20 @@ class World(object):
                             "Wrong l.",
                             "Entities",
                             "Shared o.",
+                            "Missing tag",
                             "Total chunks")
             chunk_counters = ("Counts",
                               corrupted,
                               wrong_located,
                               entities_prob,
                               shared_prob,
+                              miss_tag_prob,
                               total_chunks)
             table_data = []
             for i, j in zip(chunk_errors, chunk_counters):
                 table_data.append([i,j])
             text += "\nChunk problems:\n"
-            if corrupted or wrong_located or entities_prob or shared_prob:
+            if corrupted or wrong_located or entities_prob or shared_prob or miss_tag_prob:
                 text += table(table_data)
             else:
                 text += "No problems found.\n"

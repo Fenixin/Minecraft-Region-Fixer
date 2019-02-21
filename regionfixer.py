@@ -321,13 +321,13 @@ def main():
             else:
                 if (len(regionset.regions) > 0):
                     error('You can\'t use the replace options while scanning '
-                          'sparate region files. The input should be only one '
-                          'world and you intruduced {0} individual region '
+                          'separate region files. The input should be only one '
+                          'world and you introduced {0} individual region '
                           'files.'.format(len(regionset.regions)))
                 elif (len(world_list) > 1):
                     error('You can\'t use the replace options while scanning '
                           'multiple worlds. The input should be only one '
-                          'world and you intruduced {0} '
+                          'world and you introduced {0} '
                           'worlds.'.format(len(world_list)))
 
         if not o.backups and any_chunk_replace_option:
