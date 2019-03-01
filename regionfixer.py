@@ -490,7 +490,7 @@ if __name__ == '__main__':
         had_exception = True
         print(ERROR_MSG)
         bug_sender = BugReporter(e.printable_traceback)
-        auto_reported = bug_sender.ask_and_send(QUESTION_TEXT)
+        #auto_reported = bug_sender.ask_and_send(QUESTION_TEXT)
         bug_report = bug_sender.error_str
 
     except Exception as e:
@@ -498,7 +498,7 @@ if __name__ == '__main__':
         print(ERROR_MSG)
         # Traceback will be taken in init
         bug_sender = BugReporter()
-        auto_reported = bug_sender.ask_and_send(QUESTION_TEXT)
+        #auto_reported = bug_sender.ask_and_send(QUESTION_TEXT)
         bug_report = bug_sender.error_str
 
     finally:
