@@ -188,7 +188,7 @@ def main():
                     'the entities in chunks with more entities than '
                     '--entity-limit (300 by default). In a Minecraft '
                     'entities are mostly mobs and items dropped in the '
-                    'grond, items in chests and other stuff won\'t be '
+                    'ground, items in chests and other stuff won\'t be '
                     'touched. Read the README for more info. Region-Fixer '
                     'will delete the entities while scanning so you can '
                     'stop and resume the process',
@@ -225,7 +225,7 @@ def main():
 
     add_option('--processes',
                '-p',
-               help='Set the number of workers to use for scanning. (defaulta '
+               help='Set the number of workers to use for scanning. (default '
                     '= 1, not use multiprocessing at all)',
                action='store',
                type=int,
@@ -236,7 +236,7 @@ def main():
                help='Don\'t use a progress bar, instead print a line per '
                     'scanned region file with results information. The '
                     'letters mean c: corrupted; w: wrong located; t: total of '
-                    'chunksm; tme: too many entities problem',
+                    'chunks; tme: too many entities problem',
               action='store_true',
               default=False)
 
@@ -250,7 +250,7 @@ def main():
 
     add_option('--log',
                '-l',
-               help='Saves a log of all the problems found in the spicifyed '
+               help='Saves a log of all the problems found in the specified '
                     'file. The log file contains all the problems found with '
                     'this information: region file, chunk coordinates and '
                     'problem. Use \'-\' as name to show the log at the end '
@@ -271,11 +271,11 @@ def main():
 
     if is_bare_console():
         print("")
-        print("Minecraft Region Fixer hast a command line aplication and a GUI\n"
+        print("Minecraft Region Fixer has a command line application and a GUI\n"
               "(Graphic User Interface) and you have just double clicked the\n"
               "command line interface. If you really want to run the command line\n"
               "interface you have to use a command prompt (cmd.exe)\n\n"
-              "You can also run the gui, double click regionfixer_gui.py instead!")
+              "You can also run the GUI, double click regionfixer_gui.py instead!")
         print("")
         getpass("Press enter to continue:")
         return 1
