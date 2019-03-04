@@ -811,7 +811,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
     
     except KeyError as e:
         error = "Missing Entities TAG"
-        status = world.CHUNK_MISSING_TAG
+        status = world.CHUNK_MISSING_ENTITIES_TAG
         status_text = error
         scan_time = time()
         chunk = None
