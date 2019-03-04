@@ -47,6 +47,13 @@ CHUNK_TOO_MANY_ENTITIES = 3
 CHUNK_SHARED_OFFSET = 4
 CHUNK_MISSING_ENTITIES_TAG = 5
 
+# Status that are considered problems
+CHUNK_PROBLEMS = [CHUNK_CORRUPTED,
+                  CHUNK_WRONG_LOCATED,
+                  CHUNK_TOO_MANY_ENTITIES,
+                  CHUNK_SHARED_OFFSET,
+                  CHUNK_MISSING_ENTITIES_TAG]
+
 # Text describing each chunk status
 CHUNK_STATUS_TEXT = {CHUNK_NOT_CREATED: "Not created",
                      CHUNK_OK: "OK",
@@ -56,13 +63,6 @@ CHUNK_STATUS_TEXT = {CHUNK_NOT_CREATED: "Not created",
                      CHUNK_SHARED_OFFSET: "Sharing offset",
                      CHUNK_MISSING_ENTITIES_TAG: "Missing Entities tag"}
 
-# Status that are considered problems
-CHUNK_PROBLEMS = [CHUNK_CORRUPTED,
-                  CHUNK_WRONG_LOCATED,
-                  CHUNK_TOO_MANY_ENTITIES,
-                  CHUNK_SHARED_OFFSET,
-                  CHUNK_MISSING_ENTITIES_TAG]
-
 # arguments used in the options
 CHUNK_PROBLEMS_ARGS = {CHUNK_CORRUPTED: 'corrupted',
                        CHUNK_WRONG_LOCATED: 'wrong',
@@ -70,12 +70,19 @@ CHUNK_PROBLEMS_ARGS = {CHUNK_CORRUPTED: 'corrupted',
                        CHUNK_SHARED_OFFSET: 'sharing',
                        CHUNK_MISSING_ENTITIES_TAG: 'miss_tag'}
 
+# used in some places where there is less space
+CHUNK_PROBLEMS_ABBR = {CHUNK_CORRUPTED: 'c',
+                       CHUNK_WRONG_LOCATED: 'w',
+                       CHUNK_TOO_MANY_ENTITIES: 'tme',
+                       CHUNK_SHARED_OFFSET: 'so',
+                       CHUNK_MISSING_ENTITIES_TAG: 'mt'}
+
 # Dictionary with possible solutions for the chunks problems,
 # used to create options dynamically
 # The possible solutions right now are:
-CHUNK_SOLUTION_REMOVE = 101
-CHUNK_SOLUTION_REPLACE = 102
-CHUNK_SOLUTION_REMOVE_ENTITIES = 103
+CHUNK_SOLUTION_REMOVE = 51
+CHUNK_SOLUTION_REPLACE = 52
+CHUNK_SOLUTION_REMOVE_ENTITIES = 53
 
 CHUNK_PROBLEMS_SOLUTIONS = {CHUNK_CORRUPTED: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE],
                        CHUNK_WRONG_LOCATED: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE],
@@ -93,15 +100,36 @@ for problem in CHUNK_PROBLEMS:
 # Region related:
 # ---------------
 # Used to mark the status of region files:
-REGION_OK = 10
-REGION_TOO_SMALL = 11
-REGION_UNREADABLE = 12
+REGION_OK = 100
+REGION_TOO_SMALL = 101
+REGION_UNREADABLE = 102
+
+# Text describing each chunk status
 REGION_STATUS_TEXT = {REGION_OK: "Ok",
                       REGION_TOO_SMALL: "Too small",
                       REGION_UNREADABLE: "Unreadable"}
 
-REGION_PROBLEMS = [REGION_TOO_SMALL]
-REGION_PROBLEMS_ARGS = {REGION_TOO_SMALL: 'too small'}
+# Status that are considered problems
+REGION_PROBLEMS = [REGION_TOO_SMALL,
+                   REGION_UNREADABLE]
+
+# arguments used in the options
+REGION_PROBLEMS_ARGS = {REGION_TOO_SMALL: 'too_small',
+                        REGION_UNREADABLE: 'unreadable'}
+
+# used in some places where there is less space
+REGION_PROBLEMS_ABBR = {REGION_TOO_SMALL: 'ts',
+                        REGION_UNREADABLE: 'ur'}
+
+# Dictionary with possible solutions for the chunks problems,
+# used to create options dynamically
+# The possible solutions right now are:
+REGION_SOLUTION_REMOVE = 501
+REGION_SOLUTION_REPLACE = 502
+
+REGION_PROBLEMS_SOLUTIONS = {REGION_TOO_SMALL: [REGION_SOLUTION_REMOVE, REGION_SOLUTION_REPLACE],
+                       REGION_UNREADABLE: [REGION_SOLUTION_REMOVE, REGION_SOLUTION_REPLACE]}
+
 
 # list with problem, status-text, problem arg tuples
 REGION_PROBLEMS_ITERATOR = []
@@ -121,6 +149,10 @@ REGION_PROBLEMS_ARGS = {REGION_TOO_SMALL: 'too-small'}
 #~ TUPLE_GLOBAL_COORDS = 2
 TUPLE_NUM_ENTITIES = 0
 TUPLE_STATUS = 1
+
+# Data files relate:
+#-------------------
+# TODO TODO TODO
 
 # Dimension names:
 DIMENSION_NAMES = {"region": "Overworld",

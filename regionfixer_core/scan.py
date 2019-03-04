@@ -636,7 +636,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         If delete_entities is True it will delete entities while
         scanning
 
-        entiti_limit is the threshold tof entities to conisder a chunk
+        entiti_limit is the threshold of entities to consider a chunk
         with too much entities problems.
     """
     try:
@@ -713,6 +713,9 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         # good one). Only wrong located chunk with a overlapping
         # flag are really BAD chunks! Use this criterion to
         # discriminate
+        #
+        # TODO: Why? I don't remember why
+         
         metadata = region_file.metadata
         sharing = [k for k in metadata if (
             metadata[k].status == region.STATUS_CHUNK_OVERLAPPING and
@@ -751,7 +754,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
 
 
 def scan_chunk(region_file, coords, global_coords, entity_limit):
-    """ Takes a RegionFile obj and the local coordinatesof the chunk as
+    """ Takes a nbt.RegionFile object and the local coordinates of the chunk as
         inputs, then scans the chunk and returns all the data."""
     el = entity_limit
     try:
