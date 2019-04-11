@@ -595,7 +595,7 @@ def console_scan_regionset(regionset, processes, entity_limit,
 
 
 def scan_data(scanned_dat_file):
-    """ Try to parse the nbd data file, and fill the scanned object.
+    """ Try to parse the nbt data file, and fill the scanned object.
 
     If something is wrong it will return a tuple with useful info
     to debug the problem.
@@ -622,6 +622,13 @@ def scan_data(scanned_dat_file):
     except IOError as e:
         s.readable = False
         s.status_text = str(e)
+    except UnicodeDecodeError as e:
+        s.readable = False
+        s.status_text = str(e)
+    except TypeError as e:
+        s.readable = False
+        s.status_text = str(e)
+    
     except:
         s.readable = False
         except_type, except_class, tb = sys.exc_info()
