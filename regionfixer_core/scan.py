@@ -784,60 +784,76 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         num_entities = len(chunk["Level"]["Entities"])
         if data_coords != global_coords:
             status = world.CHUNK_WRONG_LOCATED
-            status_text = "Mismatched coordinates (wrong located chunk)."
-            scan_time = time()
+            #===================================================================
+            # status_text = "Mismatched coordinates (wrong located chunk)."
+            # scan_time = time()
+            #===================================================================
         elif num_entities > el:
             status = world.CHUNK_TOO_MANY_ENTITIES
-            status_text = "The chunks has too many entities (it has {0}, and it's more than the limit {1})".format(num_entities, entity_limit)
-            scan_time = time()
+            #===================================================================
+            # status_text = "The chunks has too many entities (it has {0}, and it's more than the limit {1})".format(num_entities, entity_limit)
+            # scan_time = time()
+            #===================================================================
         else:
             status = world.CHUNK_OK
-            status_text = "OK"
-            scan_time = time()
+            #===================================================================
+            # status_text = "OK"
+            # scan_time = time()
+            #===================================================================
 
     except InconceivedChunk as e:
         chunk = None
         data_coords = None
         num_entities = None
         status = world.CHUNK_NOT_CREATED
-        status_text = "The chunk doesn't exist"
-        scan_time = time()
+        #=======================================================================
+        # status_text = "The chunk doesn't exist"
+        # scan_time = time()
+        #=======================================================================
 
     except RegionHeaderError as e:
-        error = "Region header error: " + e.msg
         status = world.CHUNK_CORRUPTED
-        status_text = error
-        scan_time = time()
+        #=======================================================================
+        # error = "Region header error: " + e.msg
+        # status_text = error
+        # scan_time = time()
+        #=======================================================================
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
     except ChunkDataError as e:
-        error = "Chunk data error: " + e.msg
         status = world.CHUNK_CORRUPTED
-        status_text = error
-        scan_time = time()
+        #=======================================================================
+        # error = "Chunk data error: " + e.msg
+        # status_text = error
+        # scan_time = time()
+        #=======================================================================
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
     except ChunkHeaderError as e:
-        error = "Chunk herader error: " + e.msg
         status = world.CHUNK_CORRUPTED
-        status_text = error
-        scan_time = time()
+        #=======================================================================
+        # error = "Chunk herader error: " + e.msg
+        # status_text = error
+        # scan_time = time()
+        #=======================================================================
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
     
     except KeyError as e:
-        error = "Missing Entities TAG"
         status = world.CHUNK_MISSING_ENTITIES_TAG
-        status_text = error
-        scan_time = time()
+        #=======================================================================
+        # error = "Missing Entities TAG"
+        # status_text = error
+        # scan_time = time()
+        #=======================================================================
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
