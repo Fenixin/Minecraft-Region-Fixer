@@ -754,8 +754,22 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
 
 
 def scan_chunk(region_file, coords, global_coords, entity_limit):
-    """ Takes a nbt.RegionFile object and the local coordinates of the chunk as
-        inputs, then scans the chunk and returns all the data."""
+    """ Scans a chunk returning its status and number of entities.
+    
+    Keywords arguments:
+    region_file -- nbt.RegionFile object
+    coords -- tuple containing the local (region) coordinates of the chunk
+    global_coords -- tuple containing the global (world) coordinates of the chunk
+    entity_limit -- the number of entities that is considered to be too many
+    
+    Return:
+    chunk -- as a nbt file
+    (num_entities, status) -- tuple with the number of entities of the chunk and 
+                              the status described by the CHUNK_* variables in 
+                              world.py
+    
+    If the chunk does not exist (is not yet created it returns None
+    """
     el = entity_limit
     try:
         chunk = region_file.get_chunk(*coords)

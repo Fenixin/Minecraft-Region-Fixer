@@ -107,12 +107,12 @@ def table(columns):
         returns a text string with a table. """
 
     def get_max_len(l):
-        """ Takes a list and returns the length of the biggest
-            element """
+        """ Takes a list of strings and returns the length of the biggest
+            string  """
         m = 0
         for e in l:
             if len(str(e)) > m:
-                m = len(e)
+                m = len(str(e))
         return m
 
     text = ""
@@ -132,7 +132,7 @@ def table(columns):
     ml_total += 1 + 2# +1 for the separator | and +2 for the borders
     text += "-"*ml_total + "\n"
     # all the columns have the same number of rows
-    row = get_max_len(columns)
+    row = len(columns[0])
     for r in range(row):
         line = "|"
         # put all the elements in this row together with spaces

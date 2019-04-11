@@ -47,6 +47,16 @@ CHUNK_TOO_MANY_ENTITIES = 3
 CHUNK_SHARED_OFFSET = 4
 CHUNK_MISSING_ENTITIES_TAG = 5
 
+# Chunk statuses 
+CHUNK_STATUSES = [CHUNK_NOT_CREATED,
+                  CHUNK_OK,
+                  CHUNK_CORRUPTED,
+                  CHUNK_WRONG_LOCATED,
+                  CHUNK_TOO_MANY_ENTITIES,
+                  CHUNK_TOO_MANY_ENTITIES,
+                  CHUNK_SHARED_OFFSET,
+                  CHUNK_MISSING_ENTITIES_TAG]
+
 # Status that are considered problems
 CHUNK_PROBLEMS = [CHUNK_CORRUPTED,
                   CHUNK_WRONG_LOCATED,
@@ -103,6 +113,11 @@ for problem in CHUNK_PROBLEMS:
 REGION_OK = 100
 REGION_TOO_SMALL = 101
 REGION_UNREADABLE = 102
+
+# Region statuses
+REGION_STATUSES = [REGION_OK,
+                   REGION_TOO_SMALL,
+                   REGION_UNREADABLE]
 
 # Text describing each chunk status
 REGION_STATUS_TEXT = {REGION_OK: "Ok",
@@ -244,13 +259,17 @@ class ScannedRegionFile(object):
         # in the region file
         self.chunks = {}
 
-        # Counters with the number of chunks
-        # Filled in scan.scan_region_file
+        # Dictionary containing counters to for all the statuses
+        #
         self.corrupted_chunks = corrupted
         self.wrong_located_chunks = wrong
         self.entities_prob = entities_prob
         self.shared_offset = shared_offset
         self.chunk_count = chunks
+        
+        self.counts = {}
+        for s in CHUNK_STATUSES:
+            self.counts[s] = 0
 
         # time when the scan for this file finished
         self.scan_time = time
@@ -350,7 +369,7 @@ class ScannedRegionFile(object):
 # without a problem will remove all the chunks in the region file!!
     def list_chunks(self, status=None):
         """ Returns a list of all the ScannedChunk objects of the chunks
-            with the given status, if no status is omited or None,
+            with the given status, if no status is omitted or None,
             returns all the existent chunks in the region file """
 
         l = []
