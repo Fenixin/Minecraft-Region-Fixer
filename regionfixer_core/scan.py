@@ -859,6 +859,32 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
+    except UnicodeDecodeError as e:
+        # TODO: This should another kind of error, it's now being handled as corrupted chunk
+        status = world.CHUNK_CORRUPTED
+        #=======================================================================
+        # error = "Chunk data error: " + e.msg
+        # status_text = error
+        # scan_time = time()
+        #=======================================================================
+        chunk = None
+        data_coords = None
+        global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
+        num_entities = None
+
+    except TypeError as e:
+        # TODO: This should another kind of error, it's now being handled as corrupted chunk
+        status = world.CHUNK_CORRUPTED
+        #=======================================================================
+        # error = "Chunk data error: " + e.msg
+        # status_text = error
+        # scan_time = time()
+        #=======================================================================
+        chunk = None
+        data_coords = None
+        global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
+        num_entities = None
+
     return chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
 
 
