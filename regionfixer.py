@@ -494,7 +494,7 @@ def main():
             delete_bad_regions(options, w)
 
             # fix chunks
-            fix_bad_chunks(options, scanned_obj)
+            fix_bad_chunks(options, w)
 
             # print a summary for this world
             if options.summary:
