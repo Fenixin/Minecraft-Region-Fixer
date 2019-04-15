@@ -31,6 +31,7 @@ from os import remove
 from shutil import copy
 
 import time
+from nbt.nbt import TAG_List
 
 # Constants:
 
@@ -421,6 +422,25 @@ class ScannedRegionFile(object):
 
         return counter
 
+    def fix_problematic_chunks(self, problem):
+
+        counter = 0
+        bad_chunks = self.list_chunks(problem)
+        for c in bad_chunks:
+            global_coords = c[0]
+            local_coords = _get_local_chunk_coords(*global_coords)
+            region_file = region.RegionFile(self.path)
+            chunk = region_file.get_chunk(*local_coords)
+            chunk['Level']['Entities'] = TAG_List()
+            region_file.write_chunk(local_coords[0],local_coords[1], chunk)
+            counter += 1
+            # create the new status tuple
+            #                    (num_entities, chunk status)
+            self[local_coords] = (0           , CHUNK_NOT_CREATED)
+
+        return counter
+
+
     def remove_entities(self):
         """ Removes all the entities in chunks with the problematic
             status CHUNK_TOO_MANY_ENTITIES that are in this region file.
@@ -711,6 +731,19 @@ class RegionSet(DataSet):
             for r in list(self.regions.keys()):
                 counter += self.regions[r].remove_problematic_chunks(problem)
             print("Removed {0} chunks in this regionset.\n".format(counter))
+
+        return counter
+
+    def fix_problematic_chunks(self, problem):
+        """ Removes all the chunks with the given problem, returns a
+            counter with the number of deleted chunks. """
+
+        counter = 0
+        if self.count_chunks():
+            print(' Repairing chunks in region set \"{0}\":'.format(self._get_dimension_directory()))
+            for r in list(self.regions.keys()):
+                counter += self.regions[r].fix_problematic_chunks(problem)
+            print("Repaired {0} chunks in this regionset.\n".format(counter))
 
         return counter
 
@@ -1041,6 +1074,13 @@ class World(object):
         counter = 0
         for regionset in self.regionsets:
             counter += regionset.remove_problematic_chunks(problem)
+        return counter
+
+    def fix_problematic_chunks(self, problem):
+        """ Removes all the chunks with the given problem. """
+        counter = 0
+        for regionset in self.regionsets:
+            counter += regionset.fix_problematic_chunks(problem)
         return counter
 
     def replace_problematic_regions(self, backup_worlds, problem, entity_limit, delete_entities):
