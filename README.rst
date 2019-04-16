@@ -3,7 +3,6 @@ Minecraft Region Fixer
 ======================
 
 By Alejandro Aguilera (Fenixin) 
-Sponsored by NITRADO servers (http://nitrado.net)
 
 Locates problems and tries to fix Minecraft worlds (or region files).
 
@@ -24,8 +23,8 @@ http://www.minecraftforum.net/topic/275730-minecraft-region-fixer/
 
 Supported platforms
 ===================
-This program seems to work with Python 2.7.x, and DOESN'T work with
-python 3.x. There is also a windows executable for ease of use, if you
+This program only works with Python 3.x, and DOESN'T work with
+python 2.x. There is also a windows executable for ease of use, if you
 use the windows executable you don't need to install Python.
 
 
@@ -78,6 +77,11 @@ http://www.minecraftforum.net/topic/275730-tool-minecraft-region-fixer/
 (mapping and modding)
 http://www.minecraftforum.net/topic/302380-tool-minecraft-region-fixer/
 
+
+Donations and sponsors
+======================
+Region-Fixer was created thanks to sponsors and donations. You can find
+information about that in DONORS.txt
 
 Contributors
 ============
