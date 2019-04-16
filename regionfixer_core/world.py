@@ -36,7 +36,7 @@ from nbt.nbt import TAG_List
 # Constants:
 
 # 
-
+# --------------
 # Chunk related:
 # --------------
 # Used to mark the status of chunks:
@@ -108,36 +108,43 @@ for problem in CHUNK_PROBLEMS:
                                     CHUNK_STATUS_TEXT[problem],
                                     CHUNK_PROBLEMS_ARGS[problem]))
 
+# ---------------
 # Region related:
 # ---------------
 # Used to mark the status of region files:
 REGION_OK = 100
 REGION_TOO_SMALL = 101
 REGION_UNREADABLE = 102
+REGION_UNREADABLE_PERMISSION_ERROR = 103
 
 # Region statuses
 REGION_STATUSES = [REGION_OK,
                    REGION_TOO_SMALL,
-                   REGION_UNREADABLE]
+                   REGION_UNREADABLE,
+                   REGION_UNREADABLE_PERMISSION_ERROR]
 
-# Text describing each chunk status
+# Text describing each region status used to list all the problem at the end of the scan
 REGION_STATUS_TEXT = {REGION_OK: "Ok",
                       REGION_TOO_SMALL: "Too small",
-                      REGION_UNREADABLE: "Unreadable"}
+                      REGION_UNREADABLE: "Unreadable IOError",
+                      REGION_UNREADABLE_PERMISSION_ERROR: "Permission error"}
 
 # Status that are considered problems
 REGION_PROBLEMS = [REGION_TOO_SMALL,
-                   REGION_UNREADABLE]
+                   REGION_UNREADABLE,
+                   REGION_UNREADABLE_PERMISSION_ERROR]
 
 # arguments used in the options
 REGION_PROBLEMS_ARGS = {REGION_TOO_SMALL: 'too_small',
-                        REGION_UNREADABLE: 'unreadable'}
+                        REGION_UNREADABLE: 'unreadable',
+                        REGION_UNREADABLE_PERMISSION_ERROR: 'permission_error'}
 
 # used in some places where there is less space
 REGION_PROBLEMS_ABBR = {REGION_TOO_SMALL: 'ts',
-                        REGION_UNREADABLE: 'ur'}
+                        REGION_UNREADABLE: 'ur',
+                        REGION_UNREADABLE_PERMISSION_ERROR: 'pe'}
 
-# Dictionary with possible solutions for the chunks problems,
+# Dictionary with possible solutions for the region problems,
 # used to create options dynamically
 # The possible solutions right now are:
 REGION_SOLUTION_REMOVE = 501
@@ -991,7 +998,7 @@ class World(object):
         """ Takes a list of world objects and a problem value and try
             to replace every chunk with that problem using a working
             chunk from the list of world objects. It uses the world
-            objects in left to riht order. """
+            objects in left to right order. """
 
         counter = 0
         scanned_regions = {}

@@ -665,6 +665,13 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
             r.scan_time = time()
             r.scanned = True
             return r
+
+        except PermissionError as e:
+            r.status = world.REGION_UNREADABLE_PERMISSION_ERROR
+            r.scan_time = time()
+            r.scanned = True
+            return r
+
         except IOError as e:
             r.status = world.REGION_UNREADABLE
             r.scan_time = time()
