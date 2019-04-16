@@ -440,7 +440,9 @@ class ScannedRegionFile(object):
             local_coords = _get_local_chunk_coords(*global_coords)
             region_file = region.RegionFile(self.path)
             chunk = region_file.get_chunk(*local_coords)
-            chunk['Level']['Entities'] = TAG_List()
+            # The arguments to create the empty TAG_List have been somehow extracted by comparing
+            # the tag list from a healthy chunk with the one created by nbt
+            chunk['Level']['Entities'] = TAG_List(name='Entities', type=nbt._TAG_End)
             region_file.write_chunk(local_coords[0],local_coords[1], chunk)
             counter += 1
             # create the new status tuple

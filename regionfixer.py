@@ -247,7 +247,7 @@ def main():
 
     add_option('--fix-missing-tag',
                '--fm',
-               help='[DON\'T WORK] Fixes chunks that have the Entities tag missing.',
+               help='Fixes chunks that have the Entities tag missing. This will add the missing tag.',
                dest='fix_missing_tag',
                default=False,
                action='store_true')
