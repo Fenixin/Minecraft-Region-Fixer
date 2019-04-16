@@ -127,6 +127,8 @@ REGION_STATUSES = [REGION_OK,
 REGION_STATUS_TEXT = {REGION_OK: "Ok",
                       REGION_TOO_SMALL: "Too small",
                       REGION_UNREADABLE: "Unreadable IOError",
+                      # This status differentiates IOError from a file that you don't have permission to access
+                      # TODO: It would be better to open region files only in write mode when needed
                       REGION_UNREADABLE_PERMISSION_ERROR: "Permission error"}
 
 # Status that are considered problems

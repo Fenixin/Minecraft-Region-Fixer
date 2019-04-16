@@ -75,7 +75,8 @@ def delete_bad_chunks(options, scanned_obj):
     options_delete = [options.delete_corrupted,
                       options.delete_wrong_located,
                       options.delete_entities,
-                      options.delete_shared_offset]
+                      options.delete_shared_offset,
+                      options.delete_missing_tag]
     deleting = list(zip(options_delete, world.CHUNK_PROBLEMS))
     for delete, problem in deleting:
         status = world.CHUNK_STATUS_TEXT[problem]
@@ -236,11 +237,11 @@ def main():
                default=False,
                dest='delete_shared_offset')
 
-    add_option('--delete-too-small',
-               '--dt',
-               help='[WARNING!] This option deletes! Removes any region files '
-                    'found to be too small to actually be a region file.',
-               dest='delete_too_small',
+    add_option('--delete-missing-tag',
+               '--dmt',
+               help='[WARNING!] This option deletes! Removes any chunks '
+                    'with the mandatory entities tag missing.',
+               dest='delete_missing_tag',
                default=False,
                action='store_true')
 
@@ -248,6 +249,14 @@ def main():
                '--fm',
                help='[DON\'T WORK] Fixes chunks that have the Entities tag missing.',
                dest='fix_missing_tag',
+               default=False,
+               action='store_true')
+
+    add_option('--delete-too-small',
+               '--dt',
+               help='[WARNING!] This option deletes! Removes any region files '
+                    'found to be too small to actually be a region file.',
+               dest='delete_too_small',
                default=False,
                action='store_true')
 
@@ -299,9 +308,9 @@ def main():
     (options, args) = parser.parse_args()
     o = options
 
-    if sys.version_info[0] > 5:
+    if sys.version_info[0] != 3:
         print("")
-        print("Minecraft Region Fixer only works with python 2.x")
+        print("Minecraft Region Fixer only works with python 3.x")
         print(("(And you just tried to run it in python {0})".format(sys.version)))
         print("")
         return 1
