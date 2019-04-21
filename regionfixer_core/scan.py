@@ -237,6 +237,7 @@ class AsyncScanner(object):
                 self.raise_child_exception(d)
             # Copy it to the father process
             ds._replace_in_data_structure(d)
+            ds._update_counts(d)
             self.update_str_last_scanned(d)
             # Got result! Reset it!
             self.queries_without_results = 0
@@ -510,6 +511,7 @@ def console_scan_loop(scanners, scan_titles, verbose):
                         scanner.sleep()
                         result = scanner.get_last_result()
                         if result:
+                            logging.debug("\nNew result: {0}\n\nOneliner: {1}\n".format(result,result.oneliner_status))
                             counter += 1
                             if not verbose:
                                 pbar.update(counter)
@@ -687,7 +689,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
                                       g_coords,
                                       entity_limit)
                 if c:
-                    r.chunks[(x, z)] = c
+                    r[(x, z)] = c
                     chunk_count += 1
                 else:
                     # chunk not created
@@ -705,7 +707,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
                                " ({1},{2}) of the region file: {3}").format(
                                     c[TUPLE_NUM_ENTITIES], x, z, r.filename))
                         # entities removed, change chunk status to OK
-                        r.chunks[(x, z)] = (0, world.CHUNK_OK)
+                        r[(x, z)] = (0, world.CHUNK_OK)
 
                     else:
                         entities_prob += 1

@@ -37,6 +37,15 @@ from regionfixer_core.bug_reporter import BugReporter
 from regionfixer_core.world import CHUNK_MISSING_ENTITIES_TAG
 
 
+################
+# Return values
+################
+
+RV_OK = 0 # world scanned and no problems found
+RV_CRASH = 1 # crash or end unexpectedly
+RV_NOTHING_TO_SCAN = 2 # no files/worlds to scan
+RV_BAD_WORLD = 3 # scan completed successfully but problems have been found in the scan
+
 def fix_bad_chunks(options, scanned_obj):
     """ Fixes chunks that can be repaired.
     
@@ -313,7 +322,7 @@ def main():
         print("Minecraft Region Fixer only works with python 3.x")
         print(("(And you just tried to run it in python {0})".format(sys.version)))
         print("")
-        return 1
+        return RV_CRASH
 
     if is_bare_console():
         print("")
@@ -324,7 +333,7 @@ def main():
               "You can also run the GUI, double click regionfixer_gui.py instead!")
         print("")
         getpass("Press enter to continue:")
-        return 1
+        return RV_CRASH
 
     # Args are world_paths and region files
     if not args:
@@ -335,7 +344,7 @@ def main():
 
     if not (world_list or regionset):
         print ("Error: No worlds or region files to scan!")
-        return 1
+        return RV_NOTHING_TO_SCAN
 
     # Check basic options compatibilities
     any_chunk_replace_option = o.replace_corrupted or \
@@ -395,14 +404,19 @@ def main():
     else:
         backup_worlds = []
 
-    # The program starts
+    # The scanning process starts
+    found_problems_in_regionsets = False
+    found_problems_in_worlds = False
     if o.interactive:
         c = InteractiveLoop(world_list, regionset, o, backup_worlds)
         c.cmdloop()
+        return RV_OK
     else:
         summary_text = ""
         # Scan the separate region files
+        
         if len(regionset.regions) > 0:
+            
             console_scan_regionset(regionset, o.processes, o.entity_limit,
                                    o.delete_entities, o.verbose)
             print((regionset.generate_report(True)))
@@ -426,8 +440,13 @@ def main():
                     summary_text += t
                 else:
                     summary_text += "No problems found.\n\n"
+            
+            # Check if problems have been found
+            if regionset.has_problems:
+                found_problems_in_regionsets = True
 
         # scan all the world folders
+        
         for w in world_list:
             w_name = w.get_name()
             print((entitle(' Scanning world: {0} '.format(w_name), 0)))
@@ -438,12 +457,8 @@ def main():
             print("")
             print((entitle('Scan results for: {0}'.format(w_name), 0)))
             print((w.generate_report(True)))
-
-#             corrupted, wrong_located, entities_prob, shared_prob,\
-#             total_chunks, too_small_region, unreadable_region, total_regions\
-#             = w.generate_report(standalone = False)
-
             print("")
+
             # Replace chunks
             if backup_worlds and not len(world_list) > 1:
                 del_ent = options.delete_entities
@@ -509,6 +524,10 @@ def main():
             if options.summary:
                 summary_text += w.summary()
 
+            # check if problems have been found
+            if w.has_problems:
+                found_problems_in_worlds = True
+
         # verbose log text
         if options.summary == '-':
             print("\nPrinting log:\n")
@@ -522,8 +541,11 @@ def main():
                 print(("Log file saved in \'{0}\'.".format(options.summary)))
             except:
                 print("Something went wrong while saving the log file!")
-
-    return 0
+    
+    if found_problems_in_regionsets or found_problems_in_worlds:
+        return RV_BAD_WORLD
+    
+    return RV_OK
 
 
 if __name__ == '__main__':
@@ -536,7 +558,9 @@ if __name__ == '__main__':
     try:
         freeze_support()
         value = main()
-        sys.exit(value)
+        #=======================================================================
+        # sys.exit(value)
+        #=======================================================================
 
     except ChildProcessException as e:
         had_exception = True
@@ -544,6 +568,7 @@ if __name__ == '__main__':
         bug_sender = BugReporter(e.printable_traceback)
         #auto_reported = bug_sender.ask_and_send(QUESTION_TEXT)
         bug_report = bug_sender.error_str
+        value = RV_CRASH
 
     except Exception as e:
         had_exception = True
@@ -552,6 +577,7 @@ if __name__ == '__main__':
         bug_sender = BugReporter()
         #auto_reported = bug_sender.ask_and_send(QUESTION_TEXT)
         bug_report = bug_sender.error_str
+        value = RV_CRASH
 
     finally:
         if had_exception and not auto_reported:
@@ -561,3 +587,4 @@ if __name__ == '__main__':
             print(bug_report)
         elif had_exception and auto_reported:
             print("Bug report uploaded successfully")
+        sys.exit(value)
