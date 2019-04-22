@@ -779,77 +779,49 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         data_coords = world.get_chunk_data_coords(chunk)
         num_entities = len(chunk["Level"]["Entities"])
         if data_coords != global_coords:
+            # wrong located chunk
             status = world.CHUNK_WRONG_LOCATED
-            #===================================================================
-            # status_text = "Mismatched coordinates (wrong located chunk)."
-            # scan_time = time()
-            #===================================================================
         elif num_entities > el:
+            # too many entities in the chunk
             status = world.CHUNK_TOO_MANY_ENTITIES
-            #===================================================================
-            # status_text = "The chunks has too many entities (it has {0}, and it's more than the limit {1})".format(num_entities, entity_limit)
-            # scan_time = time()
-            #===================================================================
         else:
+            # chunk ok
             status = world.CHUNK_OK
-            #===================================================================
-            # status_text = "OK"
-            # scan_time = time()
-            #===================================================================
-
+    
     except InconceivedChunk as e:
+        # chunk not created
         chunk = None
         data_coords = None
         num_entities = None
         status = world.CHUNK_NOT_CREATED
-        #=======================================================================
-        # status_text = "The chunk doesn't exist"
-        # scan_time = time()
-        #=======================================================================
 
     except RegionHeaderError as e:
+        # corrupted chunk, because of region header
         status = world.CHUNK_CORRUPTED
-        #=======================================================================
-        # error = "Region header error: " + e.msg
-        # status_text = error
-        # scan_time = time()
-        #=======================================================================
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
     except ChunkDataError as e:
+        # corrupted chunk, usually because of bad CRC in compression
         status = world.CHUNK_CORRUPTED
-        #=======================================================================
-        # error = "Chunk data error: " + e.msg
-        # status_text = error
-        # scan_time = time()
-        #=======================================================================
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
     except ChunkHeaderError as e:
+        # corrupted chunk, error in the header of the chunk
         status = world.CHUNK_CORRUPTED
-        #=======================================================================
-        # error = "Chunk herader error: " + e.msg
-        # status_text = error
-        # scan_time = time()
-        #=======================================================================
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
-    
+
     except KeyError as e:
+        # chunk with the mandatory tag Entities missing
         status = world.CHUNK_MISSING_ENTITIES_TAG
-        #=======================================================================
-        # error = "Missing Entities TAG"
-        # status_text = error
-        # scan_time = time()
-        #=======================================================================
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
@@ -858,11 +830,6 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
     except UnicodeDecodeError as e:
         # TODO: This should another kind of error, it's now being handled as corrupted chunk
         status = world.CHUNK_CORRUPTED
-        #=======================================================================
-        # error = "Chunk data error: " + e.msg
-        # status_text = error
-        # scan_time = time()
-        #=======================================================================
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
@@ -871,11 +838,6 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
     except TypeError as e:
         # TODO: This should another kind of error, it's now being handled as corrupted chunk
         status = world.CHUNK_CORRUPTED
-        #=======================================================================
-        # error = "Chunk data error: " + e.msg
-        # status_text = error
-        # scan_time = time()
-        #=======================================================================
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
