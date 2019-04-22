@@ -165,7 +165,7 @@ class MainWindow(wx.Frame):
 
     def OnOpen(self, e):
         """ Called when the open world button is pressed. """
-        dlg = wx.DirDialog(self, "Choose a Minecraf world folder")
+        dlg = wx.DirDialog(self, "Choose a Minecraft world folder")
         # Set the last path used
         dlg.SetPath(self.last_path)
         if dlg.ShowModal() == wx.ID_OK:
