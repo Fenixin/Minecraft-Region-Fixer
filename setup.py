@@ -15,7 +15,9 @@ import zlib
 import shutil
 
 from regionfixer_core import version as cli_version
-from gui import version as gui_version
+#===============================================================================
+# from gui import version as gui_version
+#===============================================================================
 
 
 # Remove the build folder
@@ -128,18 +130,20 @@ data_files += [("", py26MSdll),]
 # Ok, now we are going to build our target class.
 # I chose this building strategy as it works perfectly for me :-D
 
-GUI_Target = Target(
-    # what to build
-    script = "regionfixer_gui.py",
-    icon_resources = icon_resources,
-    bitmap_resources = bitmap_resources,
-    other_resources = other_resources,
-    dest_base = "regionfixer_gui",
-    version = gui_version.version_string,
-    company_name = "No Company",
-    copyright = "Copyright (C) 2011  Alejandro Aguilera",
-    name = "Region Fixer GUI"
-    )
+#===============================================================================
+# GUI_Target = Target(
+#     # what to build
+#     script = "regionfixer_gui.py",
+#     icon_resources = icon_resources,
+#     bitmap_resources = bitmap_resources,
+#     other_resources = other_resources,
+#     dest_base = "regionfixer_gui",
+#     version = gui_version.version_string,
+#     company_name = "No Company",
+#     copyright = "Copyright (C) 2011  Alejandro Aguilera",
+#     name = "Region Fixer GUI"
+#     )
+#===============================================================================
 
 CLI_Target = Target(
     # what to build
@@ -150,7 +154,7 @@ CLI_Target = Target(
     dest_base = "regionfixer",
     version = cli_version.version_string,
     company_name = "No Company",
-    copyright = "Copyright (C) 2011  Alejandro Aguilera",
+    copyright = "Copyright (C) 2019  Alejandro Aguilera",
     name = "Region Fixer"
     )
 
@@ -179,8 +183,8 @@ setup(
               },
 
     zipfile = "lib\library.zip",
-    console = [CLI_Target],
-    windows = [GUI_Target]
+    console = [CLI_Target]
+    #windows = [GUI_Target]
     )
 
 # This is a place where any post-compile code may go.
