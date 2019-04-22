@@ -328,6 +328,16 @@ class ScannedRegionFile(object):
     def keys(self):
         return list(self._chunks.keys())
 
+    @property
+    def has_problems(self):
+        """ Return True if the region file has problem in itself or in its chunks. """
+        if self.status in REGION_PROBLEMS:
+            return True
+        for s in CHUNK_PROBLEMS:
+            if self.count_chunks(s):
+                return True
+        return False
+
     def get_path(self):
         """ Returns the path of the region file. """
         return self.path
@@ -394,18 +404,19 @@ class ScannedRegionFile(object):
             is a string with region file, global coords, local coords,
             and status of every problematic chunk. """
         text = ""
-        if self.status == REGION_TOO_SMALL:
-            text += " |- This region file is too small in size to actually be a region file.\n"
+        if self.status in REGION_PROBLEMS:
+            text += " |- This region has status: {0}.\n".format(REGION_STATUS_TEXT[self.status])
         else:
             for c in list(self.keys()):
-                if self[c][TUPLE_STATUS] == CHUNK_OK or self[c][TUPLE_STATUS] == CHUNK_NOT_CREATED: continue
+                if self[c][TUPLE_STATUS] not in CHUNK_PROBLEMS: 
+                    continue
                 status = self[c][TUPLE_STATUS]
                 h_coords = c
                 g_coords = self.get_global_chunk_coords(*h_coords)
                 text += " |-+-Chunk coords: header {0}, global {1}.\n".format(h_coords, g_coords)
                 text += " | +-Status: {0}\n".format(CHUNK_STATUS_TEXT[status])
                 if self[c][TUPLE_STATUS] == CHUNK_TOO_MANY_ENTITIES:
-                    text += " | +-Nº entities: {0}\n".format(self[c][TUPLE_NUM_ENTITIES])
+                    text += " | +-No. entities: {0}\n".format(self[c][TUPLE_NUM_ENTITIES])
                 text += " |\n"
 
         return text
@@ -787,11 +798,7 @@ class RegionSet(DataSet):
             local coords, data coords and status. """
         text = ""
         for r in list(self.keys()):
-            if not (self[r].count_chunks(CHUNK_CORRUPTED) or \
-                    self[r].count_chunks(CHUNK_TOO_MANY_ENTITIES) or \
-                    self[r].count_chunks(CHUNK_WRONG_LOCATED) or \
-                    self[r].count_chunks(CHUNK_SHARED_OFFSET) or \
-                    self[r].status == REGION_TOO_SMALL):
+            if not self[r].has_problems:
                 continue
             text += "Region file: {0}\n".format(self[r].filename)
             text += self[r].summary()
@@ -948,8 +955,6 @@ class World(object):
         for directory in glob(join(self.path, "DIM*/region")):
             self.regionsets.append(RegionSet(join(self.path, directory)))
 
-        print(self.regionsets)
-
         # level.dat
         # Let's scan level.dat here so we can extract the world name
         level_dat_path = join(self.path, "level.dat")
@@ -958,15 +963,17 @@ class World(object):
                 self.level_data = nbt.NBTFile(level_dat_path)["Data"]
                 self.name = self.level_data["LevelName"].value
                 self.scanned_level = ScannedDataFile(level_dat_path)
+                self.scanned_level.status = DATAFILE_OK
             except Exception as e:
                 self.name = None
                 self.scanned_level = ScannedDataFile(level_dat_path)
+                self.scanned_level.status = DATAFILE_UNREADABLE
         else:
             self.level_file = None
             self.level_data = None
             self.name = None
-            self.scanned_level = ScannedDataFile(None, False,
-                                                 "The file doesn't exist")
+            self.scanned_level = ScannedDataFile(None, level_dat_path)
+            self.scanned_level.status = DATAFILE_UNREADABLE
 
         # Player files
         self.datafilesets = []
@@ -1043,7 +1050,7 @@ class World(object):
 
         # leve.dat and data files
         final += "\nlevel.dat:\n"
-        if self.scanned_level.status in DATAFILE_PROBLEMS:
+        if self.scanned_level.status not in DATAFILE_PROBLEMS:
             final += "\t\'level.dat\' is readable\n"
         else:
             final += "\t[WARNING]: \'level.dat\' isn't readable, error: {0}\n".format(DATAFILE_STATUS_TEXT[self.scanned_level.status])
