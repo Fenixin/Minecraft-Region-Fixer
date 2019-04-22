@@ -549,7 +549,7 @@ def main():
 
 
 if __name__ == '__main__':
-    ERROR_MSG = "\n\nOps! Something went really wrong and regionfixer crashed. I can try to send an automatic bug rerpot if you wish.\n\n"
+    ERROR_MSG = "\n\nOps! Something went really wrong and regionfixer crashed.\n"
     QUESTION_TEXT = ('Do you want to send an anonymous bug report to the region fixer ftp?\n'
                      '(Answering no will print the bug report)')
     had_exception = False
@@ -558,9 +558,6 @@ if __name__ == '__main__':
     try:
         freeze_support()
         value = main()
-        #=======================================================================
-        # sys.exit(value)
-        #=======================================================================
 
     except ChildProcessException as e:
         had_exception = True
