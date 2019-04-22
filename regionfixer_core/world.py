@@ -230,9 +230,11 @@ DIMENSION_NAMES = {"region": "Overworld",
 class InvalidFileName(IOError):
     pass
 
+
 class ScannedDataFile(object):
     """ Stores all the information of a scanned data file. """
-    def __init__(self, path=None, readable=None, status_text=None):
+    def __init__(self, path=None):
+        super().__init__()
         self.path = path
         if self.path and exists(self.path):
             self.filename = split(path)[1]
@@ -248,6 +250,7 @@ class ScannedDataFile(object):
 
     @property
     def oneliner_status(self):
+        """ One line describing the status of the file. """
         return "File: \"" + self.filename + "\"; status: " + DATAFILE_STATUS_TEXT[self.status] 
 
 
@@ -260,11 +263,11 @@ class ScannedChunk(object):
 
 class ScannedRegionFile(object):
     """ Stores all the scan information for a region file """
-    def __init__(self, filename, time=None):
+    def __init__(self, path, time=None):
         # general region file info
-        self.path = filename
-        self.filename = split(filename)[1]
-        self.folder = split(filename)[0]
+        self.path = path
+        self.filename = split(path)[1]
+        self.folder = split(path)[0]
         self.x = self.z = None
         self.x, self.z = self.get_coords()
         self.coords = (self.x, self.z)
@@ -507,6 +510,9 @@ class ScannedRegionFile(object):
 class DataSet(object):
     """ Stores data items to be scanned by AsyncScanner in scan.py. 
 
+    typevalue is the type of the class to store in the set. When setting it will be
+    asserted if it is of that type
+
     The data should be in a dictionary and should be accessible through the 
     methods __getitem__, __setitem__. The methods, _get_list, __len__ are also used.
 
@@ -521,11 +527,12 @@ class DataSet(object):
 
     """
 
-    def __init__(self, *args, **kwargs):
-        object.__init__(self, *args, **kwargs)
+    def __init__(self, typevalue, *args, **kwargs):
         self._set = {}
+        self._typevalue = typevalue
 
     def _get_list(self):
+        """ Returns a list with all the values in the set. """
         return list(self._set.values())
 
     def __getitem__(self, key):
@@ -535,7 +542,9 @@ class DataSet(object):
         del self._set[key]
 
     def __setitem__(self, key, value):
+        assert(self._typevalue == type(value))
         self._set[key] = value
+        self._update_counts(value)
 
     def __len__(self):
         return len(self._set)
@@ -547,12 +556,20 @@ class DataSet(object):
 
     @property
     def has_problems(self):
+        """ Returns True if the scanned set has problems. """
         raise NotImplemented
 
     def _replace_in_data_structure(self, data, key):
+        """ For multiprocessing. Replaces the data in the set with the new data.
+        
+        Child scanning processes make copies of the ScannedRegion/DataFile when they scan them.
+        The AsyncScanner will call this function so the ScannedRegion/DataFile is stored
+        in the set properly.
+        """
         raise NotImplemented
 
     def _update_counts(self, s):
+        """ This functions is used by __set__ to update the counters. """
         raise NotImplemented
 
 
@@ -562,7 +579,7 @@ class DataFileSet(DataSet):
     DataSets are scanned using scan.AsyncScanner
     """
     def __init__(self, path, title, *args, **kwargs):
-        DataSet.__init__(self, *args, **kwargs)
+        DataSet.__init__(self, ScannedDataFile, *args, **kwargs)
         d = self._set
 
         self.title = title
@@ -571,9 +588,15 @@ class DataFileSet(DataSet):
 
         for path in data_files_path:
             d[path] = ScannedDataFile(path)
+        
+        # stores the counts of files
+        self._counts = {}
+        for s in DATAFILE_STATUSES:
+            self._counts[s] = 0
 
     @property
     def has_problems(self):
+        """ One line describing the status of the data file. """
         for d in self._set.values():
             if d.status not in DATAFILE_PROBLEMS:
                 return True
@@ -583,7 +606,8 @@ class DataFileSet(DataSet):
         self._set[data.path] = data
 
     def _update_counts(self, s):
-        pass
+        assert(type(s) == self._typevalue)
+        self._counts[s.status] += 1
 
     def count_datafiles(self, status):
         pass
@@ -603,6 +627,7 @@ class RegionSet(DataSet):
         Inits with a list of region files. The regions dict is filled
         while scanning with ScannedRegionFiles and ScannedChunks."""
     def __init__(self, regionset_path=None, region_list=[]):
+        DataSet.__init__(self, ScannedRegionFile)
         if regionset_path:
             self.path = regionset_path
             self.region_list = glob(join(self.path, "r.*.*.mca"))
@@ -646,6 +671,16 @@ class RegionSet(DataSet):
         else:
             return ""
 
+    def _update_counts(self, scanned_regionfile):
+        """ Updates the counters of the regionset with the new regionfile. """
+
+        assert(type(scanned_regionfile) == ScannedRegionFile)
+        
+        self._region_counters[scanned_regionfile.status] += 1
+
+        for status in CHUNK_STATUSES:
+            self._chunk_counters[status] += scanned_regionfile.count_chunks(status)
+
     def _get_dimension_directory(self):
         """ Returns a string with the directory of the dimension, None
         if there is no such a directory and the regionset is composed
@@ -658,6 +693,9 @@ class RegionSet(DataSet):
             return dim_path
         else:
             return None
+
+    def _replace_in_data_structure(self, data):
+        self._set[data.get_coords()] = data
 
     def __str__(self):
         text = "RegionSet: {0}\n".format(self.get_name())
@@ -681,18 +719,6 @@ class RegionSet(DataSet):
         
         return False
 
-    def __setitem__(self, key, value):
-        self._set[key] = value
-        assert(type(value) == ScannedRegionFile)
-        
-        self._region_counters[value.status] += 1
-
-        for status in CHUNK_STATUSES:
-            self._chunk_counters[status] += value.count_chunks(status)
-
-    def _replace_in_data_structure(self, data):
-        self._set[data.get_coords()] = data
-
     def keys(self):
         return list(self._set.keys())
 
@@ -709,15 +735,6 @@ class RegionSet(DataSet):
             if r.status == status:
                 t.append(r)
         return t
-
-    def _update_counts(self, scanned_regionfile):
-        """ Updates the counters of the regionset with the new regionfile. """
-        assert(type(scanned_regionfile) == ScannedRegionFile)
-        
-        self._region_counters[scanned_regionfile.status] += 1
-
-        for status in CHUNK_STATUSES:
-            self._chunk_counters[status] += scanned_regionfile.count_chunks(status)
 
     def count_regions(self, status=None):
         """ Return the number of region files with status. If none
@@ -940,14 +957,10 @@ class World(object):
             try:
                 self.level_data = nbt.NBTFile(level_dat_path)["Data"]
                 self.name = self.level_data["LevelName"].value
-                self.scanned_level = ScannedDataFile(level_dat_path,
-                                                    readable=True,
-                                                    status_text="OK")
+                self.scanned_level = ScannedDataFile(level_dat_path)
             except Exception as e:
                 self.name = None
-                self.scanned_level = ScannedDataFile(level_dat_path,
-                                                    readable=False,
-                                                    status_text=e)
+                self.scanned_level = ScannedDataFile(level_dat_path)
         else:
             self.level_file = None
             self.level_data = None
