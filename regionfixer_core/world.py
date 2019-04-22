@@ -107,6 +107,11 @@ for problem in CHUNK_PROBLEMS:
                                     CHUNK_STATUS_TEXT[problem],
                                     CHUNK_PROBLEMS_ARGS[problem]))
 
+# Used to know where to look in a chunk status tuple
+TUPLE_NUM_ENTITIES = 0
+TUPLE_STATUS = 1
+
+
 # ---------------
 # Region related:
 # ---------------
@@ -123,7 +128,7 @@ REGION_STATUSES = [REGION_OK,
                    REGION_UNREADABLE_PERMISSION_ERROR]
 
 # Text describing each region status used to list all the problem at the end of the scan
-REGION_STATUS_TEXT = {REGION_OK: "Ok",
+REGION_STATUS_TEXT = {REGION_OK: "OK",
                       REGION_TOO_SMALL: "Too small",
                       REGION_UNREADABLE: "Unreadable IOError",
                       # This status differentiates IOError from a file that you don't have permission to access
@@ -148,8 +153,8 @@ REGION_PROBLEMS_ABBR = {REGION_TOO_SMALL: 'ts',
 # Dictionary with possible solutions for the region problems,
 # used to create options dynamically
 # The possible solutions right now are:
-REGION_SOLUTION_REMOVE = 501
-REGION_SOLUTION_REPLACE = 502
+REGION_SOLUTION_REMOVE = 151
+REGION_SOLUTION_REPLACE = 152
 
 REGION_PROBLEMS_SOLUTIONS = {REGION_TOO_SMALL: [REGION_SOLUTION_REMOVE, REGION_SOLUTION_REPLACE],
                        REGION_UNREADABLE: [REGION_SOLUTION_REMOVE, REGION_SOLUTION_REPLACE]}
@@ -167,16 +172,54 @@ for problem in REGION_PROBLEMS:
 
 REGION_PROBLEMS_ARGS = {REGION_TOO_SMALL: 'too-small'}
 
-# Used to know where to look in a chunk status tuple
-#~ TUPLE_COORDS = 0
-#~ TUPLE_DATA_COORDS = 0
-#~ TUPLE_GLOBAL_COORDS = 2
-TUPLE_NUM_ENTITIES = 0
-TUPLE_STATUS = 1
+# ------------------
+# Data file related:
+# ------------------
+# Used to mark the status of data files:
+DATAFILE_OK = 200
+DATAFILE_UNREADABLE = 201
 
-# Data files relate:
-#-------------------
-# TODO TODO TODO
+
+# Data files statuses 
+DATAFILE_STATUSES = [DATAFILE_OK,
+                  DATAFILE_UNREADABLE]
+
+# Status that are considered problems
+DATAFILE_PROBLEMS = [DATAFILE_UNREADABLE]
+
+# Text describing each chunk status
+DATAFILE_STATUS_TEXT = {DATAFILE_OK: "OK",
+                        DATAFILE_UNREADABLE: "The data file cannot be read"}
+
+# arguments used in the options
+DATAFILE_PROBLEMS_ARGS = {DATAFILE_OK: 'OK',
+                         DATAFILE_UNREADABLE: 'unreadable'}
+
+# used in some places where there is less space
+DATAFILE_PROBLEM_ABBR = {DATAFILE_OK: 'ok',
+                         DATAFILE_UNREADABLE: 'ur'}
+
+# Dictionary with possible solutions for the chunks problems,
+# used to create options dynamically
+# The possible solutions right now are:
+DATAFILE_SOLUTION_REMOVE = 251
+
+DATAFILE_PROBLEMS_SOLUTIONS = {DATAFILE_UNREADABLE:[DATAFILE_SOLUTION_REMOVE]}
+
+# list with problem, status-text, problem arg tuples
+DATAFILE_PROBLEMS_ITERATOR = []
+for problem in DATAFILE_PROBLEMS:
+    DATAFILE_PROBLEMS_ITERATOR.append((problem,
+                                       DATAFILE_STATUS_TEXT[problem],
+                                       DATAFILE_PROBLEMS_ARGS[problem]))
+
+CHUNK_PROBLEMS_ITERATOR = []
+for problem in CHUNK_PROBLEMS:
+    CHUNK_PROBLEMS_ITERATOR.append((problem,
+                                    CHUNK_STATUS_TEXT[problem],
+                                    CHUNK_PROBLEMS_ARGS[problem]))
+
+
 
 # Dimension names:
 DIMENSION_NAMES = {"region": "Overworld",
@@ -186,7 +229,6 @@ DIMENSION_NAMES = {"region": "Overworld",
 
 class InvalidFileName(IOError):
     pass
-
 
 class ScannedDataFile(object):
     def __init__(self, path=None, readable=None, status_text=None):
@@ -211,10 +253,11 @@ class ScannedDataFile(object):
 class ScannedChunk(object):
     """ Stores all the results of the scan. Not used at the moment, it
         prette nice but takes an huge amount of memory. """
-        # WARNING: not used at the moment, it probably has bugs ans is
-        # outdated
-        # The problem with it was it took too much memory. It has been
-        # remplaced with a tuple
+        # WARNING: not used at the moment, it probably has bugs and it's outdated.
+        # The problem was it took too much memory, every full region file
+        # has a thousand chunks and a world with a thousand region files is not strange,
+        # that reach a million of this structures pretty fast.
+        # It has been replaced with a tuple
     def __init__(self, header_coords, global_coords=None, data_coords=None,
                  status=None, num_entities=None, scan_time=None,
                  region_path=None):
@@ -254,8 +297,7 @@ class ScannedChunk(object):
 
 class ScannedRegionFile(object):
     """ Stores all the scan information for a region file """
-    def __init__(self, filename, corrupted=0, wrong=0, entities_prob=0,
-                 shared_offset=0, chunks=0, status=0, time=None):
+    def __init__(self, filename, time=None):
         # general region file info
         self.path = filename
         self.filename = split(filename)[1]
@@ -268,8 +310,7 @@ class ScannedRegionFile(object):
         # in the region file
         self._chunks = {}
 
-        # Dictionary containing counters to for all the statuses
-        #
+        # Dictionary containing counters to for all the chunks
         self._counts = {}
         for s in CHUNK_STATUSES:
             self._counts[s] = 0
@@ -280,21 +321,20 @@ class ScannedRegionFile(object):
         # The status of the region file. At the moment can be OK,
         # TOO SMALL or UNREADABLE see the constants at the start
         # of the file.
-        self.status = status
+        self.status = None
         
         self.scanned = False
 
     @property
     def oneliner_status(self):
-        # TODO: update oneliner and automate it
+        """ On line description of the status of the region file. """
         if self.scanned:
             status = self.status
-            if status == REGION_OK:
+            if status == REGION_OK: # summary with all found in scan
                 stats = ""
                 for s in CHUNK_PROBLEMS:
                     stats += "{0}:{1}, ".format(CHUNK_PROBLEMS_ABBR[s], self.count_chunks(s))
                 stats += "t:{0}".format(self.count_chunks())
-                
             elif status == REGION_TOO_SMALL:
                 stats = "No header in the region file"
             elif status == REGION_UNREADABLE:
@@ -323,30 +363,16 @@ class ScannedRegionFile(object):
     def keys(self):
         return list(self._chunks.keys())
 
-    #===========================================================================
-    # def get_counters(self):
-    #     """ Returns integers with all the problem counters in this
-    #         region file. The order is corrupted, wrong located, entities
-    #         shared header, total chunks """
-    #     return self.corrupted_chunks, self.wrong_located_chunks,\
-    #            self.entities_prob, self.shared_offset, self.count_chunks()
-    #===========================================================================
-
     def get_path(self):
         """ Returns the path of the region file. """
         return self.path
 
     def count_chunks(self, problem=None):
         """ Counts chunks in the region file with the given problem.
-            If problem is omited or None, counts all the chunks. Returns
-            an integer with the counter. """
-        #=======================================================================
-        # counter = 0
-        # for coords in list(self.keys()):
-        #     if self[coords] and (self[coords][TUPLE_STATUS] == problem or problem == None):
-        #         counter += 1
-        #=======================================================================
         
+            If problem is omitted or None, counts all the chunks. Returns
+            an integer with the counter. """
+
         if problem == None:
             c = 0
             for s in CHUNK_STATUSES: c += self._counts[s]
@@ -439,7 +465,12 @@ class ScannedRegionFile(object):
         return counter
 
     def fix_problematic_chunks(self, problem):
-
+        """ This fixes problems in chunks that can be somehow easy to fix.
+        
+        Right now it only fixes chunks missing the TAG_List Entities.
+        """
+        # TODO: it seems having the Entities TAG missing is just a little part. Some of the
+        # chunks have like 3 or 4 tag missing from the NBT structure. 
         counter = 0
         bad_chunks = self.list_chunks(problem)
         for c in bad_chunks:
@@ -461,7 +492,7 @@ class ScannedRegionFile(object):
 
     def remove_entities(self):
         """ Removes all the entities in chunks with the problematic
-            status CHUNK_TOO_MANY_ENTITIES that are in this region file.
+            CHUNK_TOO_MANY_ENTITIES that are in this region file.
             Returns a counter of all the removed entities. """
         problem = CHUNK_TOO_MANY_ENTITIES
         counter = 0
@@ -524,30 +555,42 @@ class DataSet(object):
     _update_counts makes sure that the DataSet stores all the counts and that
     it is not needed to loop through all of them to know the real count.
 
+    has_problems should return True only if any element of the set has problems
+
     """
 
+    def __init__(self, *args, **kwargs):
+        object.__init__(self, *args, **kwargs)
+        self._set = {}
+
+    def _get_list(self):
+        return list(self._set.values())
+
+    def __getitem__(self, key):
+        return self._set[key]
+
+    def __delitem__(self, key):
+        del self._set[key]
+
+    def __setitem__(self, key, value):
+        self._set[key] = value
+
+    def __len__(self):
+        return len(self._set)
+    
+    # mandatory implementation methods
     def summary(self):
         """ Return a summary of problems found in this set. """
         raise NotImplemented
 
-    def _replace_in_data_structure(self, data):
+    @property
+    def has_problems(self):
         raise NotImplemented
 
-    def _get_list(self):
+    def _replace_in_data_structure(self, data, key):
         raise NotImplemented
 
     def _update_counts(self, s):
-        raise NotImplemented
-
-    def __getitem__(self, key):
-        """ 
-        """
-        raise NotImplemented
-
-    def __setitem__(self, key, value):
-        raise NotImplemented
-
-    def __len__(self):
         raise NotImplemented
 
 
@@ -558,36 +601,34 @@ class DataFileSet(DataSet):
     """
     def __init__(self, path, title, *args, **kwargs):
         DataSet.__init__(self, *args, **kwargs)
+        d = self._set
 
         self.title = title
         self.path = path
         data_files_path = glob(join(path, "*.dat"))
-        self.data_files = d = {}
+
         for path in data_files_path:
             d[path] = ScannedDataFile(path)
 
     @property
     def has_problems(self):
-        for d in self.data_files.values():
+        for d in self._set.values():
             if not d.readable: return True
         return False
 
-    def _get_list(self):
-        return list(self.data_files.values())
-
     def _replace_in_data_structure(self, data):
-        self.data_files[data.path] = data
-
-    def __len__(self):
-        return len(self.data_files)
+        self._set[data.path] = data
 
     def _update_counts(self, s):
+        pass
+
+    def count_datafiles(self, status):
         pass
 
     def summary(self):
         """ Return a summary of problems found in this set. """
         text = ""
-        bad_data_files = [i for i in list(self.data_files.values()) if not i.readable]
+        bad_data_files = [i for i in list(self._set.values()) if not i.readable]
         for f in bad_data_files:
             text += "\t" + f.oneliner_status
             text += "\n"
@@ -605,11 +646,11 @@ class RegionSet(DataSet):
         else:
             self.path = None
             self.region_list = region_list
-        self.regions = {}
+        self._set = {}
         for path in self.region_list:
             try:
                 r = ScannedRegionFile(path)
-                self.regions[r.get_coords()] = r
+                self._set[r.get_coords()] = r
 
             except InvalidFileName as e:
                 print("Warning: The file {0} is not a valid name for a region. I'll skip it.".format(path))
@@ -659,7 +700,7 @@ class RegionSet(DataSet):
         text = "RegionSet: {0}\n".format(self.get_name())
         if self.path:
             text += "   Regionset path: {0}\n".format(self.path)
-        text += "   Region files: {0}\n".format(len(self.regions))
+        text += "   Region files: {0}\n".format(len(self._set))
         text += "   Scanned: {0}".format(str(self.scanned))
         return text
 
@@ -677,11 +718,8 @@ class RegionSet(DataSet):
         
         return False
 
-    def __getitem__(self, key):
-        return self.regions[key]
-
     def __setitem__(self, key, value):
-        self.regions[key] = value
+        self._set[key] = value
         assert(type(value) == ScannedRegionFile)
         
         self._region_counters[value.status] += 1
@@ -689,20 +727,11 @@ class RegionSet(DataSet):
         for status in CHUNK_STATUSES:
             self._chunk_counters[status] += value.count_chunks(status)
 
-    def __delitem__(self, key):
-        del self.regions[key]
-
-    def __len__(self):
-        return len(self.regions)
-
-    def _get_list(self):
-        return list(self.regions.values())
-
     def _replace_in_data_structure(self, data):
-        self.regions[data.get_coords()] = data
+        self._set[data.get_coords()] = data
 
     def keys(self):
-        return list(self.regions.keys())
+        return list(self._set.keys())
 
     def list_regions(self, status=None):
         """ Returns a list of all the ScannedRegionFile objects stored
@@ -710,10 +739,10 @@ class RegionSet(DataSet):
             all the objects."""
 
         if status == None:
-            return list(self.regions.values())
+            return list(self._set.values())
         t = []
-        for coords in list(self.regions.keys()):
-            r = self.regions[coords]
+        for coords in list(self._set.keys()):
+            r = self._set[coords]
             if r.status == status:
                 t.append(r)
         return t
@@ -815,8 +844,8 @@ class RegionSet(DataSet):
         counter = 0
         if self.count_chunks():
             print(' Deleting chunks in region set \"{0}\":'.format(self._get_dimension_directory()))
-            for r in list(self.regions.keys()):
-                counter += self.regions[r].remove_problematic_chunks(problem)
+            for r in list(self._set.keys()):
+                counter += self._set[r].remove_problematic_chunks(problem)
             print("Removed {0} chunks in this regionset.\n".format(counter))
 
         return counter
@@ -828,8 +857,8 @@ class RegionSet(DataSet):
         counter = 0
         if self.count_chunks():
             print(' Repairing chunks in region set \"{0}\":'.format(self._get_dimension_directory()))
-            for r in list(self.regions.keys()):
-                counter += self.regions[r].fix_problematic_chunks(problem)
+            for r in list(self._set.keys()):
+                counter += self._set[r].fix_problematic_chunks(problem)
             print("Repaired {0} chunks in this regionset.\n".format(counter))
 
         return counter
@@ -838,8 +867,8 @@ class RegionSet(DataSet):
         """ Removes entities in chunks with the status
             TOO_MANY_ENTITIES. """
         counter = 0
-        for r in list(self.regions.keys()):
-            counter += self.regions[r].remove_entities()
+        for r in list(self._set.keys()):
+            counter += self._set[r].remove_entities()
         return counter
 
     def rescan_entities(self, options):

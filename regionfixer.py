@@ -374,11 +374,11 @@ def main():
                 error('The option --backups needs at least one of the '
                       '--replace-* options')
             else:
-                if (len(regionset.regions) > 0):
+                if (len(regionset) > 0):
                     error('You can\'t use the replace options while scanning '
                           'separate region files. The input should be only one '
                           'world and you introduced {0} individual region '
-                          'files.'.format(len(regionset.regions)))
+                          'files.'.format(len(regionset)))
                 elif (len(world_list) > 1):
                     error('You can\'t use the replace options while scanning '
                           'multiple worlds. The input should be only one '
@@ -415,7 +415,7 @@ def main():
         summary_text = ""
         # Scan the separate region files
         
-        if len(regionset.regions) > 0:
+        if len(regionset) > 0:
             
             console_scan_regionset(regionset, o.processes, o.entity_limit,
                                    o.delete_entities, o.verbose)

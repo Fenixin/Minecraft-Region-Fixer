@@ -650,15 +650,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
     """
     try:
         r = scanned_regionfile_obj
-        # counters of problems
-        chunk_count = 0
-        corrupted = 0
-        wrong = 0
-        entities_prob = 0
-        shared = 0
-        # used to detect chunks sharing headers
-        offsets = {}
-        filename = r.filename
+
         # try to open the file and see if we can parse the header
         try:
             region_file = region.RegionFile(r.path)
@@ -690,7 +682,6 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
                                       entity_limit)
                 if c:
                     r[(x, z)] = c
-                    chunk_count += 1
                 else:
                     # chunk not created
                     continue
@@ -700,7 +691,8 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
                 elif c[TUPLE_STATUS] == world.CHUNK_TOO_MANY_ENTITIES:
                     # Deleting entities is in here because parsing a chunk
                     # with thousands of wrong entities takes a long time,
-                    # and once detected is better to fix it at once.
+                    # and sometimes GiB of RAM, and once detected is better
+                    # to fix it at once.
                     if delete_entities:
                         world.delete_entities(region_file, x, z)
                         print(("Deleted {0} entities in chunk"
@@ -710,18 +702,17 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
                         r[(x, z)] = (0, world.CHUNK_OK)
 
                     else:
-                        entities_prob += 1
                         # This stores all the entities in a file,
                         # comes handy sometimes.
                         #~ pretty_tree = chunk['Level']['Entities'].pretty_tree()
                         #~ name = "{2}.chunk.{0}.{1}.txt".format(x,z,split(region_file.filename)[1])
                         #~ archivo = open(name,'w')
                         #~ archivo.write(pretty_tree)
-
+                        pass
                 elif c[TUPLE_STATUS] == world.CHUNK_CORRUPTED:
-                    corrupted += 1
+                    pass
                 elif c[TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
-                    wrong += 1
+                    pass
 
         # Now check for chunks sharing offsets:
         # Please note! region.py will mark both overlapping chunks
@@ -731,6 +722,7 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
         # discriminate
         #
         # TODO: Why? I don't remember why
+        # TODO: Leave this to nbt, which code is much better than this
          
         metadata = region_file.metadata
         sharing = [k for k in metadata if (
@@ -741,11 +733,6 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
             r[k] = (r[k][TUPLE_NUM_ENTITIES], world.CHUNK_SHARED_OFFSET)
             shared_counter += 1
 
-        r.chunk_count = chunk_count
-        r.corrupted_chunks = corrupted
-        r.wrong_located_chunks = wrong
-        r.entities_prob = entities_prob
-        r.shared_offset = shared_counter
         r.scan_time = time()
         r.status = world.REGION_OK
         r.scanned = True
