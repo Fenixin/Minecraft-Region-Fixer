@@ -231,68 +231,31 @@ class InvalidFileName(IOError):
     pass
 
 class ScannedDataFile(object):
+    """ Stores all the information of a scanned data file. """
     def __init__(self, path=None, readable=None, status_text=None):
         self.path = path
         if self.path and exists(self.path):
             self.filename = split(path)[1]
         else:
             self.filename = None
-        self.readable = readable
-        self.status_text = status_text
+        # The status of the region file.
+        self.status = None
 
     def __str__(self):
         text = "NBT file:" + str(self.filename) + "\n"
-        text += "\tReadable:" + str(self.readable) + "\n"
+        text += "\tStatus:" + DATAFILE_STATUS_TEXT[self.status] + "\n"
         return text
 
     @property
     def oneliner_status(self):
-        return "File: \"" + self.filename + "\"; status: " + ("Readable" if self.readable else "Unreadable")
+        return "File: \"" + self.filename + "\"; status: " + DATAFILE_STATUS_TEXT[self.status] 
 
 
 class ScannedChunk(object):
     """ Stores all the results of the scan. Not used at the moment, it
         prette nice but takes an huge amount of memory. """
-        # WARNING: not used at the moment, it probably has bugs and it's outdated.
-        # The problem was it took too much memory, every full region file
-        # has a thousand chunks and a world with a thousand region files is not strange,
-        # that reach a million of this structures pretty fast.
-        # It has been replaced with a tuple
-    def __init__(self, header_coords, global_coords=None, data_coords=None,
-                 status=None, num_entities=None, scan_time=None,
-                 region_path=None):
-        """ Inits the object with all the scan information. """
-        self.h_coords = header_coords
-        self.g_coords = global_coords
-        self.d_coords = data_coords
-        self.status = status
-        self.status_text = None
-        self.num_entities = num_entities
-        self.scan_time = scan_time
-        self.region_path = region_path
-
-    def __str__(self):
-        text = "Chunk with header coordinates:" + str(self.h_coords) + "\n"
-        text += "\tData coordinates:" + str(self.d_coords) + "\n"
-        text += "\tGlobal coordinates:" + str(self.g_coords) + "\n"
-        text += "\tStatus:" + str(self.status_text) + "\n"
-        text += "\tNumber of entities:" + str(self.num_entities) + "\n"
-        text += "\tScan time:" + time.ctime(self.scan_time) + "\n"
-        return text
-
-    def get_path(self):
-        """ Returns the path of the region file. """
-        return self.region_path
-
-    def rescan_entities(self, options):
-        """ Updates the status of the chunk when the the option
-            entity limit is changed. """
-        if self.num_entities >= options.entity_limit:
-            self.status = CHUNK_TOO_MANY_ENTITIES
-            self.status_text = CHUNK_STATUS_TEXT[CHUNK_TOO_MANY_ENTITIES]
-        else:
-            self.status = CHUNK_OK
-            self.status_text = CHUNK_STATUS_TEXT[CHUNK_OK]
+        # WARNING: This is here so I remember to not use objects as ScannedChunk
+        # They take too much memory.
 
 
 class ScannedRegionFile(object):
@@ -318,11 +281,10 @@ class ScannedRegionFile(object):
         # time when the scan for this file finished
         self.scan_time = time
 
-        # The status of the region file. At the moment can be OK,
-        # TOO SMALL or UNREADABLE see the constants at the start
-        # of the file.
+        # The status of the region file.
         self.status = None
         
+        # has the file been scanned yet?
         self.scanned = False
 
     @property
@@ -613,7 +575,8 @@ class DataFileSet(DataSet):
     @property
     def has_problems(self):
         for d in self._set.values():
-            if not d.readable: return True
+            if d.status not in DATAFILE_PROBLEMS:
+                return True
         return False
 
     def _replace_in_data_structure(self, data):
@@ -628,7 +591,7 @@ class DataFileSet(DataSet):
     def summary(self):
         """ Return a summary of problems found in this set. """
         text = ""
-        bad_data_files = [i for i in list(self._set.values()) if not i.readable]
+        bad_data_files = [i for i in list(self._set.values()) if i.status in DATAFILE_PROBLEMS]
         for f in bad_data_files:
             text += "\t" + f.oneliner_status
             text += "\n"
@@ -1034,7 +997,7 @@ class World(object):
     def has_problems(self):
         """ Returns True if the regionset has chunk or region problems and false otherwise. """
 
-        if not self.scanned_level.readable:
+        if not self.scanned_level.status in DATAFILE_PROBLEMS:
             return True
         
         for d in self.datafilesets:
@@ -1067,10 +1030,10 @@ class World(object):
 
         # leve.dat and data files
         final += "\nlevel.dat:\n"
-        if self.scanned_level.readable:
+        if self.scanned_level.status in DATAFILE_PROBLEMS:
             final += "\t\'level.dat\' is readable\n"
         else:
-            final += "\t[WARNING]: \'level.dat\' isn't readable, error: {0}\n".format(self.scanned_level.status_text)
+            final += "\t[WARNING]: \'level.dat\' isn't readable, error: {0}\n".format(DATAFILE_STATUS_TEXT[self.scanned_level.status])
 
         sets = [self.players,
                 self.old_players,
@@ -1330,8 +1293,8 @@ class World(object):
 
             # add all the player files with problems
             text += "\nUnreadable player files:\n"
-            broken_players = [p for p in self.players._get_list() if not p.readable]
-            broken_players.extend([p for p in self.old_players._get_list() if not p.readable])
+            broken_players = [p for p in self.players._get_list() if p.status in DATAFILE_PROBLEMS]
+            broken_players.extend([p for p in self.old_players._get_list() if p.status in DATAFILE_PROBLEMS])
             if broken_players:
                 broken_player_files = [p.filename for p in broken_players]
                 text += "\n".join(broken_player_files)
@@ -1341,7 +1304,7 @@ class World(object):
 
             # Now all the data files
             text += "\nUnreadable data files:\n"
-            broken_data_files = [d for d in self.data_files._get_list() if not d.readable]
+            broken_data_files = [d for d in self.data_files._get_list() if d.status in DATAFILE_PROBLEMS]
             if broken_data_files:
                 broken_data_filenames = [p.filename for p in broken_data_files]
                 text += "\n".join(broken_data_filenames)

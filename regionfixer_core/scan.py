@@ -40,6 +40,7 @@ from progressbar import ProgressBar, Bar, AdaptiveETA, SimpleProgress
 from . import world
 
 from regionfixer_core.util import entitle
+from regionfixer_core.world import DATAFILE_OK
 
 
 #~ TUPLE_COORDS = 0
@@ -189,7 +190,6 @@ class AsyncScanner(object):
                 initializer=_mp_init_function,
                 initargs=(init_args,))
 
-        # TODO: make this automatic amount
         # Recommended time to sleep between polls for results
         self.SCAN_START_SLEEP_TIME = 0.001
         self.SCAN_MIN_SLEEP_TIME = 1e-6
@@ -211,7 +211,6 @@ class AsyncScanner(object):
         logging.debug("Starting scan in: " + str(self))
         logging.debug("########################################################")
         logging.debug("########################################################")
-        total_files = len(self.data_structure)
         # Tests indicate that smaller amount of jobs per worker make all type
         # of scans faster
         jobs_per_worker = 5
@@ -560,11 +559,11 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities,
     if not w.scanned_level.path:
         print("[WARNING!] \'level.dat\' doesn't exist!")
     else:
-        if w.scanned_level.readable == True:
+        if w.scanned_level.status not in world.DATAFILE_PROBLEMS:
             print("\'level.dat\' is readable")
         else:
             print("[WARNING!]: \'level.dat\' is corrupted with the following error/s:")
-            print("\t {0}".format(w.scanned_level.status_text))
+            print("\t {0}".format(world.DATAFILE_STATUS_TEXT[w.scanned_level.status]))
 
     ps = AsyncDataScanner(w.players, processes)
     ops = AsyncDataScanner(w.old_players, processes)
@@ -617,22 +616,18 @@ def scan_data(scanned_dat_file):
             _ = nbt.NBTFile(buffer=f)
         else:
             _ = nbt.NBTFile(filename=s.path)
-        s.readable = True
+        s.status = world.DATAFILE_OK
     except MalformedFileError as e:
-        s.readable = False
-        s.status_text = str(e)
+        s.status = world.DATAFILE_UNREADABLE
     except IOError as e:
-        s.readable = False
-        s.status_text = str(e)
+        s.status = world.DATAFILE_UNREADABLE
     except UnicodeDecodeError as e:
-        s.readable = False
-        s.status_text = str(e)
+        s.status = world.DATAFILE_UNREADABLE
     except TypeError as e:
-        s.readable = False
-        s.status_text = str(e)
+        s.status = world.DATAFILE_UNREADABLE
     
     except:
-        s.readable = False
+        s.status = world.DATAFILE_UNREADABLE
         except_type, except_class, tb = sys.exc_info()
         s = (s, (except_type, except_class, extract_tb(tb)))
 
