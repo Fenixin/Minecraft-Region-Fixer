@@ -300,10 +300,8 @@ class ScannedRegionFile(object):
                 for s in CHUNK_PROBLEMS:
                     stats += "{0}:{1}, ".format(CHUNK_PROBLEMS_ABBR[s], self.count_chunks(s))
                 stats += "t:{0}".format(self.count_chunks())
-            elif status == REGION_TOO_SMALL:
-                stats = "No header in the region file"
-            elif status == REGION_UNREADABLE:
-                stats = "Unreadable region file)"
+            else:
+                stats = REGION_STATUS_TEXT[status]
         else:
             stats = "Not scanned"
 
