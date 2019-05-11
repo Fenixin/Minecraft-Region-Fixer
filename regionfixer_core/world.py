@@ -970,7 +970,7 @@ class World(object):
             self.level_file = None
             self.level_data = None
             self.name = None
-            self.scanned_level = ScannedDataFile(None, level_dat_path)
+            self.scanned_level = ScannedDataFile(level_dat_path)
             self.scanned_level.status = DATAFILE_UNREADABLE
 
         # Player files
