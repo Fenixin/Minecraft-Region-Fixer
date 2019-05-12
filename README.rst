@@ -18,38 +18,23 @@ Web page:
 https://github.com/Fenixin/Minecraft-Region-Fixer
 
 Mincraft forums posts:
-http://www.minecraftforum.net/topic/302380-minecraft-region-fixer/
-http://www.minecraftforum.net/topic/275730-minecraft-region-fixer/
+https://www.minecraftforum.net/forums/support/server-support-and/1903200-minecraft-region-fixer
+https://www.minecraftforum.net/forums/mapping-and-modding-java-edition/minecraft-tools/1261480-minecraft-region-fixer
 
 Supported platforms
 ===================
 This program only works with Python 3.x, and DOESN'T work with
-python 2.x. There is also a windows executable for ease of use, if you
-use the windows executable you don't need to install Python.
-
-
-Windows .exe downloads
-======================
-The window executable is generated using py2exe and is the choice if 
-you don't want to install python in your system.
-
-These downloads were usually in the downloads section of github, but 
-github has deprecated this feature. So, from Region Fixer v0.1.0 
-downloads are stored in mediafire:
-
-http://www.mediafire.com/?1exub0d8ys83y
-or
-http://adf.ly/HVHGu   (if you want to contribute a little)
-
+python 2.x. There was a windows exe in older versions, but right
+now You need to install the python interpreter to run this
+program.
 
 Notes
 =====
-Older versions of Minecraft had big problems when loading corrupted 
-chunks. But in the latest versions of Minecraft (tested in 1.4.7) the
-server itself removes corrupted chunks (when loading them) and 
-regenerate those chunks.
+Older versions of Minecraft had big problems when loading broken
+worlds. Newer versions of Minecraft are doing improving the way
+they deal with corruption and other things.
 
-Region-Fixer still is useful for replacing those chunks with a 
+Region-Fixer still is useful for replacing chunks/regions with a 
 backup, removing entities, or trying to see what's going wrong
 with your world.
 
@@ -72,16 +57,17 @@ https://github.com/Fenixin/Minecraft-Region-Fixer
 Feedback and questions should go preferably to the forums posts:
 
 (server administration)
-http://www.minecraftforum.net/topic/275730-tool-minecraft-region-fixer/
+https://www.minecraftforum.net/forums/support/server-support-and/1903200-minecraft-region-fixer
 
 (mapping and modding)
-http://www.minecraftforum.net/topic/302380-tool-minecraft-region-fixer/
+https://www.minecraftforum.net/forums/mapping-and-modding-java-edition/minecraft-tools/1261480-minecraft-region-fixer
 
 
 Donations and sponsors
 ======================
 Region-Fixer was created thanks to sponsors and donations. You can find
 information about that in DONORS.txt
+
 
 Contributors
 ============
