@@ -25,7 +25,7 @@ Supported platforms
 ===================
 This program only works with Python 3.x, and DOESN'T work with
 python 2.x. There was a windows exe in older versions, but right
-now You need to install the python interpreter to run this
+now you need to install the python interpreter to run this
 program.
 
 Notes
