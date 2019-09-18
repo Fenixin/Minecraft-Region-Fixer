@@ -337,8 +337,9 @@ def main():
 
     # Args are world_paths and region files
     if not args:
-        parser.error('No world paths or region files specified! Use '
+        print('Error: No world paths or region files specified! Use '
                      '--help for a complete list of options.')
+        return RV_NOTHING_TO_SCAN
 
     world_list, regionset = parse_paths(args)
 
