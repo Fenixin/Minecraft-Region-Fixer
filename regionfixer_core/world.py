@@ -1384,8 +1384,8 @@ def get_chunk_region(chunkX, chunkZ):
     """ Returns the name of the region file given global chunk
         coords """
 
-    regionX = chunkX / 32
-    regionZ = chunkZ / 32
+    regionX = chunkX // 32
+    regionZ = chunkZ // 32
 
     region_name = 'r.' + str(regionX) + '.' + str(regionZ) + '.mca'
 
