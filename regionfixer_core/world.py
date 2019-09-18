@@ -605,7 +605,7 @@ class DataFileSet(DataSet):
 
     @property
     def has_problems(self):
-        """ One line describing the status of the data file. """
+        """ Returns True if the dataset has problems and false otherwise. """
         for d in self._set.values():
             if d.status in DATAFILE_PROBLEMS:
                 return True
