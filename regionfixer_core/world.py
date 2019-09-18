@@ -607,7 +607,7 @@ class DataFileSet(DataSet):
     def has_problems(self):
         """ One line describing the status of the data file. """
         for d in self._set.values():
-            if d.status not in DATAFILE_PROBLEMS:
+            if d.status in DATAFILE_PROBLEMS:
                 return True
         return False
 
@@ -1015,7 +1015,7 @@ class World(object):
     def has_problems(self):
         """ Returns True if the regionset has chunk or region problems and false otherwise. """
 
-        if not self.scanned_level.status in DATAFILE_PROBLEMS:
+        if self.scanned_level.status in DATAFILE_PROBLEMS:
             return True
         
         for d in self.datafilesets:
