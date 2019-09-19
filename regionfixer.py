@@ -22,7 +22,7 @@
 #
 
 from multiprocessing import freeze_support
-from optparse import OptionParser
+from optparse import OptionParser, BadOptionError
 from getpass import getpass
 import sys
 
@@ -44,6 +44,7 @@ from regionfixer_core.world import CHUNK_MISSING_ENTITIES_TAG
 RV_OK = 0 # world scanned and no problems found
 RV_CRASH = 1 # crash or end unexpectedly
 RV_NOTHING_TO_SCAN = 2 # no files/worlds to scan
+RV_WRONG_COMMAND = 20 # the command line used is wrong and region fixer didn't execute
 RV_BAD_WORLD = 3 # scan completed successfully but problems have been found in the scan
 
 def fix_bad_chunks(options, scanned_obj):
@@ -121,6 +122,26 @@ def delete_bad_regions(options, scanned_obj):
             else:
                 print(("No regions to delete with status: {0}".format(status)))
 
+class WrongOption(BadOptionError):
+    def __init__(self, *args, **kwargs):
+        BadOptionError.__init__(self, *args, **kwargs)
+
+class NewOptionParser(OptionParser):
+    def __init__(self, *args, **kwargs):
+        OptionParser.__init__(self, *args, **kwargs)
+    def error(self, msg):
+        """error(msg : string)
+
+        Print a usage message incorporating 'msg' to stderr and exit.
+        If you override this in a subclass, it should not return -- it
+        should either exit or raise an exception.
+        """
+        self.print_usage(sys.stderr)
+        #self.exit(2, "%s: error: %s\n" % (self.get_prog_name(), msg))
+        #raise self.BadOptionError(msg)
+        raise WrongOption(msg)
+
+
 
 def main():
 
@@ -133,7 +154,7 @@ def main():
               'are welcome to redistribute it under certain conditions; '
               'see COPYING.txt for details.')
 
-    parser = OptionParser(description=('Program to check the integrity of '
+    parser = NewOptionParser(description=('Program to check the integrity of '
                                        'Minecraft worlds and fix them when '
                                        'possible. It uses NBT by twoolie. '
                                        'Author: Alejandro Aguilera (Fenixin)'),
@@ -337,9 +358,8 @@ def main():
 
     # Args are world_paths and region files
     if not args:
-        print('Error: No world paths or region files specified! Use '
+        parser.error('Error: No world paths or region files specified! Use '
                      '--help for a complete list of options.')
-        return RV_NOTHING_TO_SCAN
 
     world_list, regionset = parse_paths(args)
 
@@ -359,12 +379,10 @@ def main():
     any_region_replace_option = o.replace_too_small
     any_region_delete_option = o.delete_too_small
 
-    error = parser.error
-
 
     if o.interactive or o.summary:
         if any_chunk_replace_option or any_region_replace_option:
-            error('Can\'t use the options --replace-* , --delete-* and '
+            parser.error('Error: Can\'t use the options --replace-* , --delete-* and '
                   '--log with --interactive. You can choose all this '
                   'while in the interactive mode.')
 
@@ -372,25 +390,25 @@ def main():
         # Not options.interactive
         if o.backups:
             if not any_chunk_replace_option and not any_region_replace_option:
-                error('The option --backups needs at least one of the '
+                parser.error('Error: The option --backups needs at least one of the '
                       '--replace-* options')
             else:
                 if (len(regionset) > 0):
-                    error('You can\'t use the replace options while scanning '
+                    parser.error('Error: You can\'t use the replace options while scanning '
                           'separate region files. The input should be only one '
                           'world and you introduced {0} individual region '
                           'files.'.format(len(regionset)))
                 elif (len(world_list) > 1):
-                    error('You can\'t use the replace options while scanning '
+                    parser.error('Error: You can\'t use the replace options while scanning '
                           'multiple worlds. The input should be only one '
                           'world and you introduced {0} '
                           'worlds.'.format(len(world_list)))
 
         if not o.backups and any_chunk_replace_option:
-            error("The options --replace-* need the --backups option")
+            parser.error("Error: The options --replace-* need the --backups option")
 
     if o.entity_limit < 0:
-        error("The entity limit must be at least 0!")
+        parser.error("Error: The entity limit must be at least 0!")
 
     print("\nWelcome to Region Fixer!")
     print(("(version: {0})".format(parser.version)))
@@ -559,6 +577,11 @@ if __name__ == '__main__':
     try:
         freeze_support()
         value = main()
+ 
+    except WrongOption as e:
+        had_exception = False
+        value = RV_WRONG_COMMAND
+        print(str(e))
 
     except ChildProcessException as e:
         had_exception = True
