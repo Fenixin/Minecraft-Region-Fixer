@@ -132,15 +132,10 @@ class NewOptionParser(OptionParser):
     def error(self, msg):
         """error(msg : string)
 
-        Print a usage message incorporating 'msg' to stderr and exit.
-        If you override this in a subclass, it should not return -- it
-        should either exit or raise an exception.
+        Overrides the original method. Raises WrongOption and stores the msm.
         """
         self.print_usage(sys.stderr)
-        #self.exit(2, "%s: error: %s\n" % (self.get_prog_name(), msg))
-        #raise self.BadOptionError(msg)
         raise WrongOption(msg)
-
 
 
 def main():
@@ -573,6 +568,7 @@ if __name__ == '__main__':
                      '(Answering no will print the bug report)')
     had_exception = False
     auto_reported = False
+    value = 0
 
     try:
         freeze_support()
