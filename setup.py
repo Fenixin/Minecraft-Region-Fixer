@@ -20,6 +20,7 @@ try:
   os.system("pip install py2exe")
   
   print("Installed py2exe. Please now relaunch setup.py :)")
+  exit()
 import glob
 import zlib
 import shutil
