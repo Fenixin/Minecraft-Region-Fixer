@@ -625,7 +625,7 @@ class DataFileSet(DataSet):
         self._set[data.path] = data
 
     def _update_counts(self, s):
-        assert isinstance(s) == self._typevalue
+        assert isinstance(s, self._typevalue)
         self._counts[s.status] += 1
 
     def count_datafiles(self, status):
@@ -694,7 +694,7 @@ class RegionSet(DataSet):
     def _update_counts(self, scanned_regionfile):
         """ Updates the counters of the regionset with the new regionfile. """
 
-        assert isinstance(scanned_regionfile) == ScannedRegionFile
+        assert isinstance(scanned_regionfile, ScannedRegionFile)
 
         self._region_counters[scanned_regionfile.status] += 1
 
