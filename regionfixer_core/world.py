@@ -26,7 +26,7 @@ import nbt.nbt as nbt
 from .util import table
 
 from glob import glob
-from os.path import join, split, exists
+from os.path import join, split, exists, isfile
 from os import remove
 from shutil import copy
 
@@ -232,6 +232,95 @@ DIMENSION_NAMES = {"region": "Overworld",
                    "DIM1": "The End",
                    "DIM-1": "Nether"
                    }
+
+
+def parse_chunk_list(chunk_list, world_obj):
+    """ Generate a list of chunks to use with world.delete_chunk_list.
+
+    It takes a list of global chunk coordinates and generates a list of
+    tuples containing:
+
+    (region fullpath, chunk X, chunk Z)
+
+    """
+    # this is not used right now
+    parsed_list = []
+    for line in chunk_list:
+        try:
+            chunk = eval(line)
+        except:
+            print("The chunk {0} is not valid.".format(line))
+            continue
+        region_name = get_chunk_region(chunk[0], chunk[1])
+        fullpath = join(world_obj.world_path, "region", region_name)
+        if fullpath in world_obj.all_mca_files:
+            parsed_list.append((fullpath, chunk[0], chunk[1]))
+        else:
+            print("The chunk {0} should be in the region file {1} and this region files doesn't extist!".format(chunk, fullpath))
+
+    return parsed_list
+
+
+def parse_paths(args):
+    """ Parse the list of args passed to region-fixer.py and returns a 
+    RegionSet object with the list of regions and a list of World 
+    objects. """
+    # parese the list of region files and worlds paths
+    world_list = []
+    region_list = []
+    warning = False
+    for arg in args:
+        if arg[-4:] == ".mca":
+            region_list.append(arg)
+        elif arg[-4:] == ".mcr": # ignore pre-anvil region files
+            if not warning:
+                print("Warning: Region-Fixer only works with anvil format region files. Ignoring *.mcr files")
+                warning = True
+        else:
+            world_list.append(arg)
+
+    # check if they exist
+    region_list_tmp = []
+    for f in region_list:
+        if exists(f):
+            if isfile(f):
+                region_list_tmp.append(f)
+            else:
+                print("Warning: \"{0}\" is not a file. Skipping it and scanning the rest.".format(f))
+        else:
+            print("Warning: The region file {0} doesn't exists. Skipping it and scanning the rest.".format(f))
+    region_list = region_list_tmp
+
+    # init the world objects
+    world_list = parse_world_list(world_list)
+
+    return world_list, RegionSet(region_list = region_list)
+
+
+def parse_world_list(world_path_list):
+    """ Parses a world list checking if they exists and are a minecraft
+        world folders. Returns a list of World objects. """
+    
+    tmp = []
+    for d in world_path_list:
+        if exists(d):
+            w = World(d)
+            if w.isworld:
+                tmp.append(w)
+            else:
+                print("Warning: The folder {0} doesn't look like a minecraft world. I'll skip it.".format(d))
+        else:
+            print("Warning: The folder {0} doesn't exist. I'll skip it.".format(d))
+    return tmp
+
+
+def parse_backup_list(world_backup_dirs):
+    """ Generates a list with the input of backup dirs containing the
+    world objects of valid world directories."""
+
+    directories = world_backup_dirs.split(',')
+    backup_worlds = parse_world_list(directories)
+    return backup_worlds
 
 
 class InvalidFileName(IOError):

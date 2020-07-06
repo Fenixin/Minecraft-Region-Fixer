@@ -31,10 +31,8 @@ from regionfixer_core.scan import (console_scan_world,
                                    console_scan_regionset,
                                    ChildProcessException)
 from regionfixer_core.interactive import InteractiveLoop
-from regionfixer_core.util import (entitle,
-                                   is_bare_console,
-                                   parse_paths,
-                                   parse_backup_list)
+from regionfixer_core.util import entitle, is_bare_console
+from regionfixer_core.world import parse_paths, parse_backup_list
 from regionfixer_core.version import version_string
 from regionfixer_core.bug_reporter import BugReporter
 from regionfixer_core.world import CHUNK_MISSING_ENTITIES_TAG
