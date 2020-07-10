@@ -45,8 +45,8 @@ from regionfixer_core.world import CHUNK_MISSING_ENTITIES_TAG
 
 RV_OK = 0  # world scanned and no problems found
 RV_CRASH = 1  # crash or end unexpectedly
-RV_NOTHING_TO_SCAN = 2  # no files/worlds to scan
-RV_WRONG_COMMAND = 20  # the command line used is wrong and region fixer didn't execute
+RV_NOTHING_TO_SCAN = 20  # no files/worlds to scan
+# RV_WRONG_COMMAND = 2  # the command line used is wrong and region fixer didn't execute. argparse uses this value by default
 RV_BAD_WORLD = 3  # scan completed successfully but problems have been found in the scan
 
 
@@ -143,6 +143,7 @@ def main():
                                      prog='region_fixer',
                                      usage=usage,
                                      epilog=epilog)
+
 
     parser.add_argument('--backups',
                         '-b',
@@ -338,15 +339,13 @@ def main():
         getpass("Press enter to continue:")
         return RV_CRASH
 
-    # Args are world_paths and region files
-    if not args:
-        parser.error('Error: No world paths or region files specified! Use '
-                     '--help for a complete list of options.')
 
     world_list, regionset = parse_paths(args.paths)
 
+    # Check if there are valid worlds to scan
     if not (world_list or regionset):
-        print("Error: No worlds or region files to scan!")
+        print('Error: No worlds or region files to scan! Use '
+                     '--help for a complete list of options.')
         return RV_NOTHING_TO_SCAN
 
     # Check basic options compatibilities
@@ -554,6 +553,11 @@ if __name__ == '__main__':
     try:
         freeze_support()
         value = main()
+
+    except SystemExit as e:
+        # sys.exit() was called within the program
+        had_exception = False
+        value = e.code
 
     except ChildProcessException as e:
         had_exception = True
