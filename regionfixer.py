@@ -4,7 +4,7 @@
 #
 #   Region Fixer.
 #   Fix your region files with a backup copy of your Minecraft world.
-#   Copyright (C) 2011  Alejandro Aguilera (Fenixin)
+#   Copyright (C) 2020  Alejandro Aguilera (Fenixin)
 #   https://github.com/Fenixin/Minecraft-Region-Fixer
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -133,7 +133,7 @@ def delete_bad_regions(options, scanned_obj):
 def main():
     usage = ('%(prog)s [options] <world-path> '
              '<other-world-path> ... <region-files> ...')
-    epilog = ('Copyright (C) 2011  Alejandro Aguilera (Fenixin)\n'
+    epilog = ('Copyright (C) 2020  Alejandro Aguilera (Fenixin)\n'
               'https://github.com/Fenixin/Minecraft-Region-Fixer\n'
               'This program comes with ABSOLUTELY NO WARRANTY; for '
               'details see COPYING.txt. This is free software, and you '
