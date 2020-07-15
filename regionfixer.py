@@ -57,16 +57,22 @@ def fix_bad_chunks(options, scanned_obj):
     total = scanned_obj.count_chunks(CHUNK_MISSING_ENTITIES_TAG)
     problem = CHUNK_MISSING_ENTITIES_TAG
     status = world.CHUNK_STATUS_TEXT[CHUNK_MISSING_ENTITIES_TAG]
-    if options.fix_missing_tag:
-        if total:
-
-            text = ' Repairing chunks with status: {0} '.format(status)
-            print(("\n{0:#^60}".format(text)))
-            counter = scanned_obj.fix_problematic_chunks(problem)
-            print(("\nRepaired {0} chunks with status: {1}".format(counter,
-                                                                   status)))
-        else:
-            print(("No chunks to fix with status: {0}".format(status)))
+    # In the same order as in FIXABLE_CHUNK_PROBLEMS
+    options_fix = [options.fix_missing_tag,
+                   options.fix_wrong_located]
+    fixing = list(zip(options_fix, world.FIXABLE_CHUNK_PROBLEMS))
+    for fix, problem in fixing:
+        status = world.CHUNK_STATUS_TEXT[problem]
+        total = scanned_obj.count_chunks(problem)
+        if fix:
+            if total:
+                text = ' Repairing chunks with status: {0} '.format(status)
+                print(("\n{0:#^60}".format(text)))
+                counter = scanned_obj.fix_problematic_chunks(problem)
+                print(("\nRepaired {0} chunks with status: {1}".format(counter,
+                                                                     status)))
+            else:
+                print(("No chunks to fix with status: {0}".format(status)))
 
 
 def delete_bad_chunks(options, scanned_obj):
@@ -257,6 +263,14 @@ def main():
                         '--fm',
                         help='Fixes chunks that have the Entities tag missing. This will add the missing tag.',
                         dest='fix_missing_tag',
+                        default=False,
+                        action='store_true')
+
+    parser.add_argument('--fix-wrong-located',
+                        '--fw',
+                        help='Fixes chunks that have that are wrong located. This will save them in the coordinates '
+                            'stored in their data.',
+                        dest='fix_wrong_located',
                         default=False,
                         action='store_true')
 

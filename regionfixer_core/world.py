@@ -96,13 +96,16 @@ CHUNK_PROBLEMS_ABBR = {CHUNK_CORRUPTED: 'c',
 CHUNK_SOLUTION_REMOVE = 51
 CHUNK_SOLUTION_REPLACE = 52
 CHUNK_SOLUTION_REMOVE_ENTITIES = 53
+CHUNK_SOLUTION_RELOCATE_USING_DATA = 54
 
 CHUNK_PROBLEMS_SOLUTIONS = {CHUNK_CORRUPTED: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE],
-                            CHUNK_WRONG_LOCATED: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE],
-                            CHUNK_TOO_MANY_ENTITIES: [CHUNK_SOLUTION_REMOVE_ENTITIES],
-                            CHUNK_SHARED_OFFSET: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE],
-                            CHUNK_MISSING_ENTITIES_TAG: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE]
-                            }
+                       CHUNK_WRONG_LOCATED: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE, CHUNK_SOLUTION_RELOCATE_USING_DATA],
+                       CHUNK_TOO_MANY_ENTITIES: [CHUNK_SOLUTION_REMOVE_ENTITIES],
+                       CHUNK_SHARED_OFFSET: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE],
+                       CHUNK_MISSING_ENTITIES_TAG: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE]}
+
+# chunk problems that can be fixed (so they don't need to be removed or replaced)
+FIXABLE_CHUNK_PROBLEMS = [CHUNK_MISSING_ENTITIES_TAG, CHUNK_WRONG_LOCATED]
 
 # list with problem, status-text, problem arg tuples
 CHUNK_PROBLEMS_ITERATOR = []
@@ -371,7 +374,8 @@ class ScannedRegionFile:
         self.coords = (self.x, self.z)
 
         # dictionary storing all the state tuples of all the chunks
-        # in the region file
+        # in the region file, keys are the local coords of the chunk
+        # sometimes called header coords
         self._chunks = {}
 
         # Dictionary containing counters to for all the chunks
@@ -454,8 +458,7 @@ class ScannedRegionFile:
         return c
 
     def get_global_chunk_coords(self, chunkX, chunkZ):
-        """ Takes the region filename and the chunk local
-            coords and returns the global chunkcoords as integerss """
+        """ Takes the chunk local coords and returns the global chunkcoords """
 
         regionX, regionZ = self.get_coords()
         chunkX += regionX * 32
@@ -483,9 +486,9 @@ class ScannedRegionFile:
     # TODO TODO TODO: This is dangerous! Running the method remove_problematic_chunks
     # without a problem will remove all the chunks in the region file!!
     def list_chunks(self, status=None):
-        """ Returns a list of all the ScannedChunk objects of the chunks
-            with the given status, if no status is omitted or None,
-            returns all the existent chunks in the region file """
+        """ Returns a list of tuples (global coords, status tuple) for all the chunks with said status.
+        
+        If no status is omitted or None, returns all the chunks in the region file """
 
         l = []
         for c in list(self.keys()):
@@ -494,6 +497,7 @@ class ScannedRegionFile:
                 l.append((self.get_global_chunk_coords(*c), t))
             elif status == None:
                 l.append((self.get_global_chunk_coords(*c), t))
+
         return l
 
     def summary(self):
@@ -540,10 +544,19 @@ class ScannedRegionFile:
     def fix_problematic_chunks(self, problem):
         """ This fixes problems in chunks that can be somehow easy to fix.
 
-        Right now it only fixes chunks missing the TAG_List Entities.
+        
+        Right now it only fixes chunks missing the TAG_List Entities and wrong located chunks.
+        
+        -TAG_List is fixed by adding said tag.
+        
+        -Wrong located chunks are relocated to the data coordinates stored in the zip stream. 
+        We suppose these coordinates are right because the data has checksum.
         """
         # TODO: it seems having the Entities TAG missing is just a little part. Some of the
-        # chunks have like 3 or 4 tag missing from the NBT structure.
+        # chunks have like 3 or 4 tag missing from the NBT structure. 
+        
+        # TODO: remove the assert?
+        assert(problem in FIXABLE_CHUNK_PROBLEMS)
         counter = 0
         bad_chunks = self.list_chunks(problem)
         for c in bad_chunks:
@@ -551,14 +564,31 @@ class ScannedRegionFile:
             local_coords = _get_local_chunk_coords(*global_coords)
             region_file = region.RegionFile(self.path)
             chunk = region_file.get_chunk(*local_coords)
-            # The arguments to create the empty TAG_List have been somehow extracted by comparing
-            # the tag list from a healthy chunk with the one created by nbt
-            chunk['Level']['Entities'] = TAG_List(name='Entities', type=nbt._TAG_End)
-            region_file.write_chunk(local_coords[0], local_coords[1], chunk)
-            counter += 1
-            # create the new status tuple
-            #                    (num_entities, chunk status)
-            self[local_coords] = (0, CHUNK_NOT_CREATED)
+            if problem == CHUNK_MISSING_ENTITIES_TAG:
+                # The arguments to create the empty TAG_List have been somehow extracted by comparing
+                # the tag list from a healthy chunk with the one created by nbt
+                chunk['Level']['Entities'] = TAG_List(name='Entities', type=nbt._TAG_End)
+                region_file.write_chunk(local_coords[0],local_coords[1], chunk)
+
+                # create the new status tuple
+                #                    (num_entities, chunk status)
+                self[local_coords] = (0           , CHUNK_NOT_CREATED)
+                counter += 1
+
+            elif problem == CHUNK_WRONG_LOCATED:
+                data_coords = get_chunk_data_coords(chunk)
+                data_l_coords = _get_local_chunk_coords(*data_coords)
+                region_file.write_chunk(data_l_coords[0], data_l_coords[1], chunk)
+                region_file.unlink_chunk(*local_coords)
+                # what to do with the old chunk in the wrong position?
+                # remove it or keep it? It's probably the best to remove it.
+                # create the new status tuple
+                
+                # remove the wrong position of the chunk and update the status 
+                #                    (num_entities, chunk status)
+                self[local_coords] = (0           , CHUNK_NOT_CREATED)
+                self[data_l_coords]= (0           , CHUNK_OK)
+                counter += 1
 
         return counter
 
@@ -927,7 +957,8 @@ class RegionSet(DataSet):
 
         counter = 0
         if self.count_chunks():
-            print(' Deleting chunks in region set \"{0}\":'.format(self._get_dimension_directory()))
+            dim_name = self._get_dimension_directory()
+            print(' Deleting chunks in region set \"{0}\":'.format(dim_name if dim_name else "selected region files"))
             for r in list(self._set.keys()):
                 counter += self._set[r].remove_problematic_chunks(problem)
             print("Removed {0} chunks in this regionset.\n".format(counter))
@@ -935,12 +966,13 @@ class RegionSet(DataSet):
         return counter
 
     def fix_problematic_chunks(self, problem):
-        """ Removes all the chunks with the given problem, returns a
+        """ Fix all the chunks with the given problem, returns a
             counter with the number of deleted chunks. """
 
         counter = 0
         if self.count_chunks():
-            print(' Repairing chunks in region set \"{0}\":'.format(self._get_dimension_directory()))
+            dim_name = self._get_dimension_directory()
+            print(' Repairing chunks in region set \"{0}\":'.format(dim_name if dim_name else "selected region files"))
             for r in list(self._set.keys()):
                 counter += self._set[r].fix_problematic_chunks(problem)
             print("Repaired {0} chunks in this regionset.\n".format(counter))
