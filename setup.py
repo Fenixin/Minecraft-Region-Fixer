@@ -140,7 +140,7 @@ data_files += [("", py26MSdll),]
 #     dest_base = "regionfixer_gui",
 #     version = gui_version.version_string,
 #     company_name = "No Company",
-#     copyright = "Copyright (C) 2011  Alejandro Aguilera",
+#     copyright = "Copyright (C) 2020  Alejandro Aguilera",
 #     name = "Region Fixer GUI"
 #     )
 #===============================================================================

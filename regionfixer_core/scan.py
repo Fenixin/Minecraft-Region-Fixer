@@ -4,7 +4,7 @@
 #
 #   Region Fixer.
 #   Fix your region files with a backup copy of your Minecraft world.
-#   Copyright (C) 2011  Alejandro Aguilera (Fenixin)
+#   Copyright (C) 2020  Alejandro Aguilera (Fenixin)
 #   https://github.com/Fenixin/Minecraft-Region-Fixer
 #
 #    This program is free software: you can redistribute it and/or modify
