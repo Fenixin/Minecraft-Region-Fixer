@@ -51,8 +51,16 @@ RV_BAD_WORLD = 3  # scan completed successfully but problems have been found in 
 def fix_bad_chunks(options, scanned_obj):
     """ Fixes chunks that can be repaired.
 
-    Doesn't work right now.
+    Keywords arguments:
+    options -- argparse arguments, the whole argparse.ArgumentParser() object
+    scanned_obj -- this can be a RegionSet or World objects from world.py
+
+    Returns nothing.
+
+    It will fix the chunks as requested by options and modify the RegionSet and World objects
+    with the new fixed chunks.
     """
+
     print("")
     total = scanned_obj.count_chunks(CHUNK_MISSING_ENTITIES_TAG)
     problem = CHUNK_MISSING_ENTITIES_TAG
@@ -79,14 +87,16 @@ def delete_bad_chunks(options, scanned_obj):
     """ Takes a scanned object and deletes all the bad chunks.
 
     Keywords arguments
-    options -- options as returned by the module optparse
-    scanned_obj -- a regionfixer world or regionset
+    options -- argparse arguments, the whole argparse.ArgumentParser() object
+    scanned_obj -- this can be a RegionSet or World objects from world.py
 
     Returns nothing.
 
     This function will deletes all the chunks with problems
     iterating through all the possible problems and using the
-    options given. """
+    options given.
+    """
+
     print("")
     # In the same order as in CHUNK_PROBLEMS
     options_delete = [options.delete_corrupted,
@@ -110,9 +120,19 @@ def delete_bad_chunks(options, scanned_obj):
 
 
 def delete_bad_regions(options, scanned_obj):
-    """ Takes an scanned object (world object or regionset object) and
-    the options give to region-fixer, it deletes all the region files
-    with problems iterating through all the possible problems. """
+    """  Takes a scanned object and deletes all bad region files.
+    
+    Keywords arguments:
+    options -- argparse arguments, the whole argparse.ArgumentParser() object
+    scanned_obj -- this can be a RegionSet or World objects from world.py
+
+    Returns nothing.
+    
+    Takes an scanned object (World object or RegionSet object) and
+    the options given to region-fixer and it deletes all the region files
+    with problems iterating through all the possible problems.
+    """
+
     print("")
     options_delete = [options.delete_too_small]
     deleting = list(zip(options_delete, world.REGION_PROBLEMS))
