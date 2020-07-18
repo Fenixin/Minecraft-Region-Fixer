@@ -860,16 +860,6 @@ class RegionSet(DataSet):
         else:
             return ""
 
-    def _update_counts(self, scanned_regionfile):
-        """ Updates the counters of the regionset with the new regionfile. """
-
-        assert isinstance(scanned_regionfile, ScannedRegionFile)
-
-        self._region_counters[scanned_regionfile.status] += 1
-
-        for status in CHUNK_STATUSES:
-            self._chunk_counters[status] += scanned_regionfile.count_chunks(status)
-
     def _get_dimension_directory(self):
         """ Returns a string with the directory containing the RegionSet.
         
@@ -886,6 +876,16 @@ class RegionSet(DataSet):
             return dim_path
         else:
             return None
+
+    def _update_counts(self, scanned_regionfile):
+        """ Updates the counters of the regionset with the new regionfile. """
+
+        assert isinstance(scanned_regionfile, ScannedRegionFile)
+
+        self._region_counters[scanned_regionfile.status] += 1
+
+        for status in CHUNK_STATUSES:
+            self._chunk_counters[status] += scanned_regionfile.count_chunks(status)
 
     def _replace_in_data_structure(self, data):
         self._set[data.get_coords()] = data
@@ -1047,8 +1047,8 @@ class RegionSet(DataSet):
 
         counter = 0
         if self.count_chunks():
-            dim_name = self._get_dimension_directory()
-            print(' Deleting chunks in region set \"{0}\":'.format(dim_name if dim_name else "selected region files"))
+            dim_name = self.get_name()
+            print(' Deleting chunks in regionset \"{0}\":'.format(dim_name if dim_name else "selected region files"))
             for r in list(self._set.keys()):
                 counter += self._set[r].remove_problematic_chunks(problem)
             print("Removed {0} chunks in this regionset.\n".format(counter))
@@ -1067,8 +1067,8 @@ class RegionSet(DataSet):
 
         counter = 0
         if self.count_chunks():
-            dim_name = self._get_dimension_directory()
-            print('Repairing chunks in region set \"{0}\":'.format(dim_name if dim_name else "selected region files"))
+            dim_name = self.get_name()
+            print('Repairing chunks in regionset \"{0}\":'.format(dim_name if dim_name else "selected region files"))
             for r in list(self._set.keys()):
                 counter += self._set[r].fix_problematic_chunks(problem)
             print("    Repaired {0} chunks in this regionset.\n".format(counter))
