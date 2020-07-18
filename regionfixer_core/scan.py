@@ -25,7 +25,6 @@
 import sys
 import logging
 import multiprocessing
-from multiprocessing import SimpleQueue
 from os.path import split, abspath
 from time import sleep, time
 from copy import copy
@@ -38,15 +37,12 @@ from nbt.region import (ChunkDataError,
                         ChunkHeaderError,
                         RegionHeaderError,
                         InconceivedChunk)
+
 from progressbar import ProgressBar, Bar, AdaptiveETA, SimpleProgress
-from . import world
 
+from regionfixer_core import world
 from regionfixer_core.util import entitle
-from regionfixer_core.world import DATAFILE_OK
 
-# ~ TUPLE_COORDS = 0
-# ~ TUPLE_DATA_COORDS = 0
-# ~ TUPLE_GLOBAL_COORDS = 2
 TUPLE_NUM_ENTITIES = 0
 TUPLE_STATUS = 1
 
@@ -184,7 +180,7 @@ class AsyncScanner:
         self.scan_function = scan_function
 
         # Queue used by processes to pass results
-        self.queue = SimpleQueue()
+        self.queue = multiprocessing.SimpleQueue()
         init_args.update({'queue': self.queue})
         # NOTE TO SELF: initargs doesn't handle kwargs, only args!
         # Pass a dict with all the args
