@@ -362,11 +362,10 @@ def main():
 
     if is_bare_console():
         print("")
-        print("Minecraft Region Fixer has a command line application and a GUI\n"
-              "(Graphic User Interface) and you have just double clicked the\n"
-              "command line interface. If you really want to run the command line\n"
-              "interface you have to use a command prompt (cmd.exe)\n\n"
-              "You can also run the GUI, double click regionfixer_gui.py instead!")
+        print("Minecraft Region Fixer is a command line application and \n"
+              "you have just double clicked it. If you really want to run \n"
+              "the command line interface you have to use a command prompt.\n"
+              "Run cmd.exe in the run window.\n\n")
         print("")
         getpass("Press enter to continue:")
         return RV_CRASH
