@@ -26,16 +26,15 @@ from getpass import getpass
 from multiprocessing import freeze_support
 import sys
 
-from regionfixer_core import world
+
 from regionfixer_core.scan import (console_scan_world,
                                    console_scan_regionset,
                                    ChildProcessException)
 from regionfixer_core.interactive import InteractiveLoop
-from regionfixer_core.util import entitle, is_bare_console
-from regionfixer_core.world import parse_paths, parse_backup_list
-from regionfixer_core.version import version_string
 from regionfixer_core.bug_reporter import BugReporter
-from regionfixer_core.world import CHUNK_MISSING_ENTITIES_TAG
+from regionfixer_core.util import entitle, is_bare_console
+from regionfixer_core.version import version_string
+from regionfixer_core import world
 
 ################
 # Return values
@@ -62,11 +61,12 @@ def fix_bad_chunks(options, scanned_obj):
     """
 
     print("")
-    total = scanned_obj.count_chunks(CHUNK_MISSING_ENTITIES_TAG)
-    problem = CHUNK_MISSING_ENTITIES_TAG
-    status = world.CHUNK_STATUS_TEXT[CHUNK_MISSING_ENTITIES_TAG]
+    total = scanned_obj.count_chunks(world.CHUNK_MISSING_ENTITIES_TAG)
+    problem = world.CHUNK_MISSING_ENTITIES_TAG
+    status = world.CHUNK_STATUS_TEXT[world.CHUNK_MISSING_ENTITIES_TAG]
     # In the same order as in FIXABLE_CHUNK_PROBLEMS
-    options_fix = [options.fix_missing_tag,
+    options_fix = [options.fix_corrupted,
+                   options.fix_missing_tag,
                    options.fix_wrong_located]
     fixing = list(zip(options_fix, world.FIXABLE_CHUNK_PROBLEMS))
     for fix, problem in fixing:
@@ -279,6 +279,14 @@ def main():
                         default=False,
                         action='store_true')
 
+    parser.add_argument('--fix-corrupted',
+                        '--fc',
+                        help='Tries to fix chunks that are corrupted. This will try to decompress as much as possible from'
+                            'the data stream and see if the size is reasonable.',
+                        dest='fix_corrupted',
+                        default=False,
+                        action='store_true')
+
     parser.add_argument('--fix-missing-tag',
                         '--fm',
                         help='Fixes chunks that have the Entities tag missing. This will add the missing tag.',
@@ -371,7 +379,7 @@ def main():
         return RV_CRASH
 
 
-    world_list, regionset = parse_paths(args.paths)
+    world_list, regionset = world.parse_paths(args.paths)
 
     # Check if there are valid worlds to scan
     if not (world_list or regionset):
@@ -422,7 +430,7 @@ def main():
     # Do things with the option options args
     # Create a list of worlds containing the backups of the region files
     if args.backups:
-        backup_worlds = parse_backup_list(args.backups)
+        backup_worlds = world.parse_backup_list(args.backups)
         if not backup_worlds:
             print('[WARNING] No valid backup directories found, won\'t fix '
                   'any chunk.')

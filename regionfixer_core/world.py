@@ -21,17 +21,18 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import nbt.region as region
-import nbt.nbt as nbt
-from .util import table
-
 from glob import glob
 from os.path import join, split, exists, isfile
 from os import remove
 from shutil import copy
-
 import time
+import zlib
+
+import nbt.region as region
+import nbt.nbt as nbt
+from .util import table
 from nbt.nbt import TAG_List
+
 
 # Constants:
 #
@@ -104,7 +105,7 @@ CHUNK_PROBLEMS_SOLUTIONS = {CHUNK_CORRUPTED: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUT
                        CHUNK_MISSING_ENTITIES_TAG: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE]}
 
 # chunk problems that can be fixed (so they don't need to be removed or replaced)
-FIXABLE_CHUNK_PROBLEMS = [CHUNK_MISSING_ENTITIES_TAG, CHUNK_WRONG_LOCATED]
+FIXABLE_CHUNK_PROBLEMS = [CHUNK_CORRUPTED, CHUNK_MISSING_ENTITIES_TAG, CHUNK_WRONG_LOCATED]
 
 # list with problem, status-text, problem arg tuples
 CHUNK_PROBLEMS_ITERATOR = []
@@ -543,7 +544,35 @@ class ScannedRegionFile:
             global_coords = c[0]
             local_coords = _get_local_chunk_coords(*global_coords)
             region_file = region.RegionFile(self.path)
-            chunk = region_file.get_chunk(*local_coords)
+            # catch the exception of corrupted chunks 
+            try:
+                chunk = region_file.get_chunk(*local_coords)
+            except region.ChunkDataError:
+                # if we are here the chunk is corrupted, but still
+                if problem == CHUNK_CORRUPTED:
+                    # read the data raw
+                    m = region_file.metadata[local_coords[0], local_coords[1]]
+                    region_file.file.seek(m.blockstart * region.SECTOR_LENGTH + 5)
+                    raw_chunk = region_file.file.read(m.length - 1)
+                    # decompress byte by byte so we can get as much as we can before the error happens
+                    try:
+                        dc = zlib.decompressobj()
+                        out = ""
+                        for c in raw_chunk:
+                            out += dc.decompress(c)
+                    except:
+                        pass
+                    # compare the sizes of the new compressed strem and the old one to see if we've got something good
+                    cdata = zlib.compress(out.encode())
+                    if len(cdata) == len(raw_chunk):
+                        # the chunk is probably good, write it in the region file
+                        region_file.write_blockdata(local_coords[0], local_coords[1], out)
+                        print("The chunk {0},{1} in region file {2} was fixed successfully.".format(local_coords[0], local_coords[1], self.filename))
+                    else:
+                        print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], self.filename))
+                    #print("Extracted: " + str(len(out)))
+                    #print("Size of the compressed stream: " + str(len(raw_chunk)))
+
             if problem == CHUNK_MISSING_ENTITIES_TAG:
                 # The arguments to create the empty TAG_List have been somehow extracted by comparing
                 # the tag list from a healthy chunk with the one created by nbt
@@ -1039,10 +1068,10 @@ class RegionSet(DataSet):
         counter = 0
         if self.count_chunks():
             dim_name = self._get_dimension_directory()
-            print(' Repairing chunks in region set \"{0}\":'.format(dim_name if dim_name else "selected region files"))
+            print('Repairing chunks in region set \"{0}\":'.format(dim_name if dim_name else "selected region files"))
             for r in list(self._set.keys()):
                 counter += self._set[r].fix_problematic_chunks(problem)
-            print("Repaired {0} chunks in this regionset.\n".format(counter))
+            print("    Repaired {0} chunks in this regionset.\n".format(counter))
 
         return counter
 
