@@ -25,11 +25,17 @@ import platform
 import sys
 import traceback
 
-from . import world
-
 
 def get_str_from_traceback(ty, value, tb):
-    """ Return a string from a traceback + exception. """
+    """ Return a string from a traceback plus exception.
+    
+    Keyword arguments:
+     - ty -- Exception type
+     - value -- value of the traceback
+     - tb -- Traceback
+    
+    """
+
     t = traceback.format_exception(ty, value, tb)
     s = str(ty) + "\n"
     for i in t:
@@ -39,8 +45,6 @@ def get_str_from_traceback(ty, value, tb):
 
 # Stolen from:
 # http://stackoverflow.com/questions/3041986/python-command-line-yes-no-input
-
-
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via raw_input() and return their answer.
 
@@ -78,10 +82,13 @@ def query_yes_no(question, default="yes"):
 # stolen from minecraft overviewer
 # https://github.com/overviewer/Minecraft-Overviewer/
 def is_bare_console():
-    """Returns true if Overviewer is running in a bare console in
-    Windows, that is, if overviewer wasn't started in a cmd.exe
+    """Returns true if the python script is running in a bare console
+    
+    In Windows, that is, if the script wasn't started in a cmd.exe
     session.
+
     """
+
     if platform.system() == 'Windows':
         try:
             import ctypes
@@ -96,7 +103,8 @@ def is_bare_console():
 
 
 def entitle(text, level=0):
-    """ Put the text in a title with lot's of hashes everywhere. """
+    """ Put the text in a title with lot's of hashes around it. """
+
     t = ''
     if level == 0:
         t += "\n"
@@ -107,12 +115,16 @@ def entitle(text, level=0):
 
 
 def table(columns):
-    """ Gets a list with lists in which each list is a column,
-        returns a text string with a table. """
+    """ Generates a text containing a pretty table. 
+    
+    Keyword argument:
+     - columns -- A list containing lists in which each one of the is a column 
+                 of the table.
+    
+    """
 
     def get_max_len(l):
-        """ Takes a list of strings and returns the length of the biggest
-            string  """
+        """ Takes a list of strings and returns the length of the biggest string  """
         m = 0
         for e in l:
             if len(str(e)) > m:
