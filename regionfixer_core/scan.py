@@ -43,8 +43,6 @@ from progressbar import ProgressBar, Bar, AdaptiveETA, SimpleProgress
 from regionfixer_core import world
 from regionfixer_core.util import entitle
 
-TUPLE_NUM_ENTITIES = 0
-TUPLE_STATUS = 1
 
 logging.basicConfig(filename=None, level=logging.CRITICAL)
 
@@ -52,10 +50,18 @@ logging.basicConfig(filename=None, level=logging.CRITICAL)
 class ChildProcessException(Exception):
     """ Raised when a child process has problems.
 
-    Stores all the info given by sys.exc_info() and the
-    scanned file object which is probably partially filled.
+    Keyword arguments:
+     - partial_scanned_file -- ScannedObject from world.py partially filled with 
+                               the results of the scan
+     - exc_type -- Type of the exception being handled, extracted from sys.exc_info()
+     - exc_class -- The exception instance, extracted from sys.exc_info()
+     - tb_text -- The traceback text, extracted from traceback object from sys.exc_info()
+    
+    Stores all the info given by sys.exc_info() and the scanned file object which is
+    probably partially filled.
+    
     """
-
+    #TODO: not sure about the tb_text argument is that.
     def __init__(self, partial_scanned_file, exc_type, exc_class, tb_text):
         self.scanned_file = partial_scanned_file
         self.exc_type = exc_type
@@ -66,9 +72,16 @@ class ChildProcessException(Exception):
     def printable_traceback(self):
         """ Returns a nice printable traceback.
 
-        It uses a lot of asteriks to ensure it doesn't mix with
+        This traceback reports:
+         - The file that was being scanned
+         - The type and class of exception 
+         - The text of the traceback
+        
+        It uses a lot of asteriks as indentation to ensure it doesn't mix with
         the main process traceback.
+
         """
+
         text = ""
         scanned_file = self.scanned_file
         text += "*" * 10 + "\n"
@@ -85,7 +98,16 @@ class ChildProcessException(Exception):
         return text
 
     def save_error_log(self, filename='error.log'):
-        """ Save the error in filename, return the absolute path of saved file. """
+        """ Save the error in filename, return the path.
+        
+        Keyword argument:
+         - filename -- Name of the file to write the error log.
+        
+        Return:
+         - error_log_path -- Path where the error log was saved. 
+
+        """
+
         f = open(filename, 'w')
         error_log_path = abspath(f.name)
         filename = self.scanned_file.filename
@@ -130,11 +152,16 @@ def multiprocess_scan_regionfile(region_file):
 
 
 def _mp_data_pool_init(d):
-    """ Function to initialize the multiprocessing in scan_regionset.
-    Is used to pass values to the child process.
+    """ Function to initialize the multiprocessing in scan_dataset.
 
-    Requiere to pass the multiprocessing queue as argument.
+    Keyword arguments:
+    - d -- Dictionary containing the information to copy to the function of the child process.
+
+    This function adds the queue to each of the child processes objects. This queue
+    is used to get the results from the child process. 
+
     """
+
     assert isinstance(d, dict)
     assert 'queue' in d
     multiprocess_scan_data.q = d['queue']
@@ -142,7 +169,15 @@ def _mp_data_pool_init(d):
 
 def _mp_regionset_pool_init(d):
     """ Function to initialize the multiprocessing in scan_regionset.
-    Is used to pass values to the child process. """
+    
+    Keyword arguments:
+    - d -- Dictionary containing the information to copy to the function of the child process.
+
+    This function adds the queue to each of the child processes objects. This queue
+    is used to get the results from the child process. 
+
+    """
+
     assert isinstance(d, dict)
     assert 'regionset' in d
     assert 'queue' in d
@@ -157,22 +192,24 @@ def _mp_regionset_pool_init(d):
 class AsyncScanner:
     """ Class to derive all the scanner classes from.
 
+    Keyword arguments:
+     - data_structure -- Is one of the objects in world: DataSet, RegionSet
+     - processes -- Integer with the number of child processes to use for the scan
+     - scan_function -- Function used to scan the data
+     - init_args -- These are the initialization arguments passed to __init__
+     - _mp_init_function -- Function used to initialize the child processes
+    
     To implement a scanner you have to override:
     update_str_last_scanned()
-    Use try-finally to call terminate, if not processes will be
-    hanging in the background
-     """
+    
+    It's imperative to use try-finally to call terminate at the end of the run,
+    if not processes will be hanging in the background for all eternity.
+
+    """
 
     def __init__(self, data_structure, processes, scan_function, init_args,
                  _mp_init_function):
-        """ Init the scanner.
-
-        data_structure is a world.DataSet
-        processes is the number of child processes to use
-        scan_function is the function to use for scanning
-        init_args are the arguments passed to the init function
-        _mp_init_function is the function used to init the child processes
-        """
+        """ Init the scanner """
         assert isinstance(data_structure, world.DataSet)
         self.data_structure = data_structure
         self.list_files_to_scan = data_structure._get_list()
@@ -250,8 +287,14 @@ class AsyncScanner:
         self.pool.terminate()
 
     def raise_child_exception(self, exception_tuple):
-        """ Raises a ChildProcessException using the info
-        contained in the tuple returned by the child process. """
+        """ Raises a ChildProcessException.
+        
+        Keyword arguments:
+         - exception_tuple -- Tuple containing all the information about the exception 
+                             of the child process.
+        
+        """
+        
         e = exception_tuple
         raise ChildProcessException(e[0], e[1][0], e[1][1], e[1][2])
 
@@ -262,9 +305,11 @@ class AsyncScanner:
     def sleep(self):
         """ Sleep waiting for results.
 
-        This method will sleep less when results arrive faster and
-        more when they arrive slower.
+        This method will adjust automatically the sleep time. It will sleep less
+        when results arrive faster and more when they arrive slower.
+
         """
+
         # If the query number is outside of our range...
         if not ((self.queries_without_results < self.MAX_QUERY_NUM) &
                 (self.queries_without_results > self.MIN_QUERY_NUM)):
@@ -293,13 +338,18 @@ class AsyncScanner:
 
     @property
     def str_last_scanned(self):
-        """ A friendly string with last scanned thing. """
+        """ A friendly string with last scanned result. """
         return self._str_last_scanned if self._str_last_scanned \
             else "Scanning..."
 
     @property
     def finished(self):
-        """ Finished the operation. The queue could have elements """
+        """ Return True if the scan has finished.
+        
+        It checks if the queue is empty and if the results are ready.
+
+        """
+
         return self._results.ready() and self.queue.empty()
 
     @property
@@ -310,9 +360,11 @@ class AsyncScanner:
         but also the most sloppy. If you want to closely control the
         scan process (for example cancel the process in the middle,
         whatever is happening) use get_last_result().
-
+        
+        Usage:
         for result in scanner.results:
             # do things
+
         """
 
         q = self.queue
@@ -332,7 +384,13 @@ class AsyncScanner:
 
 
 class AsyncDataScanner(AsyncScanner):
-    """ Scan a DataFileSet and fill the data structure. """
+    """ Scan a DataFileSet and fill the data structure.
+    
+    Keyword arguments:
+     - data_structure -- A DataFileSet from world.py containing the files to scan
+     - processes -- An integer with the number of child processes to use
+    
+    """
 
     def __init__(self, data_structure, processes):
         scan_function = multiprocess_scan_data
@@ -350,7 +408,18 @@ class AsyncDataScanner(AsyncScanner):
 
 
 class AsyncRegionsetScanner(AsyncScanner):
-    """ Scan a RegionSet and fill the data structure. """
+    """ Scan a RegionSet and fill the data structure.     
+    
+    Keyword arguments:
+     - data_structure -- A RegionSet from world.py containing the files to scan
+     - processes -- An integer with the number of child processes to use
+     - entity_limit -- An integer, threshold of entities for a chunk to be considered
+                     with too many entities
+     - remove_entities -- A boolean, defaults to False, to remove the entities whilel 
+                         scanning. This is really handy because opening chunks with
+                         too many entities for scanning can take minutes.
+    
+    """
 
     def __init__(self, regionset, processes, entity_limit,
                  remove_entities=False):
@@ -376,8 +445,22 @@ class AsyncRegionsetScanner(AsyncScanner):
 
 
 class AsyncWorldRegionScanner:
-    """ Wrapper around the calls of AsyncScanner to scan all the
-    regionsets of a world. """
+    """ Wrapper around the calls of AsyncScanner the whole world.
+    
+    Keyword arguments:
+     - world_obj -- A World object from world.py
+     - processes -- An integer with the number of child processes to use
+     - entity_limit -- An integer, threshold of entities for a chunk to be considered
+                     with too many entities
+     - remove_entities -- A boolean, defaults to False, to remove the entities while 
+                         scanning. This is really handy because opening chunks with
+                         too many entities for scanning can take minutes.
+    
+    This class is just a wrapper around AsyncRegionsetScanner to scan all the region sets
+    of the world.
+
+    
+    """
 
     def __init__(self, world_obj, processes, entity_limit,
                  remove_entities=False):
@@ -399,12 +482,15 @@ class AsyncWorldRegionScanner:
         """ Sleep waiting for results.
 
         This method will sleep less when results arrive faster and
-        more when they arrive slower.
+        more when they arrive slower. See AsyncScanner.sleep().
+
         """
+
         self._current_regionset.sleep()
 
     def scan(self):
         """ Scan and fill the given regionset. """
+
         cr = AsyncRegionsetScanner(self.regionsets.pop(0),
                                    self.processes,
                                    self.entity_limit,
@@ -424,7 +510,9 @@ class AsyncWorldRegionScanner:
 
         This method is better if you want to closely control the scan
         process.
+
         """
+
         cr = self._current_regionset
 
         if cr is not None:
@@ -441,6 +529,8 @@ class AsyncWorldRegionScanner:
             return None
 
     def terminate(self):
+        """ Terminates scan of the current RegionSet. """
+
         self._current_regionset.terminate()
 
     @property
@@ -450,11 +540,18 @@ class AsyncWorldRegionScanner:
 
     @property
     def current_regionset(self):
+        """ Returns the current RegionSet being scanned. """
+
         return self._current_regionset.regionset
 
     @property
     def finished(self):
-        """ Finished the operation. The queue could have elements """
+        """ Return True if the scan has finished.
+        
+        It checks if the queue is empty and if the results are ready.
+
+        """
+
         return not self.regionsets and self._current_regionset.finished
 
     @property
@@ -470,8 +567,7 @@ class AsyncWorldRegionScanner:
         scan process (for example cancel the process in the middle,
         whatever is happening) use get_last_result().
 
-        Example using this method:
-
+        Usage:
         for result in scanner.results:
             # do things
         """
@@ -492,8 +588,16 @@ class AsyncWorldRegionScanner:
 
 
 def console_scan_loop(scanners, scan_titles, verbose):
-    """ Uses all the AsyncScanner passed to scan the files and
-    print status text to the terminal. """
+    """ Scan all the AsyncScanner object printing status to console.
+    
+    Keyword arguments:
+     - scanners -- List of AsyncScanner objects to scan.
+     - scan_titles -- List of string with the names of the world/regionsets in the same
+                     order as in scanners.
+     - verbose -- Boolean, if true it will print a line per scanned region file.
+    
+     """
+
     try:
         for scanner, title in zip(scanners, scan_titles):
             print("\n{0:-^60}".format(title))
@@ -537,7 +641,16 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities,
                        verbose):
     """ Scans a world folder prints status to console.
 
-    It will scan region files and data files (includes players).
+    Keyword arguments:
+     - world_obj -- World object from world.py that will be scanned
+     - processes -- An integer with the number of child processes to use
+     - entity_limit -- An integer, threshold of entities for a chunk to be considered
+                     with too many entities
+     - remove_entities -- A boolean, defaults to False, to remove the entities whilel 
+                         scanning. This is really handy because opening chunks with
+                         too many entities for scanning can take minutes.
+     - verbose -- Boolean, if true it will print a line per scanned region file.
+
     """
 
     # Time to wait between asking for results. Note that if the time is too big
@@ -580,11 +693,19 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities,
     w.scanned = True
 
 
-def console_scan_regionset(regionset, processes, entity_limit,
-                           remove_entities, verbose):
+def console_scan_regionset(regionset, processes, entity_limit, remove_entities, verbose):
     """ Scan a regionset printing status to console.
 
-    Uses AsyncRegionsetScanner.
+    Keyword arguments:
+     - regionset -- RegionSet object from world.py that will be scanned
+     - processes -- An integer with the number of child processes to use
+     - entity_limit -- An integer, threshold of entities for a chunk to be considered
+                     with too many entities
+     - remove_entities -- A boolean, defaults to False, to remove the entities whilel 
+                         scanning. This is really handy because opening chunks with
+                         too many entities for scanning can take minutes.
+     - verbose -- Boolean, if true it will print a line per scanned region file.
+
     """
 
     rs = AsyncRegionsetScanner(regionset, processes, entity_limit,
@@ -598,6 +719,9 @@ def console_scan_regionset(regionset, processes, entity_limit,
 def scan_data(scanned_dat_file):
     """ Try to parse the nbt data file, and fill the scanned object.
 
+    Keyword arguments:
+     - scanned_dat_file -- ScannedDataFile object from world.py.
+
     If something is wrong it will return a tuple with useful info
     to debug the problem.
 
@@ -605,6 +729,7 @@ def scan_data(scanned_dat_file):
     is not compressed, we handle the  special case here.
 
     """
+
     s = scanned_dat_file
     try:
         if s.filename == 'idcounts.dat':
@@ -634,15 +759,19 @@ def scan_data(scanned_dat_file):
     return s
 
 
-def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
-    """ Scan a region file filling the ScannedRegionFile
+def scan_region_file(scanned_regionfile_obj, entity_limit, remove_entities):
+    """ Scan a region file filling the ScannedRegionFile object
 
-        If delete_entities is True it will delete entities while
-        scanning
+    Keyword arguments:
+     - scanned_regionfile_obj -- ScannedRegionfile object from world.py that will be scanned
+     - entity_limit -- An integer, threshold of entities for a chunk to be considered
+                     with too many entities
+     - remove_entities -- A boolean, defaults to False, to remove the entities while 
+                         scanning. This is really handy because opening chunks with
+                         too many entities for scanning can take minutes.
 
-        entiti_limit is the threshold of entities to consider a chunk
-        with too much entities problems.
     """
+
     try:
         r = scanned_regionfile_obj
 
@@ -655,13 +784,13 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
             r.scanned = True
             return r
 
-        except PermissionError as e:
+        except PermissionError:
             r.status = world.REGION_UNREADABLE_PERMISSION_ERROR
             r.scan_time = time()
             r.scanned = True
             return r
 
-        except IOError as e:
+        except IOError:
             r.status = world.REGION_UNREADABLE
             r.scan_time = time()
             r.scanned = True
@@ -681,17 +810,17 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
                     # chunk not created
                     continue
 
-                if c[TUPLE_STATUS] == world.CHUNK_OK:
+                if c[world.TUPLE_STATUS] == world.CHUNK_OK:
                     continue
-                elif c[TUPLE_STATUS] == world.CHUNK_TOO_MANY_ENTITIES:
+                elif c[world.TUPLE_STATUS] == world.CHUNK_TOO_MANY_ENTITIES:
                     # Deleting entities is in here because parsing a chunk
                     # with thousands of wrong entities takes a long time,
                     # and sometimes GiB of RAM, and once detected is better
                     # to fix it at once.
-                    if delete_entities:
+                    if remove_entities:
                         world.delete_entities(region_file, x, z)
                         print(("Deleted {0} entities in chunk"
-                               " ({1},{2}) of the region file: {3}").format(c[TUPLE_NUM_ENTITIES], x, z, r.filename))
+                               " ({1},{2}) of the region file: {3}").format(c[world.TUPLE_NUM_ENTITIES], x, z, r.filename))
                         # entities removed, change chunk status to OK
                         r[(x, z)] = (0, world.CHUNK_OK)
 
@@ -703,9 +832,9 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
                         # ~ archivo = open(name,'w')
                         # ~ archivo.write(pretty_tree)
                         pass
-                elif c[TUPLE_STATUS] == world.CHUNK_CORRUPTED:
+                elif c[world.TUPLE_STATUS] == world.CHUNK_CORRUPTED:
                     pass
-                elif c[TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
+                elif c[world.TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
                     pass
 
         # Now check for chunks sharing offsets:
@@ -720,10 +849,10 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, delete_entities):
 
         metadata = region_file.metadata
         sharing = [k for k in metadata if (metadata[k].status == region.STATUS_CHUNK_OVERLAPPING and
-                                           r[k][TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED)]
+                                           r[k][world.TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED)]
         shared_counter = 0
         for k in sharing:
-            r[k] = (r[k][TUPLE_NUM_ENTITIES], world.CHUNK_SHARED_OFFSET)
+            r[k] = (r[k][world.TUPLE_NUM_ENTITIES], world.CHUNK_SHARED_OFFSET)
             shared_counter += 1
 
         r.scan_time = time()
@@ -781,14 +910,14 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
             # chunk ok
             status = world.CHUNK_OK
 
-    except InconceivedChunk as e:
+    except InconceivedChunk:
         # chunk not created
         chunk = None
         data_coords = None
         num_entities = None
         status = world.CHUNK_NOT_CREATED
 
-    except RegionHeaderError as e:
+    except RegionHeaderError:
         # corrupted chunk, because of region header
         status = world.CHUNK_CORRUPTED
         chunk = None
@@ -796,7 +925,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
-    except ChunkDataError as e:
+    except ChunkDataError:
         # corrupted chunk, usually because of bad CRC in compression
         status = world.CHUNK_CORRUPTED
         chunk = None
@@ -804,7 +933,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
-    except ChunkHeaderError as e:
+    except ChunkHeaderError:
         # corrupted chunk, error in the header of the chunk
         status = world.CHUNK_CORRUPTED
         chunk = None
@@ -812,7 +941,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
-    except KeyError as e:
+    except KeyError:
         # chunk with the mandatory tag Entities missing
         status = world.CHUNK_MISSING_ENTITIES_TAG
         chunk = None
@@ -820,7 +949,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
-    except UnicodeDecodeError as e:
+    except UnicodeDecodeError:
         # TODO: This should another kind of error, it's now being handled as corrupted chunk
         status = world.CHUNK_CORRUPTED
         chunk = None
@@ -828,7 +957,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
-    except TypeError as e:
+    except TypeError:
         # TODO: This should another kind of error, it's now being handled as corrupted chunk
         status = world.CHUNK_CORRUPTED
         chunk = None
