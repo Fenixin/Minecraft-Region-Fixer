@@ -381,6 +381,10 @@ def main():
 
     world_list, regionset = world.parse_paths(args.paths)
 
+    # print greetings an version number
+    print("\nWelcome to Region Fixer!")
+    print(("(v {0})".format(version_string)))
+
     # Check if there are valid worlds to scan
     if not (world_list or regionset):
         print('Error: No worlds or region files to scan! Use '
@@ -423,9 +427,6 @@ def main():
 
     if args.entity_limit < 0:
         parser.error("Error: The entity limit must be at least 0!")
-
-    print("\nWelcome to Region Fixer!")
-    print(("(version: {0})".format(version_string)))
 
     # Do things with the option options args
     # Create a list of worlds containing the backups of the region files
