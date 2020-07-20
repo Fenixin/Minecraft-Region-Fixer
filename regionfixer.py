@@ -27,24 +27,16 @@ from multiprocessing import freeze_support
 import sys
 
 
+from regionfixer_core.bug_reporter import BugReporter
+import regionfixer_core.constants as c
+from regionfixer_core.interactive import InteractiveLoop
 from regionfixer_core.scan import (console_scan_world,
                                    console_scan_regionset,
                                    ChildProcessException)
-from regionfixer_core.interactive import InteractiveLoop
-from regionfixer_core.bug_reporter import BugReporter
 from regionfixer_core.util import entitle, is_bare_console
 from regionfixer_core.version import version_string
 from regionfixer_core import world
 
-################
-# Return values
-################
-
-RV_OK = 0  # world scanned and no problems found
-RV_CRASH = 1  # crash or end unexpectedly
-RV_NOTHING_TO_SCAN = 20  # no files/worlds to scan
-# RV_WRONG_COMMAND = 2  # the command line used is wrong and region fixer didn't execute. argparse uses this value by default
-RV_BAD_WORLD = 3  # scan completed successfully but problems have been found in the scan
 
 
 def fix_bad_chunks(options, scanned_obj):
@@ -61,16 +53,16 @@ def fix_bad_chunks(options, scanned_obj):
     """
 
     print("")
-    total = scanned_obj.count_chunks(world.CHUNK_MISSING_ENTITIES_TAG)
-    problem = world.CHUNK_MISSING_ENTITIES_TAG
-    status = world.CHUNK_STATUS_TEXT[world.CHUNK_MISSING_ENTITIES_TAG]
+    total = scanned_obj.count_chunks(c.CHUNK_MISSING_ENTITIES_TAG)
+    problem = c.CHUNK_MISSING_ENTITIES_TAG
+    status = c.CHUNK_STATUS_TEXT[c.CHUNK_MISSING_ENTITIES_TAG]
     # In the same order as in FIXABLE_CHUNK_PROBLEMS
     options_fix = [options.fix_corrupted,
                    options.fix_missing_tag,
                    options.fix_wrong_located]
-    fixing = list(zip(options_fix, world.FIXABLE_CHUNK_PROBLEMS))
+    fixing = list(zip(options_fix, c.FIXABLE_CHUNK_PROBLEMS))
     for fix, problem in fixing:
-        status = world.CHUNK_STATUS_TEXT[problem]
+        status = c.CHUNK_STATUS_TEXT[problem]
         total = scanned_obj.count_chunks(problem)
         if fix:
             if total:
@@ -104,9 +96,9 @@ def delete_bad_chunks(options, scanned_obj):
                       options.delete_entities,
                       options.delete_shared_offset,
                       options.delete_missing_tag]
-    deleting = list(zip(options_delete, world.CHUNK_PROBLEMS))
+    deleting = list(zip(options_delete, c.CHUNK_PROBLEMS))
     for delete, problem in deleting:
-        status = world.CHUNK_STATUS_TEXT[problem]
+        status = c.CHUNK_STATUS_TEXT[problem]
         total = scanned_obj.count_chunks(problem)
         if delete:
             if total:
@@ -135,9 +127,9 @@ def delete_bad_regions(options, scanned_obj):
 
     print("")
     options_delete = [options.delete_too_small]
-    deleting = list(zip(options_delete, world.REGION_PROBLEMS))
+    deleting = list(zip(options_delete, c.REGION_PROBLEMS))
     for delete, problem in deleting:
-        status = world.REGION_STATUS_TEXT[problem]
+        status = c.REGION_STATUS_TEXT[problem]
         total = scanned_obj.count_regions(problem)
         if delete:
             if total:
@@ -366,7 +358,7 @@ def main():
         print("Minecraft Region Fixer only works with python 3.x")
         print(("(And you just tried to run it in python {0})".format(sys.version)))
         print("")
-        return RV_CRASH
+        return c.RV_CRASH
 
     if is_bare_console():
         print("")
@@ -376,7 +368,7 @@ def main():
               "Run cmd.exe in the run window.\n\n")
         print("")
         getpass("Press enter to continue:")
-        return RV_CRASH
+        return c.RV_CRASH
 
 
     world_list, regionset = world.parse_paths(args.paths)
@@ -389,7 +381,7 @@ def main():
     if not (world_list or regionset):
         print('Error: No worlds or region files to scan! Use '
                      '--help for a complete list of options.')
-        return RV_NOTHING_TO_SCAN
+        return c.RV_NOTHING_TO_SCAN
 
     # Check basic options compatibilities
     any_chunk_replace_option = args.replace_corrupted or \
@@ -442,9 +434,9 @@ def main():
     found_problems_in_regionsets = False
     found_problems_in_worlds = False
     if args.interactive:
-        c = InteractiveLoop(world_list, regionset, args, backup_worlds)
-        c.cmdloop()
-        return RV_OK
+        ci = InteractiveLoop(world_list, regionset, args, backup_worlds)
+        ci.cmdloop()
+        return c.RV_OK
     else:
         summary_text = ""
         # Scan the separate region files
@@ -501,7 +493,7 @@ def main():
                                    args.replace_wrong_located,
                                    args.replace_entities,
                                    args.replace_shared_offset]
-                replacing = list(zip(options_replace, world.CHUNK_PROBLEMS_ITERATOR))
+                replacing = list(zip(options_replace, c.CHUNK_PROBLEMS_ITERATOR))
                 for replace, (problem, status, arg) in replacing:
                     if replace:
                         total = w.count_chunks(problem)
@@ -525,7 +517,7 @@ def main():
                 del_ent = args.delete_entities
                 ent_lim = args.entity_limit
                 options_replace = [args.replace_too_small]
-                replacing = list(zip(options_replace, world.REGION_PROBLEMS_ITERATOR))
+                replacing = list(zip(options_replace, c.REGION_PROBLEMS_ITERATOR))
                 for replace, (problem, status, arg) in replacing:
                     if replace:
                         total = w.count_regions(problem)
@@ -577,9 +569,9 @@ def main():
                 print("Something went wrong while saving the log file!")
 
     if found_problems_in_regionsets or found_problems_in_worlds:
-        return RV_BAD_WORLD
+        return c.RV_BAD_WORLD
 
-    return RV_OK
+    return c.RV_OK
 
 
 if __name__ == '__main__':
@@ -605,7 +597,7 @@ if __name__ == '__main__':
         bug_sender = BugReporter(e.printable_traceback)
         # auto_reported = bug_sender.ask_and_send(QUESTION_TEXT)
         bug_report = bug_sender.error_str
-        value = RV_CRASH
+        value = c.RV_CRASH
 
     except Exception as e:
         had_exception = True
@@ -614,7 +606,7 @@ if __name__ == '__main__':
         bug_sender = BugReporter()
         # auto_reported = bug_sender.ask_and_send(QUESTION_TEXT)
         bug_report = bug_sender.error_str
-        value = RV_CRASH
+        value = c.RV_CRASH
 
     finally:
         if had_exception and not auto_reported:

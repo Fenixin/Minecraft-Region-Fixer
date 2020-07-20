@@ -24,8 +24,9 @@
 
 from cmd import Cmd
 
-from . import world
-from .scan import console_scan_world, console_scan_regionset
+import regionfixer_core.constants as c
+from regionfixer_core import world
+from regionfixer_core.scan import console_scan_world, console_scan_regionset
 
 
 class InteractiveLoop(Cmd):
@@ -50,7 +51,7 @@ class InteractiveLoop(Cmd):
         # Possible args for chunks stuff
         possible_args = ""
         first = True
-        for i in list(world.CHUNK_PROBLEMS_ARGS.values()) + ['all']:
+        for i in list(c.CHUNK_PROBLEMS_ARGS.values()) + ['all']:
             if not first:
                 possible_args += ", "
             possible_args += i
@@ -60,7 +61,7 @@ class InteractiveLoop(Cmd):
         # Possible args for region stuff
         possible_args = ""
         first = True
-        for i in list(world.REGION_PROBLEMS_ARGS.values()) + ['all']:
+        for i in list(c.REGION_PROBLEMS_ARGS.values()) + ['all']:
             if not first:
                 possible_args += ", "
             possible_args += i
@@ -227,9 +228,9 @@ class InteractiveLoop(Cmd):
             elif len(arg.split()) > 1:
                 print("Error: too many parameters.")
             else:
-                if arg in list(world.CHUNK_PROBLEMS_ARGS.values()) or arg == 'all':
+                if arg in list(c.CHUNK_PROBLEMS_ARGS.values()) or arg == 'all':
                     total = self.current.count_chunks(None)
-                    for problem, status_text, a in world.CHUNK_PROBLEMS_ITERATOR:
+                    for problem, status_text, a in c.CHUNK_PROBLEMS_ITERATOR:
                         if arg == 'all' or arg == a:
                             n = self.current.count_chunks(problem)
                             print("Chunks with status \'{0}\': {1}".format(status_text, n))
@@ -248,9 +249,9 @@ class InteractiveLoop(Cmd):
             elif len(arg.split()) > 1:
                 print("Error: too many parameters.")
             else:
-                if arg in list(world.REGION_PROBLEMS_ARGS.values()) or arg == 'all':
+                if arg in list(c.REGION_PROBLEMS_ARGS.values()) or arg == 'all':
                     total = self.current.count_regions(None)
-                    for problem, status_text, a in world.REGION_PROBLEMS_ITERATOR:
+                    for problem, status_text, a in c.REGION_PROBLEMS_ITERATOR:
                         if arg == 'all' or arg == a:
                             n = self.current.count_regions(problem)
                             print("Regions with status \'{0}\': {1}".format(status_text, n))
@@ -301,8 +302,8 @@ class InteractiveLoop(Cmd):
             elif len(arg.split()) > 1:
                 print("Error: too many parameters.")
             else:
-                if arg in list(world.CHUNK_PROBLEMS_ARGS.values()) or arg == 'all':
-                    for problem, status_text, a in world.CHUNK_PROBLEMS_ITERATOR:
+                if arg in list(c.CHUNK_PROBLEMS_ARGS.values()) or arg == 'all':
+                    for problem, status_text, a in c.CHUNK_PROBLEMS_ITERATOR:
                         if arg == 'all' or arg == a:
                             n = self.current.remove_problematic_chunks(problem)
                             if n:
@@ -322,8 +323,8 @@ class InteractiveLoop(Cmd):
             elif len(arg.split()) > 1:
                 print("Error: too many parameters.")
             else:
-                if arg in list(world.CHUNK_PROBLEMS_ARGS.values()) or arg == 'all':
-                    for problem, status_text, a in world.CHUNK_PROBLEMS_ITERATOR:
+                if arg in list(c.CHUNK_PROBLEMS_ARGS.values()) or arg == 'all':
+                    for problem, status_text, a in c.CHUNK_PROBLEMS_ITERATOR:
                         if arg == 'all' or arg == a:
                             n = self.current.replace_problematic_chunks(self.backup_worlds, problem, el, de)
                             if n:
@@ -343,8 +344,8 @@ class InteractiveLoop(Cmd):
             elif len(arg.split()) > 1:
                 print("Error: too many parameters.")
             else:
-                if arg in list(world.REGION_PROBLEMS_ARGS.values()) or arg == 'all':
-                    for problem, status_text, a in world.REGION_PROBLEMS_ITERATOR:
+                if arg in list(c.REGION_PROBLEMS_ARGS.values()) or arg == 'all':
+                    for problem, status_text, a in c.REGION_PROBLEMS_ITERATOR:
                         if arg == 'all' or arg == a:
                             n = self.current.replace_problematic_regions(self.backup_worlds, problem, el, de)
                             if n:
@@ -362,8 +363,8 @@ class InteractiveLoop(Cmd):
             elif len(arg.split()) > 1:
                 print("Error: too many parameters.")
             else:
-                if arg in list(world.REGION_PROBLEMS_ARGS.values()) or arg == 'all':
-                    for problem, status_text, a in world.REGION_PROBLEMS_ITERATOR:
+                if arg in list(c.REGION_PROBLEMS_ARGS.values()) or arg == 'all':
+                    for problem, status_text, a in c.REGION_PROBLEMS_ITERATOR:
                         if arg == 'all' or arg == a:
                             n = self.current.remove_problematic_regions(problem)
                             if n:
@@ -407,27 +408,27 @@ class InteractiveLoop(Cmd):
         return self.complete_arg(text, possible_args)
 
     def complete_count_chunks(self, text, line, begidx, endidx):
-        possible_args = list(world.CHUNK_PROBLEMS_ARGS.values()) + ['all']
+        possible_args = list(c.CHUNK_PROBLEMS_ARGS.values()) + ['all']
         return self.complete_arg(text, possible_args)
 
     def complete_remove_chunks(self, text, line, begidx, endidx):
-        possible_args = list(world.CHUNK_PROBLEMS_ARGS.values()) + ['all']
+        possible_args = list(c.CHUNK_PROBLEMS_ARGS.values()) + ['all']
         return self.complete_arg(text, possible_args)
 
     def complete_replace_chunks(self, text, line, begidx, endidx):
-        possible_args = list(world.CHUNK_PROBLEMS_ARGS.values()) + ['all']
+        possible_args = list(c.CHUNK_PROBLEMS_ARGS.values()) + ['all']
         return self.complete_arg(text, possible_args)
 
     def complete_count_regions(self, text, line, begidx, endidx):
-        possible_args = list(world.REGION_PROBLEMS_ARGS.values()) + ['all']
+        possible_args = list(c.REGION_PROBLEMS_ARGS.values()) + ['all']
         return self.complete_arg(text, possible_args)
 
     def complete_remove_regions(self, text, line, begidx, endidx):
-        possible_args = list(world.REGION_PROBLEMS_ARGS.values()) + ['all']
+        possible_args = list(c.REGION_PROBLEMS_ARGS.values()) + ['all']
         return self.complete_arg(text, possible_args)
 
     def complete_replace_regions(self, text, line, begidx, endidx):
-        possible_args = list(world.REGION_PROBLEMS_ARGS.values()) + ['all']
+        possible_args = list(c.REGION_PROBLEMS_ARGS.values()) + ['all']
         return self.complete_arg(text, possible_args)
 
     #################################################

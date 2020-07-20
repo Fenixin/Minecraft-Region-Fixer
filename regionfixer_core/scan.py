@@ -40,8 +40,10 @@ from nbt.region import (ChunkDataError,
 
 from progressbar import ProgressBar, Bar, AdaptiveETA, SimpleProgress
 
-from regionfixer_core import world
+import regionfixer_core.constants as c
 from regionfixer_core.util import entitle
+from regionfixer_core import world
+
 
 
 logging.basicConfig(filename=None, level=logging.CRITICAL)
@@ -672,11 +674,11 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities,
     if not w.scanned_level.path:
         print("[WARNING!] \'level.dat\' doesn't exist!")
     else:
-        if w.scanned_level.status not in world.DATAFILE_PROBLEMS:
+        if w.scanned_level.status not in c.DATAFILE_PROBLEMS:
             print("\'level.dat\' is readable")
         else:
             print("[WARNING!]: \'level.dat\' is corrupted with the following error/s:")
-            print("\t {0}".format(world.DATAFILE_STATUS_TEXT[w.scanned_level.status]))
+            print("\t {0}".format(c.DATAFILE_STATUS_TEXT[w.scanned_level.status]))
 
     ps = AsyncDataScanner(w.players, processes)
     ops = AsyncDataScanner(w.old_players, processes)
@@ -741,18 +743,18 @@ def scan_data(scanned_dat_file):
             _ = nbt.NBTFile(buffer=f)
         else:
             _ = nbt.NBTFile(filename=s.path)
-        s.status = world.DATAFILE_OK
+        s.status = c.DATAFILE_OK
     except MalformedFileError:
-        s.status = world.DATAFILE_UNREADABLE
+        s.status = c.DATAFILE_UNREADABLE
     except IOError:
-        s.status = world.DATAFILE_UNREADABLE
+        s.status = c.DATAFILE_UNREADABLE
     except UnicodeDecodeError:
-        s.status = world.DATAFILE_UNREADABLE
+        s.status = c.DATAFILE_UNREADABLE
     except TypeError:
-        s.status = world.DATAFILE_UNREADABLE
+        s.status = c.DATAFILE_UNREADABLE
 
     except:
-        s.status = world.DATAFILE_UNREADABLE
+        s.status = c.DATAFILE_UNREADABLE
         except_type, except_class, tb = sys.exc_info()
         s = (s, (except_type, except_class, extract_tb(tb)))
 
@@ -779,19 +781,19 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, remove_entities):
         try:
             region_file = region.RegionFile(r.path)
         except region.NoRegionHeader:  # The region has no header
-            r.status = world.REGION_TOO_SMALL
+            r.status = c.REGION_TOO_SMALL
             r.scan_time = time()
             r.scanned = True
             return r
 
         except PermissionError:
-            r.status = world.REGION_UNREADABLE_PERMISSION_ERROR
+            r.status = c.REGION_UNREADABLE_PERMISSION_ERROR
             r.scan_time = time()
             r.scanned = True
             return r
 
         except IOError:
-            r.status = world.REGION_UNREADABLE
+            r.status = c.REGION_UNREADABLE
             r.scan_time = time()
             r.scanned = True
             return r
@@ -800,19 +802,19 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, remove_entities):
             for z in range(32):
                 # start the actual chunk scanning
                 g_coords = r.get_global_chunk_coords(x, z)
-                chunk, c = scan_chunk(region_file,
+                chunk, tup = scan_chunk(region_file,
                                       (x, z),
                                       g_coords,
                                       entity_limit)
-                if c:
-                    r[(x, z)] = c
+                if tup:
+                    r[(x, z)] = tup
                 else:
                     # chunk not created
                     continue
 
-                if c[world.TUPLE_STATUS] == world.CHUNK_OK:
+                if tup[c.TUPLE_STATUS] == c.CHUNK_OK:
                     continue
-                elif c[world.TUPLE_STATUS] == world.CHUNK_TOO_MANY_ENTITIES:
+                elif tup[c.TUPLE_STATUS] == c.CHUNK_TOO_MANY_ENTITIES:
                     # Deleting entities is in here because parsing a chunk
                     # with thousands of wrong entities takes a long time,
                     # and sometimes GiB of RAM, and once detected is better
@@ -820,9 +822,9 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, remove_entities):
                     if remove_entities:
                         world.delete_entities(region_file, x, z)
                         print(("Deleted {0} entities in chunk"
-                               " ({1},{2}) of the region file: {3}").format(c[world.TUPLE_NUM_ENTITIES], x, z, r.filename))
+                               " ({1},{2}) of the region file: {3}").format(tup[c.TUPLE_NUM_ENTITIES], x, z, r.filename))
                         # entities removed, change chunk status to OK
-                        r[(x, z)] = (0, world.CHUNK_OK)
+                        r[(x, z)] = (0, c.CHUNK_OK)
 
                     else:
                         # This stores all the entities in a file,
@@ -832,9 +834,9 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, remove_entities):
                         # ~ archivo = open(name,'w')
                         # ~ archivo.write(pretty_tree)
                         pass
-                elif c[world.TUPLE_STATUS] == world.CHUNK_CORRUPTED:
+                elif tup[c.TUPLE_STATUS] == c.CHUNK_CORRUPTED:
                     pass
-                elif c[world.TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED:
+                elif tup[c.TUPLE_STATUS] == c.CHUNK_WRONG_LOCATED:
                     pass
 
         # Now check for chunks sharing offsets:
@@ -849,14 +851,14 @@ def scan_region_file(scanned_regionfile_obj, entity_limit, remove_entities):
 
         metadata = region_file.metadata
         sharing = [k for k in metadata if (metadata[k].status == region.STATUS_CHUNK_OVERLAPPING and
-                                           r[k][world.TUPLE_STATUS] == world.CHUNK_WRONG_LOCATED)]
+                                           r[k][c.TUPLE_STATUS] == c.CHUNK_WRONG_LOCATED)]
         shared_counter = 0
         for k in sharing:
-            r[k] = (r[k][world.TUPLE_NUM_ENTITIES], world.CHUNK_SHARED_OFFSET)
+            r[k] = (r[k][c.TUPLE_NUM_ENTITIES], c.CHUNK_SHARED_OFFSET)
             shared_counter += 1
 
         r.scan_time = time()
-        r.status = world.REGION_OK
+        r.status = c.REGION_OK
         r.scanned = True
         return r
 
@@ -902,24 +904,24 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         num_entities = len(chunk["Level"]["Entities"])
         if data_coords != global_coords:
             # wrong located chunk
-            status = world.CHUNK_WRONG_LOCATED
+            status = c.CHUNK_WRONG_LOCATED
         elif num_entities > el:
             # too many entities in the chunk
-            status = world.CHUNK_TOO_MANY_ENTITIES
+            status = c.CHUNK_TOO_MANY_ENTITIES
         else:
             # chunk ok
-            status = world.CHUNK_OK
+            status = c.CHUNK_OK
 
     except InconceivedChunk:
         # chunk not created
         chunk = None
         data_coords = None
         num_entities = None
-        status = world.CHUNK_NOT_CREATED
+        status = c.CHUNK_NOT_CREATED
 
     except RegionHeaderError:
         # corrupted chunk, because of region header
-        status = world.CHUNK_CORRUPTED
+        status = c.CHUNK_CORRUPTED
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
@@ -927,7 +929,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
 
     except ChunkDataError:
         # corrupted chunk, usually because of bad CRC in compression
-        status = world.CHUNK_CORRUPTED
+        status = c.CHUNK_CORRUPTED
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
@@ -935,7 +937,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
 
     except ChunkHeaderError:
         # corrupted chunk, error in the header of the chunk
-        status = world.CHUNK_CORRUPTED
+        status = c.CHUNK_CORRUPTED
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
@@ -943,7 +945,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
 
     except KeyError:
         # chunk with the mandatory tag Entities missing
-        status = world.CHUNK_MISSING_ENTITIES_TAG
+        status = c.CHUNK_MISSING_ENTITIES_TAG
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
@@ -951,7 +953,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
 
     except UnicodeDecodeError:
         # TODO: This should another kind of error, it's now being handled as corrupted chunk
-        status = world.CHUNK_CORRUPTED
+        status = c.CHUNK_CORRUPTED
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
@@ -959,13 +961,13 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
 
     except TypeError:
         # TODO: This should another kind of error, it's now being handled as corrupted chunk
-        status = world.CHUNK_CORRUPTED
+        status = c.CHUNK_CORRUPTED
         chunk = None
         data_coords = None
         global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
         num_entities = None
 
-    return chunk, (num_entities, status) if status != world.CHUNK_NOT_CREATED else None
+    return chunk, (num_entities, status) if status != c.CHUNK_NOT_CREATED else None
 
 
 if __name__ == '__main__':
