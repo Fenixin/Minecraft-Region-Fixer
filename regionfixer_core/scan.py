@@ -895,23 +895,83 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
                               the status described by the CHUNK_* variables in
                               world.py
 
-    If the chunk does not exist (is not yet created it returns None
+    If the chunk does not exist (is not yet created it returns None)
+    
+    This function also scan the chunks contained in the POI region files.
+
     """
+
     el = entity_limit
+
     try:
         chunk = region_file.get_chunk(*coords)
-        data_coords = world.get_chunk_data_coords(chunk)
-        num_entities = len(chunk["Level"]["Entities"])
-        if data_coords != global_coords:
-            # wrong located chunk
-            status = c.CHUNK_WRONG_LOCATED
-        elif num_entities > el:
-            # too many entities in the chunk
-            status = c.CHUNK_TOO_MANY_ENTITIES
-        else:
-            # chunk ok
-            status = c.CHUNK_OK
+        if "Level" in chunk:
+            # to know if is a poi chunk or a level chunk check the contents
+            # if 'Level' is at root is a level chunk
 
+            # Level chunk
+            try:
+                data_coords = world.get_chunk_data_coords(chunk)
+                num_entities = len(chunk["Level"]["Entities"])
+                if data_coords != global_coords:
+                    # wrong located chunk
+                    status = c.CHUNK_WRONG_LOCATED
+                elif num_entities > el:
+                    # too many entities in the chunk
+                    status = c.CHUNK_TOO_MANY_ENTITIES
+                else:
+                    # chunk ok
+                    status = c.CHUNK_OK
+
+            ############################
+            #    Chunk error detection
+            ############################
+            except KeyError:
+                # chunk with the mandatory tag Entities missing
+                status = c.CHUNK_MISSING_ENTITIES_TAG
+                chunk = None
+                data_coords = None
+                global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
+                num_entities = None
+        
+            except UnicodeDecodeError:
+                # TODO: This should another kind of error, it's now being handled as corrupted chunk
+                status = c.CHUNK_CORRUPTED
+                chunk = None
+                data_coords = None
+                global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
+                num_entities = None
+        
+            except TypeError:
+                # TODO: This should another kind of error, it's now being handled as corrupted chunk
+                status = c.CHUNK_CORRUPTED
+                chunk = None
+                data_coords = None
+                global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
+                num_entities = None
+
+        elif "Sections" in chunk:
+            # To check if it's a POI chunk check for the tag "Sections"
+            # If we give a look to the wiki:
+            # https://minecraft.gamepedia.com/Java_Edition_level_format#poi_format
+            # We can see that there are two TAGs at root of a POI, "Data" and "DataVersion", but
+            # in my tests the TAGs at root are "Sections and "DataVersion", no trace of "Data".
+            #
+            # So, let's use "Sections" as a differentiating factor
+        
+            # POI chunk
+            data_coords = None
+            num_entities = None
+            status = c.CHUNK_OK
+        
+        else:
+            # what is this? we shouldn't reach this part of the code, as far as
+            # we know there is only POI chunks and Level chunks
+            raise AssertionError("Unrecognized scanned chunk in scan_chunk().")
+
+    ###############################################
+    #    POI chunk and Level chunk common errors
+    ###############################################
     except InconceivedChunk:
         # chunk not created
         chunk = None
@@ -937,30 +997,6 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
 
     except ChunkHeaderError:
         # corrupted chunk, error in the header of the chunk
-        status = c.CHUNK_CORRUPTED
-        chunk = None
-        data_coords = None
-        global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
-        num_entities = None
-
-    except KeyError:
-        # chunk with the mandatory tag Entities missing
-        status = c.CHUNK_MISSING_ENTITIES_TAG
-        chunk = None
-        data_coords = None
-        global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
-        num_entities = None
-
-    except UnicodeDecodeError:
-        # TODO: This should another kind of error, it's now being handled as corrupted chunk
-        status = c.CHUNK_CORRUPTED
-        chunk = None
-        data_coords = None
-        global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
-        num_entities = None
-
-    except TypeError:
-        # TODO: This should another kind of error, it's now being handled as corrupted chunk
         status = c.CHUNK_CORRUPTED
         chunk = None
         data_coords = None

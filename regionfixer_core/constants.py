@@ -239,5 +239,6 @@ for problem in CHUNK_PROBLEMS:
 # Dimension names:
 DIMENSION_NAMES = {"region": "Overworld",
                    "DIM1": "The End",
-                   "DIM-1": "Nether"
+                   "DIM-1": "Nether",
+                   "poi": "POIs"
                    }

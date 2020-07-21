@@ -1016,6 +1016,8 @@ class World:
         self.regionsets.append(RegionSet(join(self.path, "region/")))
         for directory in glob(join(self.path, "DIM*/region")):
             self.regionsets.append(RegionSet(join(self.path, directory)))
+        # TODO: let's scan POI as region files maybe it's enough,
+        self.regionsets.append(RegionSet(join(self.path, "poi/")))
 
         # level.dat
         # Let's scan level.dat here so we can extract the world name
