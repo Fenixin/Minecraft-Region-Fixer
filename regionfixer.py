@@ -328,13 +328,15 @@ def main():
                         action='store_true',
                         default=False)
 
-    parser.add_argument('--interactive',
-                        '-i',
-                        help='Enter in interactive mode, where you can scan, see the '
-                             'problems, and fix them in a terminal like mode',
-                        dest='interactive',
-                        default=False,
-                        action='store_true', )
+    #===========================================================================
+    # parser.add_argument('--interactive',
+    #                     '-i',
+    #                     help='Enter in interactive mode, where you can scan, see the '
+    #                          'problems, and fix them in a terminal like mode',
+    #                     dest='interactive',
+    #                     default=False,
+    #                     action='store_true', )
+    #===========================================================================
 
     parser.add_argument('--log',
                         '-l',
@@ -390,11 +392,10 @@ def main():
         args.replace_shared_offset
     any_region_replace_option = args.replace_too_small
 
-    if args.interactive or args.summary:
+    if False or args.summary: # removed interactive mode args.interactive
         if any_chunk_replace_option or any_region_replace_option:
-            parser.error('Error: Can\'t use the options --replace-* , --delete-* and '
-                         '--log with --interactive. You can choose all this '
-                         'while in the interactive mode.')
+            parser.error('Error: Can\'t use the options --replace-* , --delete-* with '
+                         '--log')
 
     else:
         # Not options.interactive
@@ -433,7 +434,7 @@ def main():
     # The scanning process starts
     found_problems_in_regionsets = False
     found_problems_in_worlds = False
-    if args.interactive:
+    if False: # removed args.interactive
         ci = InteractiveLoop(world_list, regionset, args, backup_worlds)
         ci.cmdloop()
         return c.RV_OK
