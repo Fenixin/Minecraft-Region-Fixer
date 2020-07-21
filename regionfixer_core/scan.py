@@ -52,7 +52,7 @@ logging.basicConfig(filename=None, level=logging.CRITICAL)
 class ChildProcessException(Exception):
     """ Raised when a child process has problems.
 
-    Keyword arguments:
+    Inputs:
      - partial_scanned_file -- ScannedObject from world.py partially filled with 
                                the results of the scan
      - exc_type -- Type of the exception being handled, extracted from sys.exc_info()
@@ -156,7 +156,7 @@ def multiprocess_scan_regionfile(region_file):
 def _mp_data_pool_init(d):
     """ Function to initialize the multiprocessing in scan_dataset.
 
-    Keyword arguments:
+    Inputs:
     - d -- Dictionary containing the information to copy to the function of the child process.
 
     This function adds the queue to each of the child processes objects. This queue
@@ -172,7 +172,7 @@ def _mp_data_pool_init(d):
 def _mp_regionset_pool_init(d):
     """ Function to initialize the multiprocessing in scan_regionset.
     
-    Keyword arguments:
+    Inputs:
     - d -- Dictionary containing the information to copy to the function of the child process.
 
     This function adds the queue to each of the child processes objects. This queue
@@ -194,7 +194,7 @@ def _mp_regionset_pool_init(d):
 class AsyncScanner:
     """ Class to derive all the scanner classes from.
 
-    Keyword arguments:
+    Inputs:
      - data_structure -- Is one of the objects in world: DataSet, RegionSet
      - processes -- Integer with the number of child processes to use for the scan
      - scan_function -- Function used to scan the data
@@ -291,7 +291,7 @@ class AsyncScanner:
     def raise_child_exception(self, exception_tuple):
         """ Raises a ChildProcessException.
         
-        Keyword arguments:
+        Inputs:
          - exception_tuple -- Tuple containing all the information about the exception 
                              of the child process.
         
@@ -388,7 +388,7 @@ class AsyncScanner:
 class AsyncDataScanner(AsyncScanner):
     """ Scan a DataFileSet and fill the data structure.
     
-    Keyword arguments:
+    Inputs:
      - data_structure -- A DataFileSet from world.py containing the files to scan
      - processes -- An integer with the number of child processes to use
     
@@ -412,7 +412,7 @@ class AsyncDataScanner(AsyncScanner):
 class AsyncRegionsetScanner(AsyncScanner):
     """ Scan a RegionSet and fill the data structure.     
     
-    Keyword arguments:
+    Inputs:
      - data_structure -- A RegionSet from world.py containing the files to scan
      - processes -- An integer with the number of child processes to use
      - entity_limit -- An integer, threshold of entities for a chunk to be considered
@@ -449,7 +449,7 @@ class AsyncRegionsetScanner(AsyncScanner):
 class AsyncWorldRegionScanner:
     """ Wrapper around the calls of AsyncScanner the whole world.
     
-    Keyword arguments:
+    Inputs:
      - world_obj -- A World object from world.py
      - processes -- An integer with the number of child processes to use
      - entity_limit -- An integer, threshold of entities for a chunk to be considered
@@ -592,7 +592,7 @@ class AsyncWorldRegionScanner:
 def console_scan_loop(scanners, scan_titles, verbose):
     """ Scan all the AsyncScanner object printing status to console.
     
-    Keyword arguments:
+    Inputs:
      - scanners -- List of AsyncScanner objects to scan.
      - scan_titles -- List of string with the names of the world/regionsets in the same
                      order as in scanners.
@@ -643,7 +643,7 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities,
                        verbose):
     """ Scans a world folder prints status to console.
 
-    Keyword arguments:
+    Inputs:
      - world_obj -- World object from world.py that will be scanned
      - processes -- An integer with the number of child processes to use
      - entity_limit -- An integer, threshold of entities for a chunk to be considered
@@ -698,7 +698,7 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities,
 def console_scan_regionset(regionset, processes, entity_limit, remove_entities, verbose):
     """ Scan a regionset printing status to console.
 
-    Keyword arguments:
+    Inputs:
      - regionset -- RegionSet object from world.py that will be scanned
      - processes -- An integer with the number of child processes to use
      - entity_limit -- An integer, threshold of entities for a chunk to be considered
@@ -721,7 +721,7 @@ def console_scan_regionset(regionset, processes, entity_limit, remove_entities, 
 def scan_data(scanned_dat_file):
     """ Try to parse the nbt data file, and fill the scanned object.
 
-    Keyword arguments:
+    Inputs:
      - scanned_dat_file -- ScannedDataFile object from world.py.
 
     If something is wrong it will return a tuple with useful info
@@ -764,7 +764,7 @@ def scan_data(scanned_dat_file):
 def scan_region_file(scanned_regionfile_obj, entity_limit, remove_entities):
     """ Scan a region file filling the ScannedRegionFile object
 
-    Keyword arguments:
+    Inputs:
      - scanned_regionfile_obj -- ScannedRegionfile object from world.py that will be scanned
      - entity_limit -- An integer, threshold of entities for a chunk to be considered
                      with too many entities

@@ -29,7 +29,7 @@ import traceback
 def get_str_from_traceback(ty, value, tb):
     """ Return a string from a traceback plus exception.
     
-    Keyword arguments:
+    Inputs:
      - ty -- Exception type
      - value -- value of the traceback
      - tb -- Traceback
@@ -117,7 +117,7 @@ def entitle(text, level=0):
 def table(columns):
     """ Generates a text containing a pretty table. 
     
-    Keyword argument:
+    Input:
      - columns -- A list containing lists in which each one of the is a column 
                  of the table.
     
