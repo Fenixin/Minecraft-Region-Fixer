@@ -42,7 +42,7 @@ from regionfixer_core import world
 def fix_bad_chunks(options, scanned_obj):
     """ Fixes chunks that can be repaired.
 
-    Keywords arguments:
+    Inputs:
     options -- argparse arguments, the whole argparse.ArgumentParser() object
     scanned_obj -- this can be a RegionSet or World objects from world.py
 
@@ -78,7 +78,7 @@ def fix_bad_chunks(options, scanned_obj):
 def delete_bad_chunks(options, scanned_obj):
     """ Takes a scanned object and deletes all the bad chunks.
 
-    Keywords arguments
+    Inputs:
     options -- argparse arguments, the whole argparse.ArgumentParser() object
     scanned_obj -- this can be a RegionSet or World objects from world.py
 
@@ -114,7 +114,7 @@ def delete_bad_chunks(options, scanned_obj):
 def delete_bad_regions(options, scanned_obj):
     """  Takes a scanned object and deletes all bad region files.
     
-    Keywords arguments:
+    Inputs:
     options -- argparse arguments, the whole argparse.ArgumentParser() object
     scanned_obj -- this can be a RegionSet or World objects from world.py
 
@@ -177,71 +177,68 @@ def main():
 
     parser.add_argument('--replace-corrupted',
                         '--rc',
-                        help='Tries to replace the corrupted chunks using the backup'
-                             ' directories. This option can be only used scanning one'
-                             ' world.',
+                        help='Try to replace the corrupted chunks using the backup'
+                             ' directories. Can be only used scanning one world.',
                         default=False,
                         dest='replace_corrupted',
                         action='store_true')
 
     parser.add_argument('--replace-wrong-located',
                         '--rw',
-                        help='Tries to replace the wrong located chunks using the '
-                             'backup directories. This option can be only used scanning'
-                             ' one world.',
+                        help='Try to replace the wrong located chunks using the '
+                             'backup directories. Can be only used scanning one '
+                             'world.',
                         default=False,
                         dest='replace_wrong_located',
                         action='store_true')
 
     parser.add_argument('--replace-entities',
                         '--re',
-                        help='Tries to replace the chunks with too many entities using '
-                             'the backup directories. This option can be only used '
-                             'scanning one world.',
+                        help='Try to replace the chunks with too many entities using '
+                             'the backup directories. Can be only used scanning '
+                             'one world.',
                         default=False,
                         dest='replace_entities',
                         action='store_true')
 
     parser.add_argument('--replace-shared-offset',
                         '--rs',
-                        help='Tries to replace the chunks with a shared offset using '
-                             'the backup directories. This option can be only used'
-                             'scanning one world.',
+                        help='Try to replace the chunks with a shared offset using '
+                             'the backup directories. Can be only used scanning '
+                             'one world.',
                         default=False,
                         dest='replace_shared_offset',
                         action='store_true')
 
     parser.add_argument('--replace-too-small',
                         '--rt',
-                        help='Tries to replace the region files that are too small to '
-                             'be actually be a region file using the backup '
-                             'directories. This option can be only used scanning one '
-                             'world.',
+                        help='Try to replace the region files that are too small to '
+                             'be actually be a region file using the backup directories.'
+                             'Can be only used scanning one world.',
                         default=False,
                         dest='replace_too_small',
                         action='store_true')
 
     parser.add_argument('--delete-corrupted',
                         '--dc',
-                        help='[WARNING!] This option deletes! This option will delete '
-                             'all the corrupted chunks. Used with --replace-corrupted '
-                             'or --replace-wrong-located it will delete all the '
-                             'non-replaced chunks.',
+                        help='[WARNING!] This option deletes! Delete all the corrupted '
+                        'chunks. Used with --replace-corrupted or --replace-wrong-located'
+                        ' will delete all the non-replaced chunks.',
                         action='store_true',
                         default=False)
 
     parser.add_argument('--delete-wrong-located',
                         '--dw',
-                        help=('[WARNING!] This option deletes!'
-                              'The same as --delete-corrupted but for wrong '
-                              'located chunks'),
+                        help='[WARNING!] This option deletes! Delete all the wrong located '
+                        'chunks. Used with --replace-corrupted or --replace-wrong-located'
+                        ' will delete all the non-replaced chunks.',
                         action='store_true',
                         default=False,
                         dest='delete_wrong_located')
 
     parser.add_argument('--delete-entities',
                         '--de',
-                        help='[WARNING!] This option deletes! This option deletes ALL '
+                        help='[WARNING!] This option deletes! Delete ALL '
                              'the entities in chunks with more entities than '
                              '--entity-limit (300 by default). In a Minecraft '
                              'entities are mostly mobs and items dropped in the '
@@ -255,17 +252,17 @@ def main():
 
     parser.add_argument('--delete-shared-offset',
                         '--ds',
-                        help='[WARNING!] This option deletes! This option will delete '
-                             'all the chunk with status shared offset. It will remove '
-                             'the region header for the false chunk, note that you '
-                             'don\'t loos any chunk doing this.',
+                        help='[WARNING!] This option deletes! Delete all the chunk '
+                             'with status shared offset. It will remove the region '
+                             'header for the false chunk, note that you '
+                             'don\'t loose any chunk doing this.',
                         action='store_true',
                         default=False,
                         dest='delete_shared_offset')
 
     parser.add_argument('--delete-missing-tag',
                         '--dmt',
-                        help='[WARNING!] This option deletes! Removes any chunks '
+                        help='[WARNING!] This option deletes! Remove any chunks '
                              'with the mandatory entities tag missing.',
                         dest='delete_missing_tag',
                         default=False,
@@ -273,22 +270,23 @@ def main():
 
     parser.add_argument('--fix-corrupted',
                         '--fc',
-                        help='Tries to fix chunks that are corrupted. This will try to decompress as much as possible from'
-                            'the data stream and see if the size is reasonable.',
+                        help='Try to fix chunks that are corrupted by extracting as much '
+                             'information as possible',
                         dest='fix_corrupted',
                         default=False,
                         action='store_true')
 
     parser.add_argument('--fix-missing-tag',
                         '--fm',
-                        help='Fixes chunks that have the Entities tag missing. This will add the missing tag.',
+                        help='Fix chunks that have the Entities tag missing. This will add '
+                             'the missing tag.',
                         dest='fix_missing_tag',
                         default=False,
                         action='store_true')
 
     parser.add_argument('--fix-wrong-located',
                         '--fw',
-                        help='Fixes chunks that have that are wrong located. This will save them in the coordinates '
+                        help='Fix chunks that are wrong located. This will save them in the coordinates '
                             'stored in their data.',
                         dest='fix_wrong_located',
                         default=False,
@@ -296,7 +294,7 @@ def main():
 
     parser.add_argument('--delete-too-small',
                         '--dt',
-                        help='[WARNING!] This option deletes! Removes any region files '
+                        help='[WARNING!] This option deletes! Remove any region files '
                              'found to be too small to actually be a region file.',
                         dest='delete_too_small',
                         default=False,
@@ -319,12 +317,14 @@ def main():
                         type=int,
                         default=1)
 
+    status_abbr = ""
+    for status in c.CHUNK_PROBLEMS: 
+        status_abbr += "{0}: {1}; ".format(c.CHUNK_PROBLEMS_ABBR[status], c.CHUNK_STATUS_TEXT[status])
     parser.add_argument('--verbose',
                         '-v',
-                        help='Don\'t use a progress bar, instead print a line per '
-                             'scanned region file with results information. The '
-                             'letters mean c: corrupted; w: wrong located; t: total of '
-                             'chunks; tme: too many entities problem',
+                        help=('Don\'t use a progress bar, instead print a line per '
+                             'scanned file with results information. The '
+                             'letters mean:\n') + status_abbr,
                         action='store_true',
                         default=False)
 
@@ -340,7 +340,7 @@ def main():
 
     parser.add_argument('--log',
                         '-l',
-                        help='Saves a log of all the problems found in the specified '
+                        help='Save a log of all the problems found in the specified '
                              'file. The log file contains all the problems found with '
                              'this information: region file, chunk coordinates and '
                              'problem. Use \'-\' as name to show the log at the end '
