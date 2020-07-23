@@ -53,6 +53,7 @@ class ScannedDataFile:
         self.path = path
         if self.path and exists(self.path):
             self.filename = split(path)[1]
+            self.folder = split(split(path)[0])[1]
         else:
             self.filename = None
         # The status of the region file.
@@ -92,7 +93,7 @@ class ScannedRegionFile:
         # general region file info
         self.path = path
         self.filename = split(path)[1]
-        self.folder = split(path)[0]
+        self.folder = split(split(path)[0])[1]
         self.x = self.z = None
         self.x, self.z = self.get_coords()
         self.coords = (self.x, self.z)
@@ -393,19 +394,19 @@ class ScannedRegionFile:
                         if len(cdata) == len(raw_chunk):
                             # the chunk is probably good, write it in the region file
                             region_file.write_blockdata(local_coords[0], local_coords[1], out)
-                            print("The chunk {0},{1} in region file {2} was fixed successfully.".format(local_coords[0], local_coords[1], self.filename))
+                            print("The chunk {0},{1} in region file {2} was fixed successfully.".format(local_coords[0], local_coords[1], join(self.folder,self.filename)))
                         else:
-                            print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], self.filename))
+                            print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], join(self.folder,self.filename)))
                         #=======================================================
                         # print("Extracted: " + str(len(out)))
                         # print("Size of the compressed stream: " + str(len(raw_chunk)))
                         #=======================================================
             except region.ChunkHeaderError:
                 # usually a chunk with zero length, pass
-                print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], self.filename))
+                print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], join(self.folder,self.filename)))
             except region.RegionHeaderError:
                 # usually a chunk with zero length, pass
-                print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], self.filename))
+                print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], join(self.folder,self.filename)))
     
             if status == c.CHUNK_MISSING_ENTITIES_TAG:
                 # The arguments to create the empty TAG_List have been somehow extracted by comparing

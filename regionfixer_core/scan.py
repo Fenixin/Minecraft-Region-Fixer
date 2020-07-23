@@ -25,7 +25,7 @@
 import sys
 import logging
 import multiprocessing
-from os.path import split, abspath
+from os.path import split, abspath, join
 from time import sleep, time
 from copy import copy
 from traceback import extract_tb
@@ -623,7 +623,8 @@ def console_scan_loop(scanners, scan_titles, verbose):
                             else:
                                 status = "(" + result.oneliner_status + ")"
                                 fn = result.filename
-                                print("Scanned {0: <12} {1:.<43} {2}/{3}".format(fn, status, counter, total))
+                                fol = result.folder
+                                print("Scanned {0: <12} {1:.<43} {2}/{3}".format(join(fol, fn), status, counter, total))
                     if not verbose:
                         pbar.finish()
                 except KeyboardInterrupt as e:
