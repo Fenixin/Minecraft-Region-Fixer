@@ -377,26 +377,36 @@ class ScannedRegionFile:
                     # read the data raw
                     m = region_file.metadata[local_coords[0], local_coords[1]]
                     region_file.file.seek(m.blockstart * region.SECTOR_LENGTH + 5)
-                    raw_chunk = region_file.file.read(m.length - 1)
-                    # decompress byte by byte so we can get as much as we can before the error happens
-                    try:
+                    # these status doesn't provide a good enough data, we could end up reading garbage
+                    if m.status not in (region.STATUS_CHUNK_IN_HEADER, region.STATUS_CHUNK_MISMATCHED_LENGTHS, 
+                                       region.STATUS_CHUNK_OUT_OF_FILE, region.STATUS_CHUNK_OVERLAPPING,
+                                       region.STATUS_CHUNK_ZERO_LENGTH):
+                        # get the raw data of the chunk
+                        raw_chunk = region_file.file.read(m.length - 1)
+                        # decompress byte by byte so we can get as much as we can before the error happens
                         dc = zlib.decompressobj()
                         out = ""
                         for i in raw_chunk:
                             out += dc.decompress(i)
-                    except:
-                        pass
-                    # compare the sizes of the new compressed strem and the old one to see if we've got something good
-                    cdata = zlib.compress(out.encode())
-                    if len(cdata) == len(raw_chunk):
-                        # the chunk is probably good, write it in the region file
-                        region_file.write_blockdata(local_coords[0], local_coords[1], out)
-                        print("The chunk {0},{1} in region file {2} was fixed successfully.".format(local_coords[0], local_coords[1], self.filename))
-                    else:
-                        print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], self.filename))
-                    #print("Extracted: " + str(len(out)))
-                    #print("Size of the compressed stream: " + str(len(raw_chunk)))
-
+                        # compare the sizes of the new compressed strem and the old one to see if we've got something good
+                        cdata = zlib.compress(out.encode())
+                        if len(cdata) == len(raw_chunk):
+                            # the chunk is probably good, write it in the region file
+                            region_file.write_blockdata(local_coords[0], local_coords[1], out)
+                            print("The chunk {0},{1} in region file {2} was fixed successfully.".format(local_coords[0], local_coords[1], self.filename))
+                        else:
+                            print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], self.filename))
+                        #=======================================================
+                        # print("Extracted: " + str(len(out)))
+                        # print("Size of the compressed stream: " + str(len(raw_chunk)))
+                        #=======================================================
+            except region.ChunkHeaderError:
+                # usually a chunk with zero length, pass
+                print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], self.filename))
+            except region.RegionHeaderError:
+                # usually a chunk with zero length, pass
+                print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], self.filename))
+    
             if status == c.CHUNK_MISSING_ENTITIES_TAG:
                 # The arguments to create the empty TAG_List have been somehow extracted by comparing
                 # the tag list from a healthy chunk with the one created by nbt
@@ -994,7 +1004,7 @@ class RegionSet(DataSet):
                 table_data = []
                 table_data.append(['Problem', 'Count'])
                 for p in c.CHUNK_PROBLEMS:
-                    if chunk_counts[p] is not 0:
+                    if chunk_counts[p] != 0:
                         table_data.append([c.CHUNK_STATUS_TEXT[p], chunk_counts[p]])
                 table_data.append(['Total', chunk_counts['TOTAL']])
                 text += table(table_data)
@@ -1007,7 +1017,7 @@ class RegionSet(DataSet):
                 table_data = []
                 table_data.append(['Problem', 'Count'])
                 for p in c.REGION_PROBLEMS:
-                    if region_counts[p] is not 0:
+                    if region_counts[p] != 0:
                         table_data.append([c.REGION_STATUS_TEXT[p], region_counts[p]])
                 table_data.append(['Total', region_counts['TOTAL']])
                 text += table(table_data)
@@ -1561,7 +1571,7 @@ class World:
                 table_data = []
                 table_data.append(['Problem', 'Count'])
                 for p in c.CHUNK_PROBLEMS:
-                    if chunk_counts[p] is not 0:
+                    if chunk_counts[p] != 0:
                         table_data.append([c.CHUNK_STATUS_TEXT[p], chunk_counts[p]])
                 table_data.append(['Total', chunk_counts['TOTAL']])
                 text += table(table_data)
@@ -1574,7 +1584,7 @@ class World:
                 table_data = []
                 table_data.append(['Problem', 'Count'])
                 for p in c.REGION_PROBLEMS:
-                    if region_counts[p] is not 0:
+                    if region_counts[p] != 0:
                         table_data.append([c.REGION_STATUS_TEXT[p], region_counts[p]])
                 table_data.append(['Total', region_counts['TOTAL']])
                 text += table(table_data)
