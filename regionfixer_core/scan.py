@@ -934,15 +934,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
                 data_coords = None
                 global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
                 num_entities = None
-        
-            except UnicodeDecodeError:
-                # TODO: This should another kind of error, it's now being handled as corrupted chunk
-                status = c.CHUNK_CORRUPTED
-                chunk = None
-                data_coords = None
-                global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
-                num_entities = None
-        
+
             except TypeError:
                 # TODO: This should another kind of error, it's now being handled as corrupted chunk
                 status = c.CHUNK_CORRUPTED
@@ -998,6 +990,14 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
 
     except ChunkHeaderError:
         # corrupted chunk, error in the header of the chunk
+        status = c.CHUNK_CORRUPTED
+        chunk = None
+        data_coords = None
+        global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
+        num_entities = None
+
+    except UnicodeDecodeError:
+        # TODO: This should another kind of error, it's now being handled as corrupted chunk
         status = c.CHUNK_CORRUPTED
         chunk = None
         data_coords = None
