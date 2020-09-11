@@ -6,7 +6,7 @@ By Alejandro Aguilera (Fenixin)
 
 Locates problems and tries to fix Minecraft worlds (or region files).
 
-Tries to fix corrupted chunks in region files using old backup copies
+Minecraft Region Fixer tries to fix corrupted chunks in region files using old backup copies
 of the Minecraft world. If you don't have a copy, you can eliminate the
 corrupted chunks making Minecraft regenerate them.
 
@@ -24,14 +24,14 @@ https://www.minecraftforum.net/forums/mapping-and-modding-java-edition/minecraft
 Supported platforms
 ===================
 This program only works with Python 3.x, and DOESN'T work with
-python 2.x. There was a windows exe in older versions, but right
+python 2.x. There was a Windows .exe for older versions, but right
 now you need to install the python interpreter to run this
 program.
 
 Notes
 =====
 Older versions of Minecraft had big problems when loading broken
-worlds. Newer versions of Minecraft are doing improving the way
+worlds. Newer versions of Minecraft are improving the way
 they deal with corruption and other things.
 
 Region-Fixer still is useful for replacing chunks/regions with a 
@@ -54,7 +54,7 @@ Suggestions and bugs should go to the github page:
 
 https://github.com/Fenixin/Minecraft-Region-Fixer
 
-Feedback and questions should go preferably to the forums posts:
+Feedback and questions should preferably go to these forums posts:
 
 (server administration)
 https://www.minecraftforum.net/forums/support/server-support-and/1903200-minecraft-region-fixer
@@ -76,11 +76,11 @@ See CONTRIBUTORS.txt
 
 Warning
 =======
-This program has been tested with a lot of worlds, but there may be 
+This program has been tested with a lot of worlds, but there may exist 
 bugs, so please, MAKE A BACKUP OF YOUR WORLD BEFORE RUNNING it,
 I'M NOT RESPONSIBLE OF WHAT HAPPENS TO YOUR WORLD. Other way to say it 
 is USE THIS TOOL AT YOUR OWN RISK.
 
-Think that you are playing with you precious saved games :P .
+Think that you are playing with your precious saved games :P .
 
 Good luck! :)
