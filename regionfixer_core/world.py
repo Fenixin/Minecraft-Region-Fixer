@@ -401,13 +401,10 @@ class ScannedRegionFile:
                         # print("Extracted: " + str(len(out)))
                         # print("Size of the compressed stream: " + str(len(raw_chunk)))
                         #=======================================================
-            except region.ChunkHeaderError:
-                # usually a chunk with zero length, pass
+            except (region.ChunkHeaderError, region.RegionHeaderError, UnicodeDecodeError):
+                # usually a chunk with zero length in the first two cases, or veeery broken chunk in the third
                 print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], join(self.folder,self.filename)))
-            except region.RegionHeaderError:
-                # usually a chunk with zero length, pass
-                print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], join(self.folder,self.filename)))
-    
+
             if status == c.CHUNK_MISSING_ENTITIES_TAG:
                 # The arguments to create the empty TAG_List have been somehow extracted by comparing
                 # the tag list from a healthy chunk with the one created by nbt
