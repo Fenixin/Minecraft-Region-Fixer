@@ -303,7 +303,7 @@ class ScannedRegionFile:
                 text += " |-+-Chunk coords: header {0}, global {1}.\n".format(h_coords, g_coords)
                 text += " | +-Status: {0}\n".format(c.CHUNK_STATUS_TEXT[status])
                 if self[ck][c.TUPLE_STATUS] == c.CHUNK_TOO_MANY_ENTITIES:
-                    text += " | +-No. entities: {0}\n".format(self[c][c.TUPLE_NUM_ENTITIES])
+                    text += " | +-No. entities: {0}\n".format(self[ck][c.TUPLE_NUM_ENTITIES])
                 text += " |\n"
 
         return text
