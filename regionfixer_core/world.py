@@ -1597,7 +1597,17 @@ class World:
         else:
             return chunk_counts, region_counts
 
-
+        
+def wildcardGoNope(arg):
+    """
+    I hate wildcards
+    """
+    region_list = []
+    path = arg[:-5]
+    for item in scandir(arg[:-5]):
+        region_list.append(arg[:-5]+item.name)
+    return region_list
+    
 
 def parse_paths(args):
     """ Parse a list of paths to and returns World and a RegionSet objects.
@@ -1615,7 +1625,9 @@ def parse_paths(args):
     region_list = []
     warning = False
     for arg in args:
-        if arg[-4:] == ".mca":
+        if arg[-6:] == "/*.mca":
+            region_list = wildcardGoNope(arg)
+        elif arg[-4:] == ".mca":
             region_list.append(arg)
         elif arg[-4:] == ".mcr": # ignore pre-anvil region files
             if not warning:
