@@ -237,8 +237,16 @@ for problem in CHUNK_PROBLEMS:
                                     CHUNK_PROBLEMS_ARGS[problem]))
 
 # Dimension names:
-DIMENSION_NAMES = {"region": "Overworld",
+DIMENSION_NAMES = {"": "Overworld",
                    "DIM1": "The End",
-                   "DIM-1": "Nether",
-                   "poi": "POIs"
+                   "DIM-1": "Nether"
                    }
+
+# Region files types
+LEVEL_DIR = "region"
+POI_DIR = "poi"
+ENTITIES_DIR = "entities"
+REGION_TYPES_NAMES = {LEVEL_DIR: ("level/region", "Level/Region"),
+                      POI_DIR: ("POIs", "POIs"),
+                      ENTITIES_DIR: ("entities", "Entities" )
+                      }

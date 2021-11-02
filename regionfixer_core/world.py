@@ -86,14 +86,15 @@ class ScannedRegionFile:
      - path -- A string with the path of the region file
      - scanned_time -- Float, time as returned by bult-in time module. The time
                at which the region file has been scanned. None by default.
+     - folder -- Used to enhance print()
 
     """
 
-    def __init__(self, path, scanned_time=None):
+    def __init__(self, path, scanned_time=None, folder=""):
         # general region file info
         self.path = path
         self.filename = split(path)[1]
-        self.folder = split(split(path)[0])[1]
+        self.folder = folder
         self.x = self.z = None
         self.x, self.z = self.get_coords()
         self.coords = (self.x, self.z)
@@ -646,11 +647,18 @@ class RegionSet(DataSet):
     
     Inputs:
      - regionset_path -- Path to the folder containing region files
+                         IT MUST NOT END WITH A SLASH ("/")
      - region_list -- List of paths to all the region files
+     - overworld -- Tweak to tell it's a dimension and not the overworld
     """
 
-    def __init__(self, regionset_path=None, region_list=[]):
+    def __init__(self, regionset_path=None, region_list=[], overworld=True):
         DataSet.__init__(self, ScannedRegionFile)
+        # Otherwise, problems in _get_dimension_directory() and _get_region_type_directory()
+        if regionset_path != None :
+            assert regionset_path[-1] != "/"
+        self.overworld = overworld
+
         if regionset_path:
             self.path = regionset_path
             self.region_list = glob(join(self.path, "r.*.*.mca"))
@@ -660,11 +668,15 @@ class RegionSet(DataSet):
         self._set = {}
         for path in self.region_list:
             try:
-                r = ScannedRegionFile(path)
+                r = ScannedRegionFile(path, folder=self._get_dim_type_string())
                 self._set[r.get_coords()] = r
 
             except InvalidFileName:
-                print("Warning: The file {0} is not a valid name for a region. I'll skip it.".format(path))
+                try :
+                    region_type = c.REGION_TYPES_NAMES[self._get_region_type_directory()][0]
+                except:
+                    region_type = "region (?)"
+                print("Warning: The file {0} is not a valid name for a {1} file. I'll skip it.".format(path, region_type))
 
         # region and chunk counters with all the data from the scan
         self._region_counters = {}
@@ -689,16 +701,18 @@ class RegionSet(DataSet):
         """
 
         dim_directory = self._get_dimension_directory()
-        if dim_directory:
-            try:
-                return c.DIMENSION_NAMES[dim_directory]
-            except:
-                return dim_directory
+        region_type_directory = self._get_region_type_directory()
+        if dim_directory and region_type_directory:
+            try: dim_directory = c.DIMENSION_NAMES[dim_directory]
+            except: dim_directory = "\"" + dim_directory + "\""
+            try: region_type_directory = c.REGION_TYPES_NAMES[region_type_directory][1]
+            except: region_type_directory = "\"" + region_type_directory + "\""
+            return "{0} files for {1}".format(region_type_directory, dim_directory)
         else:
             return ""
 
     def _get_dimension_directory(self):
-        """ Returns a string with the directory containing the RegionSet.
+        """ Returns a string with the parent directory containing the RegionSet.
         
         If there is no such a directory returns None. If it's composed
         of sparse region files returns 'regionset'.
@@ -706,13 +720,34 @@ class RegionSet(DataSet):
         """
 
         if self.path:
-            rest, region = split(self.path)
+            if self.overworld :
+                return ""
+            rest, type_dir = split(self.path)
             rest, dim_path = split(rest)
-            if dim_path == "":
-                dim_path = split(rest)[1]
             return dim_path
         else:
             return None
+
+    def _get_region_type_directory(self):
+        """ Returns a string with the directory containing the RegionSet.
+        
+        If there is no such a directory returns None. If it's composed
+        of sparse region files returns 'regionset'.
+        """
+
+        if self.path:
+            rest, type_dir = split(self.path)
+            return type_dir
+        else:
+            return None
+
+    def _get_dim_type_string(self) :
+        dim = self._get_dimension_directory()
+        rg_type = self._get_region_type_directory()
+        string = ""
+        if rg_type != None : string = rg_type
+        if dim != None and dim != "" : string = dim + "/" + rg_type
+        return string
 
     def _update_counts(self, scanned_regionfile):
         """ Updates the counters of the regionset with the new regionfile. """
@@ -873,7 +908,7 @@ class RegionSet(DataSet):
 
         """
 
-        path = self.path + get_chunk_region(*global_coords)
+        path = join(self.path, get_chunk_region(*global_coords))
         local_coords = _get_local_chunk_coords(*global_coords)
 
         return path, local_coords
@@ -1067,11 +1102,17 @@ class World:
         # list with RegionSets
         self.regionsets = []
 
-        self.regionsets.append(RegionSet(join(self.path, "region/")))
+        self.regionsets.append(RegionSet(join(self.path, "region")))
         for directory in glob(join(self.path, "DIM*/region")):
-            self.regionsets.append(RegionSet(join(self.path, directory)))
-        # TODO: let's scan POI as region files maybe it's enough,
-        self.regionsets.append(RegionSet(join(self.path, "poi/")))
+            self.regionsets.append(RegionSet(directory, overworld=False))
+
+        self.regionsets.append(RegionSet(join(self.path, "poi")))
+        for directory in glob(join(self.path, "DIM*/poi")):
+            self.regionsets.append(RegionSet(directory, overworld=False))
+
+        self.regionsets.append(RegionSet(join(self.path, "entities")))
+        for directory in glob(join(self.path, "DIM*/entities")):
+            self.regionsets.append(RegionSet(directory, overworld=False))
 
         # level.dat
         # Let's scan level.dat here so we can extract the world name
@@ -1124,10 +1165,16 @@ class World:
         self.scanned = False
 
     def __str__(self):
+        counters = get_number_regions()
         text = "World information:\n"
         text += "   World path: {0}\n".format(self.path)
         text += "   World name: {0}\n".format(self.name)
-        text += "   Region files: {0}\n".format(self.get_number_regions())
+        if c.LEVEL_DIR in counters :
+            text += "   Region/Level files: {0}\n".format(counters[c.LEVEL_DIR])
+        if c.POI_DIR in counters :
+            text += "   POI files: {0}\n".format(counters[c.POI_DIR])
+        if c.ENTITIES_DIR in counters :
+            text += "   Entities files: {0}\n".format(counters[c.ENTITIES_DIR])
         text += "   Scanned: {0}".format(str(self.scanned))
         return text
 
@@ -1154,18 +1201,21 @@ class World:
         return False
 
     def get_number_regions(self):
-        """ Returns a integer with the number of regions files in this world
+        """ Returns a dictionnary with the number of regions files in this world
         
         Return:
-         - counter -- An integer with the amount of region files.
+         - counters -- An dictionnary with the amount of region files.
                 
         """
 
-        counter = 0
+        counters = {}
         for dim in self.regionsets:
-            counter += len(dim)
+            region_type = dim._get_region_type_directory()
+            if not region_type in counters :
+                counters[region_type] = 0
+            counters[region_type] += len(dim)
 
-        return counter
+        return counters
 
     def summary(self):
         """ Returns a string with a summary of the problems in this world.
@@ -1290,9 +1340,10 @@ class World:
         for regionset in self.regionsets:
             for backup in backup_worlds:
                 # choose the correct regionset based on the dimension
-                # folder name
+                # folder name and the type name (region, POI and entities)
                 for temp_regionset in backup.regionsets:
-                    if temp_regionset._get_dimension_directory() == regionset._get_dimension_directory():
+                    if ( temp_regionset._get_dimension_directory() == regionset._get_dimension_directory() and
+                         temp_regionset._get_region_type_directory() == regionset._get_region_type_directory()):
                         b_regionset = temp_regionset
                         break
 
@@ -1300,8 +1351,10 @@ class World:
                 # iterates the list returned by list_chunks()
                 bad_chunks = regionset.list_chunks(status)
 
-                if bad_chunks and b_regionset._get_dimension_directory() != regionset._get_dimension_directory():
-                    print("The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dimension_directory()))
+                if ( bad_chunks and
+                     b_regionset._get_dimension_directory() != regionset._get_dimension_directory() and
+                     b_regionset._get_region_type_directory() != regionset._get_region_type_directory() ):
+                    print("The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dim_type_string()))
                 else:
                     for ck in bad_chunks:
                         global_coords = ck[0]
@@ -1422,15 +1475,18 @@ class World:
         for regionset in self.regionsets:
             for backup in backup_worlds:
                 # choose the correct regionset based on the dimension
-                # folder name
+                # folder name and the type name (region, POI and entities)
                 for temp_regionset in backup.regionsets:
-                    if temp_regionset._get_dimension_directory() == regionset._get_dimension_directory():
+                    if ( temp_regionset._get_dimension_directory() == regionset._get_dimension_directory() and
+                         temp_regionset._get_region_type_directory() == regionset._get_region_type_directory()):
                         b_regionset = temp_regionset
                         break
 
                 bad_regions = regionset.list_regions(status)
-                if bad_regions and b_regionset._get_dimension_directory() != regionset._get_dimension_directory():
-                    print("The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dimension_directory()))
+                if ( bad_chunks and
+                     b_regionset._get_dimension_directory() != regionset._get_dimension_directory() and
+                     b_regionset._get_region_type_directory() != regionset._get_region_type_directory() ):
+                    print("The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dim_type_string()))
                 else:
                     for r in bad_regions:
                         print("\n{0:-^60}".format(' New region file to replace! Coords {0} '.format(r.get_coords())))
@@ -1694,9 +1750,15 @@ def delete_entities(region_file, x, z):
     """
 
     chunk = region_file.get_chunk(x, z)
-    counter = len(chunk['Level']['Entities'])
     empty_tag_list = nbt.TAG_List(nbt.TAG_Byte, '', 'Entities')
-    chunk['Level']['Entities'] = empty_tag_list
+    if 'Level' in chunk : # Region file
+        counter = len(chunk['Level']['Entities'])
+        chunk['Level']['Entities'] = empty_tag_list
+    elif 'Entities' in chunk : # Entities file (>=1.17)
+        counter = len(chunk['Entities'])
+        chunk['Entities'] = empty_tag_list
+    else :
+        raise AssertionError("Unrecognized chunk in delete_entities().")
     region_file.write_chunk(x, z, chunk)
 
     return counter
@@ -1752,10 +1814,19 @@ def get_chunk_data_coords(nbt_file):
 
     """
 
-    level = nbt_file.__getitem__('Level')
+    # Region file
+    if 'Level' in nbt_file :
+        level = nbt_file.__getitem__('Level')
 
-    coordX = level.__getitem__('xPos').value
-    coordZ = level.__getitem__('zPos').value
+        coordX = level.__getitem__('xPos').value
+        coordZ = level.__getitem__('zPos').value
+
+    # Entities file :
+    elif 'Entities' in nbt_file :
+        coordX, coordZ = nbt_file.__getitem__('Position').value
+
+    else :
+        raise AssertionError("Unrecognized chunk in get_chunk_data_coords().")
 
     return coordX, coordZ
 
