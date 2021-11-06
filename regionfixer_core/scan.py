@@ -663,11 +663,15 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities,
     # Scan the world directory
     print("World info:")
 
-    print(("There are {0} region files, {1} player files and {2} data"
-           " files in the world directory.").format(
-               w.get_number_regions(),
-               len(w.players) + len(w.old_players),
-               len(w.data_files)))
+    counters = w.get_number_regions()
+    if c.LEVEL_DIR in counters:
+        print(" - {0} region/level files,".format(counters[c.LEVEL_DIR]))
+    if c.POI_DIR in counters:
+        print(" - {0} POI files,".format(counters[c.POI_DIR]))
+    if c.ENTITIES_DIR in counters:
+        print(" - {0} entities files,".format(counters[c.ENTITIES_DIR]))
+    print(" - {0} player files,".format(len(w.players) + len(w.old_players)))
+    print(" - and {0} data files.".format(len(w.data_files)))
 
     # check the level.dat
     print("\n{0:-^60}".format(' Checking level.dat '))
@@ -691,7 +695,7 @@ def console_scan_world(world_obj, processes, entity_limit, remove_entities,
     scan_titles = [' Scanning UUID player files ',
                    ' Scanning old format player files ',
                    ' Scanning structures and map data files ',
-                   ' Scanning region files ']
+                   ' Scanning region, POI and entities files ']
     console_scan_loop(scanners, scan_titles, verbose)
     w.scanned = True
 
@@ -965,10 +969,30 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
             data_coords = None
             num_entities = None
             status = c.CHUNK_OK
-        
+
+        elif "Entities" in chunk:
+            # To check if it's a entities chunk check for the tag "Entities"
+            # If entities are in the region files, the tag "Entities" is in "Level"
+            # https://minecraft.fandom.com/wiki/Entity_format
+            # We use "Entities" as a differentiating factor
+            
+            # Entities chunk
+            data_coords = world.get_chunk_data_coords(chunk)
+            num_entities = len(chunk["Entities"])
+            
+            if data_coords != global_coords:
+                # wrong located chunk
+                status = c.CHUNK_WRONG_LOCATED
+            elif num_entities > el:
+                # too many entities in the chunk
+                status = c.CHUNK_TOO_MANY_ENTITIES
+            else:
+                # chunk ok
+                status = c.CHUNK_OK
+
         else:
             # what is this? we shouldn't reach this part of the code, as far as
-            # we know there is only POI chunks and Level chunks
+            # we know there is only POI chunks, Entities chunks, and Level chunks
             raise AssertionError("Unrecognized scanned chunk in scan_chunk().")
 
     ###############################################
