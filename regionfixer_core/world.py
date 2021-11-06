@@ -702,7 +702,7 @@ class RegionSet(DataSet):
 
         dim_directory = self._get_dimension_directory()
         region_type_directory = self._get_region_type_directory()
-        if dim_directory and region_type_directory:
+        if (dim_directory or self.overworld) and region_type_directory:
             try: dim_directory = c.DIMENSION_NAMES[dim_directory]
             except: dim_directory = "\"" + dim_directory + "\""
             try: region_type_directory = c.REGION_TYPES_NAMES[region_type_directory][1]
