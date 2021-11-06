@@ -913,11 +913,20 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
             # Level chunk
             try:
                 data_coords = world.get_chunk_data_coords(chunk)
-                num_entities = len(chunk["Level"]["Entities"])
+                
+                # Since snapshot 20w45a (1.17), entities MAY BE separated
+                if chunk["DataVersion"].value >= 2681 :
+                    if "Entities" in chunk["Level"] :
+                        num_entities = len(chunk["Level"]["Entities"])
+                    else :
+                        num_entities = None
+                else :
+                    num_entities = len(chunk["Level"]["Entities"])
+                
                 if data_coords != global_coords:
                     # wrong located chunk
                     status = c.CHUNK_WRONG_LOCATED
-                elif num_entities > el:
+                elif num_entities != None and num_entities > el:
                     # too many entities in the chunk
                     status = c.CHUNK_TOO_MANY_ENTITIES
                 else:
