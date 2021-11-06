@@ -889,7 +889,10 @@ class RegionSet(DataSet):
         for r in list(self.keys()):
             if not self[r].has_problems:
                 continue
-            text += "Region file: {0}\n".format(self[r].filename)
+            if self.path: rest, dimension_folder = split(self.path)
+            else: dimension_folder = ""
+            text += "Region file: {0}\n".format(join(dimension_folder,self[r].filename))
+
             text += self[r].summary()
             text += " +\n\n"
         return text
