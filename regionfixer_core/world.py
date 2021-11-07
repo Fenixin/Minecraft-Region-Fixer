@@ -1664,6 +1664,15 @@ def parse_paths(args):
     RegionSet -- A RegionSet object with all the regionfiles found in args
     """
 
+    # windows shell doesn't parse wildcards, parse them here using glob
+    expanded_args = []
+    for arg in args:
+        earg = glob(arg)
+        # glob eats away any argument that doesn't match a file, keep those, they will be world folders
+        if earg: expanded_args.extend(earg)
+        else: expanded_args.append(arg)
+    args = expanded_args
+
     # parese the list of region files and worlds paths
     world_list = []
     region_list = []
