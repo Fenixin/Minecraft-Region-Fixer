@@ -1,10 +1,16 @@
 """
 Handle the NBT (Named Binary Tag) data format
+
+For more information about the NBT format:
+https://minecraft.gamepedia.com/NBT_format
 """
 
 from struct import Struct, error as StructError
 from gzip import GzipFile
-from collections import MutableMapping, MutableSequence, Sequence
+try:
+    from collections.abc import MutableMapping, MutableSequence, Sequence
+except ImportError:  # for Python 2.7
+    from collections import MutableMapping, MutableSequence, Sequence
 import sys
 
 _PY3 = sys.version_info >= (3,)
@@ -60,6 +66,10 @@ class TAG(object):
         """Return Unicode string of unnested value. For iterators, this
         returns a summary."""
         return unicode(self.value)
+
+    def namestr(self):
+        """Return Unicode string of tag name."""
+        return unicode(self.name)
 
     def pretty_tree(self, indent=0):
         """Return formated Unicode string of self, where iterable items are
@@ -471,7 +481,10 @@ class TAG_Compound(TAG, MutableMapping):
         # TODO: add a value parameter as well
         super(TAG_Compound, self).__init__()
         self.tags = []
-        self.name = ""
+        if name:
+            self.name = name
+        else:
+            self.name = ""
         if buffer:
             self._parse_buffer(buffer)
 
@@ -637,12 +650,14 @@ class NBTFile(TAG_Compound):
 
     def parse_file(self, filename=None, buffer=None, fileobj=None):
         """Completely parse a file, extracting all tags."""
+        closefile = True
         if filename:
             self.file = GzipFile(filename, 'rb')
         elif buffer:
             if hasattr(buffer, 'name'):
                 self.filename = buffer.name
             self.file = buffer
+            closefile = False
         elif fileobj:
             if hasattr(fileobj, 'name'):
                 self.filename = fileobj.name
@@ -654,7 +669,8 @@ class NBTFile(TAG_Compound):
                     name = TAG_String(buffer=self.file).value
                     self._parse_buffer(self.file)
                     self.name = name
-                    self.file.close()
+                    if closefile:
+                        self.file.close()
                 else:
                     raise MalformedFileError(
                         "First record is not a Compound Tag")

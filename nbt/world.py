@@ -1,5 +1,8 @@
 """
 Handles a Minecraft world save using either the Anvil or McRegion format.
+
+For more information about the world format:
+https://minecraft.gamepedia.com/Level_format
 """
 
 import os, glob, re
@@ -100,7 +103,7 @@ class _BaseWorldFolder(object):
             else:
                 # It is not yet cached.
                 # Get file, but do not cache later.
-                regionfile = region.RegionFile(self.regionfiles[(x,z)])
+                regionfile = region.RegionFile(self.regionfiles[(x,z)], chunkclass = self.chunkclass)
                 regionfile.loc = Location(x=x,z=z)
                 close_after_use = True
             try:
@@ -122,7 +125,7 @@ class _BaseWorldFolder(object):
         See [What can be pickled and unpickled?](https://docs.python.org/library/pickle.html#what-can-be-pickled-and-unpickled) in the Python documentation
         for limitation on the output of `callback_function()`.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_nbt(self,x,z):
         """
@@ -143,7 +146,7 @@ class _BaseWorldFolder(object):
         adds it to the Regionfile. May create a new Regionfile if that did not exist yet.
         nbt must be a nbt.NBTFile instance, not a Chunk or regular TAG_Compound object.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
         # TODO: implement
 
     def iter_nbt(self):
@@ -170,7 +173,7 @@ class _BaseWorldFolder(object):
         See [What can be pickled and unpickled?](https://docs.python.org/library/pickle.html#what-can-be-pickled-and-unpickled) in the Python documentation
         for limitation on the output of `callback_function()`.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_chunk(self,x,z):
         """
@@ -239,8 +242,7 @@ class AnvilWorldFolder(_BaseWorldFolder):
     """Represents a world save using the new Anvil format."""
     type = "Anvil"
     extension = 'mca'
-    chunkclass = chunk.Chunk
-    # chunkclass = chunk.AnvilChunk  # TODO: change to AnvilChunk when done
+    chunkclass = chunk.AnvilChunk
 
 
 class _WorldFolderFactory(object):
@@ -254,7 +256,7 @@ class _WorldFolderFactory(object):
             wf = cls(*args, **kwargs)
             if wf.nonempty(): # Check if the world is non-empty
                 return wf
-        raise UnknownWorldFormat("Empty world or unknown format: %r" % world_folder)
+        raise UnknownWorldFormat("Empty world or unknown format")
 
 WorldFolder = _WorldFolderFactory([AnvilWorldFolder, McRegionWorldFolder])
 """
