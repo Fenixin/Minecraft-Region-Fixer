@@ -409,7 +409,16 @@ class ScannedRegionFile:
             if status == c.CHUNK_MISSING_ENTITIES_TAG:
                 # The arguments to create the empty TAG_List have been somehow extracted by comparing
                 # the tag list from a healthy chunk with the one created by nbt
-                chunk['Level']['Entities'] = TAG_List(name='Entities', type=nbt._TAG_End)
+                chunk_type = get_chunk_type(chunk)
+                if chunk_type == c.LEVEL_DIR :
+                    if chunk["DataVersion"].value >= 2844 : # Snapshot 21w43a (1.18)
+                        chunk['entities'] = TAG_List(name='entities', type=nbt._TAG_End)
+                    else :
+                        chunk['Level']['Entities'] = TAG_List(name='Entities', type=nbt._TAG_End)
+                elif chunk_type == c.ENTITIES_DIR :
+                    chunk['Entities'] = TAG_List(name='Entities', type=nbt._TAG_End)
+                else :
+                    raise AssertionError("Unsupported chunk type.")
                 region_file.write_chunk(local_coords[0],local_coords[1], chunk)
 
                 # create the new status tuple
@@ -469,14 +478,7 @@ class ScannedRegionFile:
 
         """
 
-        region_file = region.RegionFile(self.path)
-        chunk = region_file.get_chunk(x, z)
-        counter = len(chunk['Level']['Entities'])
-        empty_tag_list = nbt.TAG_List(nbt.TAG_Byte, '', 'Entities')
-        chunk['Level']['Entities'] = empty_tag_list
-        region_file.write_chunk(x, z, chunk)
-
-        return counter
+        return delete_entities( region.RegionFile(self.path), x, z )
 
     def rescan_entities(self, options):
         """ Updates the status of all the chunks after changing entity_limit.
@@ -1757,15 +1759,24 @@ def delete_entities(region_file, x, z):
     """
 
     chunk = region_file.get_chunk(x, z)
+    chunk_type = get_chunk_type(chunk)
     empty_tag_list = nbt.TAG_List(nbt.TAG_Byte, '', 'Entities')
-    if 'Level' in chunk : # Region file
-        counter = len(chunk['Level']['Entities'])
-        chunk['Level']['Entities'] = empty_tag_list
-    elif 'Entities' in chunk : # Entities file (>=1.17)
+
+    if chunk_type == c.LEVEL_DIR : # Region file
+        if chunk["DataVersion"].value >= 2844 : # Snapshot 21w43a (1.18)
+            counter = len(chunk['entities'])
+            chunk['entities'] = empty_tag_list
+        else :
+            counter = len(chunk['Level']['Entities'])
+            chunk['Level']['Entities'] = empty_tag_list
+
+    elif chunk_type == c.ENTITIES_DIR : # Entities file (>=1.17)
         counter = len(chunk['Entities'])
         chunk['Entities'] = empty_tag_list
+
     else :
-        raise AssertionError("Unrecognized chunk in delete_entities().")
+        raise AssertionError("Unsupported chunk type in delete_entities().")
+
     region_file.write_chunk(x, z, chunk)
 
     return counter
@@ -1807,6 +1818,44 @@ def get_chunk_region(chunkX, chunkZ):
     return region_name
 
 
+def get_chunk_type(chunk):
+    """Get the type of the chunk (Region/level, POIs or entities)
+    
+    Input:
+     - chunk -- A chunk, from the NBT module
+    
+    Return:
+     - type -- The chunk type (LEVEL_DIR, POI_DIR or ENTITIES_DIR)
+    """
+    
+    # DataVersion was introduced in snapshot 15w32a (1.9)
+    # https://minecraft.fandom.com/wiki/Data_version
+    data_version = 0
+    if "DataVersion" in chunk:
+        data_version = chunk["DataVersion"].value
+    
+    # Region/level < 21w43a (1.17)
+    if data_version < 2844 and "Level" in chunk:
+        return c.LEVEL_DIR
+    
+    # Region/level >= 21w43a (1.18)
+    # The "or" is important, because some tags doesn't seem to be mandatory
+    if data_version >= 2844 and ("structures" in chunk or "sections" in chunk):
+        return c.LEVEL_DIR
+    
+    # POIs >= 1.14 (Which snapshot ?)
+    # I couldn't find when POI files were added
+    # But it's certainly a snapshot after 18w43a (DataVersion = 1901)
+    if data_version >= 1901 and "Sections" in chunk:
+        return c.POI_DIR
+    
+    # Entities >= 20w45a (1.17)
+    if data_version >= 2681 and "Entities" in chunk:
+        return c.ENTITIES_DIR
+    
+    raise AssertionError("Unrecognized chunk type in get_chunk_type().")
+
+
 def get_chunk_data_coords(nbt_file):
     """ Gets and returns the coordinates stored in the NBT structure of the chunk.
     
@@ -1821,15 +1870,21 @@ def get_chunk_data_coords(nbt_file):
 
     """
 
+    chunk_type = get_chunk_type(nbt_file)
+
     # Region file
-    if 'Level' in nbt_file :
-        level = nbt_file.__getitem__('Level')
+    if chunk_type == c.LEVEL_DIR :
+        # Since snapshot 21w43a (1.18), "Level" tag doesn't exist anymore
+        if nbt_file["DataVersion"].value >= 2844 :
+            level = nbt_file
+        else :
+            level = nbt_file.__getitem__('Level')
 
         coordX = level.__getitem__('xPos').value
         coordZ = level.__getitem__('zPos').value
 
     # Entities file :
-    elif 'Entities' in nbt_file :
+    elif chunk_type == c.ENTITIES_DIR :
         coordX, coordZ = nbt_file.__getitem__('Position').value
 
     else :
