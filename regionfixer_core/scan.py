@@ -910,7 +910,9 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
 
     try:
         chunk = region_file.get_chunk(*coords)
-        if "Level" in chunk:
+        chunk_type = world.get_chunk_type(chunk)
+
+        if chunk_type == c.LEVEL_DIR:
             # to know if is a poi chunk or a level chunk check the contents
             # if 'Level' is at root is a level chunk
 
@@ -920,10 +922,18 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
                 
                 # Since snapshot 20w45a (1.17), entities MAY BE separated
                 if chunk["DataVersion"].value >= 2681 :
-                    if "Entities" in chunk["Level"] :
+                    num_entities = None
+                    
+                    # Since snapshot 21w43a (1.18), "Level" tag doesn't exist anymore
+                    # According to the wiki, an "entities" tag can still be there (But I've never seen it)
+                    if chunk["DataVersion"].value >= 2844 :
+                        if "entities" in chunk :
+                            num_entities = len(chunk["entities"])
+                    
+                    # >= 20w45a and < 21w43a
+                    # Don't check if "Level" tag exist, at this point, it should exist
+                    elif "Entities" in chunk["Level"] :
                         num_entities = len(chunk["Level"]["Entities"])
-                    else :
-                        num_entities = None
                 else :
                     num_entities = len(chunk["Level"]["Entities"])
                 
@@ -956,7 +966,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
                 global_coords = world.get_global_chunk_coords(split(region_file.filename)[1], coords[0], coords[1])
                 num_entities = None
 
-        elif "Sections" in chunk:
+        elif chunk_type == c.POI_DIR:
             # To check if it's a POI chunk check for the tag "Sections"
             # If we give a look to the wiki:
             # https://minecraft.gamepedia.com/Java_Edition_level_format#poi_format
@@ -970,7 +980,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
             num_entities = None
             status = c.CHUNK_OK
 
-        elif "Entities" in chunk:
+        elif chunk_type == c.ENTITIES_DIR:
             # To check if it's a entities chunk check for the tag "Entities"
             # If entities are in the region files, the tag "Entities" is in "Level"
             # https://minecraft.fandom.com/wiki/Entity_format
@@ -993,7 +1003,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         else:
             # what is this? we shouldn't reach this part of the code, as far as
             # we know there is only POI chunks, Entities chunks, and Level chunks
-            raise AssertionError("Unrecognized scanned chunk in scan_chunk().")
+            raise AssertionError("Unsupported chunk type in scan_chunk().")
 
     ###############################################
     #    POI chunk and Level chunk common errors
