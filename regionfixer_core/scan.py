@@ -921,7 +921,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
                 data_coords = world.get_chunk_data_coords(chunk)
                 
                 # Since snapshot 20w45a (1.17), entities MAY BE separated
-                if chunk["DataVersion"].value >= 2681 :
+                if "DataVersion" in chunk and chunk["DataVersion"].value >= 2681 :
                     num_entities = None
                     
                     # Since snapshot 21w43a (1.18), "Level" tag doesn't exist anymore
