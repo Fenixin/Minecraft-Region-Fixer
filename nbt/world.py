@@ -76,7 +76,7 @@ class _BaseWorldFolder(object):
 
     def get_region(self, x,z):
         """Get a region using x,z coordinates of a region. Cache results."""
-        if (x,z) not in self.regions:
+        if (x,z) not in self.regions or self.regions[x,z].closed:
             if (x,z) in self.regionfiles:
                 self.regions[(x,z)] = region.RegionFile(self.regionfiles[(x,z)])
             else:
