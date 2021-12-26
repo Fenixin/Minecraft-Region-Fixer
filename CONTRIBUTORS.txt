@@ -5,6 +5,13 @@ Fenixin (Alejandro Aguilera) - Main developer
 Contributors (in no particular order):
 
 aheadley (Alex Headley) - First multiprocessing version of Region Fixer.
-carlallen (Carl Allen) - Fix problem in MacOS
+734F96 (Lavander) - Update RegionFixer for Minecraft 1.18
+sleiss (Simon Leiß) - Fix typos
 kbn (Kristian Berge) - Small fixes
+KasperFranz (Kasper Sanguesa-Franz) - Fix typo in readme
 macfreek (Freek Dijkstra) - Fixes and lots of help
+Pisich (carloser) - Changes to the readme
+carlallen (Carl Allen) - Fix problem in MacOS
+charlyhue (Charly Hue) - Fix logging with onliners
+andm (andm) - Fix typos
+sandtechnology (sandtechnology) - Fix problem scanning old worlds
