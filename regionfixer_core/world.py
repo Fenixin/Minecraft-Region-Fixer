@@ -1165,7 +1165,7 @@ class World:
         self.scanned = False
 
     def __str__(self):
-        counters = get_number_regions()
+        counters = self.get_number_regions()
         text = "World information:\n"
         text += "   World path: {0}\n".format(self.path)
         text += "   World name: {0}\n".format(self.name)
@@ -1483,7 +1483,7 @@ class World:
                         break
 
                 bad_regions = regionset.list_regions(status)
-                if ( bad_chunks and
+                if ( bad_regions and
                      b_regionset._get_dimension_directory() != regionset._get_dimension_directory() and
                      b_regionset._get_region_type_directory() != regionset._get_region_type_directory() ):
                     print("The regionset \'{0}\' doesn't exist in the backup directory. Skipping this backup directory.".format(regionset._get_dim_type_string()))
