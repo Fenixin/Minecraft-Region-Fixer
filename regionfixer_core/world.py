@@ -411,7 +411,7 @@ class ScannedRegionFile:
                 # the tag list from a healthy chunk with the one created by nbt
                 chunk_type = get_chunk_type(chunk)
                 if chunk_type == c.LEVEL_DIR :
-                    if chunk["DataVersion"].value >= 2844 : # Snapshot 21w43a (1.18)
+                    if "DataVersion" in chunk and chunk["DataVersion"].value >= 2844 : # Snapshot 21w43a (1.18)
                         chunk['entities'] = TAG_List(name='entities', type=nbt._TAG_End)
                     else :
                         chunk['Level']['Entities'] = TAG_List(name='Entities', type=nbt._TAG_End)
@@ -1763,7 +1763,7 @@ def delete_entities(region_file, x, z):
     empty_tag_list = nbt.TAG_List(nbt.TAG_Byte, '', 'Entities')
 
     if chunk_type == c.LEVEL_DIR : # Region file
-        if chunk["DataVersion"].value >= 2844 : # Snapshot 21w43a (1.18)
+        if "DataVersion" in chunk and chunk["DataVersion"].value >= 2844 : # Snapshot 21w43a (1.18)
             counter = len(chunk['entities'])
             chunk['entities'] = empty_tag_list
         else :
@@ -1875,7 +1875,7 @@ def get_chunk_data_coords(nbt_file):
     # Region file
     if chunk_type == c.LEVEL_DIR :
         # Since snapshot 21w43a (1.18), "Level" tag doesn't exist anymore
-        if nbt_file["DataVersion"].value >= 2844 :
+        if "DataVersion" in nbt_file and nbt_file["DataVersion"].value >= 2844 :
             level = nbt_file
         else :
             level = nbt_file.__getitem__('Level')
