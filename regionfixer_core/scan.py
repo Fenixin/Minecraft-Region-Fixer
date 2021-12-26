@@ -757,6 +757,9 @@ def scan_data(scanned_dat_file):
         s.status = c.DATAFILE_UNREADABLE
     except TypeError:
         s.status = c.DATAFILE_UNREADABLE
+    except EOFError:
+        # There is a compressed stream in the file but ends abruptly
+        s.status = c.DATAFILE_UNREADABLE
 
     except:
         s.status = c.DATAFILE_UNREADABLE
