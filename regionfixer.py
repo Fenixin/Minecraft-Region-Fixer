@@ -160,6 +160,16 @@ def main():
                                      usage=usage,
                                      epilog=epilog)
 
+    parser.add_argument('--text-file-input',
+                        '--tf',
+                        help=('Path to a text file with a list of world folders and region '
+                            'files. One line per element, wildcards can be used, empty lines'
+                            'will be ignored and # can be used at the start of a line as comment'
+                            '. These will be treated the same as adding paths to command input.'),
+                        metavar='<text_file_input>',
+                        type=str,
+                        dest='text_file_input',
+                        default=None)
 
     parser.add_argument('--backups',
                         '-b',
@@ -372,8 +382,28 @@ def main():
         getpass("Press enter to continue:")
         return c.RV_CRASH
 
+    # First, read paths from file
+    if args.text_file_input:
+        try:
+            tf = open(args.text_file_input, 'r')
+            path_lines = tf.readlines()
+            tmp = []
+            # Process it
+            for i in range(len(path_lines)):
+                # Remove end of lines characters
+                line = path_lines[i].replace('\n', '')
+                # Remove comment lines and empty lines
+                if line and "#" not in line:
+                    tmp.append(line)
+            
+            path_lines = tmp
+            tf.close()
 
-    world_list, regionset = world.parse_paths(args.paths)
+        except:
+            print("Something went wrong while reading the text file input!")
+
+    # Parse all the paths, from text file and command input
+    world_list, regionset = world.parse_paths(args.paths + path_lines)
 
     # print greetings an version number
     print("\nWelcome to Region Fixer!")
