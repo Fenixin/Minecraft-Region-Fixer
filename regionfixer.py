@@ -383,6 +383,7 @@ def main():
         return c.RV_CRASH
 
     # First, read paths from file
+    path_lines = []
     if args.text_file_input:
         try:
             tf = open(args.text_file_input, 'r')
