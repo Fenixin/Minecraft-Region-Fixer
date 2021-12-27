@@ -1264,6 +1264,8 @@ class World:
             chunk_info += text if text else ""
             final += chunk_info if chunk_info else "All the chunks are ok."
 
+        final += "\n\n"
+
         return final
 
     def get_name(self):
