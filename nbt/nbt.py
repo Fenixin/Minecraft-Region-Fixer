@@ -7,6 +7,9 @@ https://minecraft.gamepedia.com/NBT_format
 
 from struct import Struct, error as StructError
 from gzip import GzipFile
+
+from mutf8 import encode_modified_utf8, decode_modified_utf8
+
 try:
     from collections.abc import MutableMapping, MutableSequence, Sequence
 except ImportError:  # for Python 2.7
@@ -360,10 +363,12 @@ class TAG_String(TAG, Sequence):
         read = buffer.read(length.value)
         if len(read) != length.value:
             raise StructError()
-        self.value = read.decode("utf-8")
+        #self.value = read.decode("utf-8")
+        self.value = decode_modified_utf8(read)
 
     def _render_buffer(self, buffer):
-        save_val = self.value.encode("utf-8")
+        #save_val = self.value.encode("utf-8")
+        save_val = encode_modified_utf8(self.value)
         length = TAG_Short(len(save_val))
         length._render_buffer(buffer)
         buffer.write(save_val)
