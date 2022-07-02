@@ -185,66 +185,47 @@ def main():
                         dest='backups',
                         default=None)
 
-    parser.add_argument('--replace-corrupted',
-                        '--rc',
-                        help='Try to replace the corrupted chunks using the backup'
-                             ' directories. Can be only used scanning one world.',
-                        default=False,
-                        dest='replace_corrupted',
-                        action='store_true')
+    for solvable_status in c.CHUNK_PROBLEMS_SOLUTIONS:
+        if c.CHUNK_SOLUTION_REMOVE in c.CHUNK_PROBLEMS_SOLUTIONS[solvable_status]:
+            parser.add_argument('--delete-' + c.CHUNK_PROBLEMS_ARGS[solvable_status],
+                                '--d' + c.CHUNK_PROBLEMS_ABBR[solvable_status],
+                                help='[WARNING!] This option deletes! Delete all chunks with '
+                                'status: ' + c.CHUNK_STATUS_TEXT[solvable_status],
+                                action='store_true',
+                                default=False)
+        if c.CHUNK_SOLUTION_REPLACE in c.CHUNK_PROBLEMS_SOLUTIONS[solvable_status]:
+            parser.add_argument('--replace-' + c.CHUNK_PROBLEMS_ARGS[solvable_status],
+                                '--r' + c.CHUNK_PROBLEMS_ABBR[solvable_status],
+                                help='This option can be only used while scanning one world. '
+                                'Try to replace the problematic chunks with the status "{0}" ' 
+                                'using backup directories.'.format(c.CHUNK_STATUS_TEXT[solvable_status]),
+                                action='store_true',
+                                default=False)
+        if c.CHUNK_SOLUTION_RELOCATE_USING_DATA in c.CHUNK_PROBLEMS_SOLUTIONS[solvable_status]:
+            parser.add_argument('--relocate-' + c.CHUNK_PROBLEMS_ARGS[solvable_status],
+                                '--rl' + c.CHUNK_PROBLEMS_ABBR[solvable_status],
+                                help='This option can be only used while scanning one world. '
+                                'Try to replace the problematic chunks with the status "{0}" ' 
+                                'using backup directories.'.format(c.CHUNK_STATUS_TEXT[solvable_status]),
+                                action='store_true',
+                                default=False)
 
-    parser.add_argument('--replace-wrong-located',
-                        '--rw',
-                        help='Try to replace the wrong located chunks using the '
-                             'backup directories. Can be only used scanning one '
-                             'world.',
-                        default=False,
-                        dest='replace_wrong_located',
-                        action='store_true')
-
-    parser.add_argument('--replace-entities',
-                        '--re',
-                        help='Try to replace the chunks with too many entities using '
-                             'the backup directories. Can be only used scanning '
-                             'one world.',
-                        default=False,
-                        dest='replace_entities',
-                        action='store_true')
-
-    parser.add_argument('--replace-shared-offset',
-                        '--rs',
-                        help='Try to replace the chunks with a shared offset using '
-                             'the backup directories. Can be only used scanning '
-                             'one world.',
-                        default=False,
-                        dest='replace_shared_offset',
-                        action='store_true')
-
-    parser.add_argument('--replace-too-small',
-                        '--rt',
-                        help='Try to replace the region files that are too small to '
-                             'be actually be a region file using the backup directories.'
-                             'Can be only used scanning one world.',
-                        default=False,
-                        dest='replace_too_small',
-                        action='store_true')
-
-    parser.add_argument('--delete-corrupted',
-                        '--dc',
-                        help='[WARNING!] This option deletes! Delete all the corrupted '
-                        'chunks. Used with --replace-corrupted or --replace-wrong-located'
-                        ' will delete all the non-replaced chunks.',
-                        action='store_true',
-                        default=False)
-
-    parser.add_argument('--delete-wrong-located',
-                        '--dw',
-                        help='[WARNING!] This option deletes! Delete all the wrong located '
-                        'chunks. Used with --replace-corrupted or --replace-wrong-located'
-                        ' will delete all the non-replaced chunks.',
-                        action='store_true',
-                        default=False,
-                        dest='delete_wrong_located')
+    for solvable_status in c.REGION_PROBLEMS_SOLUTIONS:
+        if c.REGION_SOLUTION_REMOVE in c.REGION_PROBLEMS_SOLUTIONS[solvable_status]:
+            parser.add_argument('--delete-' + c.REGION_PROBLEMS_ARGS[solvable_status],
+                                '--d' + c.REGION_PROBLEMS_ABBR[solvable_status],
+                                help='[WARNING!] This option deletes! Delete all chunks with '
+                                'status: ' + c.REGION_STATUS_TEXT[solvable_status],
+                                action='store_true',
+                                default=False)
+        if c.REGION_SOLUTION_REPLACE in c.REGION_PROBLEMS_SOLUTIONS[solvable_status]:
+            parser.add_argument('--replace-' + c.REGION_PROBLEMS_ARGS[solvable_status],
+                                '--r' + c.REGION_PROBLEMS_ABBR[solvable_status],
+                                help='This option can be only used while scanning one world. '
+                                'Try to replace the problematic chunks with the status "{0}" ' 
+                                'using backup directories.'.format(c.REGION_STATUS_TEXT[solvable_status]),
+                                action='store_true',
+                                default=False)
 
     parser.add_argument('--delete-entities',
                         '--de',
@@ -259,24 +240,6 @@ def main():
                         action='store_true',
                         default=False,
                         dest='delete_entities')
-
-    parser.add_argument('--delete-shared-offset',
-                        '--ds',
-                        help='[WARNING!] This option deletes! Delete all the chunk '
-                             'with status shared offset. It will remove the region '
-                             'header for the false chunk, note that you '
-                             'don\'t loose any chunk doing this.',
-                        action='store_true',
-                        default=False,
-                        dest='delete_shared_offset')
-
-    parser.add_argument('--delete-missing-tag',
-                        '--dmt',
-                        help='[WARNING!] This option deletes! Remove any chunks '
-                             'with the mandatory entities tag missing.',
-                        dest='delete_missing_tag',
-                        default=False,
-                        action='store_true')
 
     parser.add_argument('--fix-corrupted',
                         '--fc',
@@ -299,14 +262,6 @@ def main():
                         help='Fix chunks that are wrong located. This will save them in the coordinates '
                             'stored in their data.',
                         dest='fix_wrong_located',
-                        default=False,
-                        action='store_true')
-
-    parser.add_argument('--delete-too-small',
-                        '--dt',
-                        help='[WARNING!] This option deletes! Remove any region files '
-                             'found to be too small to actually be a region file.',
-                        dest='delete_too_small',
                         default=False,
                         action='store_true')
 

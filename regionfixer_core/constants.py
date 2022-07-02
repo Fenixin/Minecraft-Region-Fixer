@@ -76,10 +76,10 @@ CHUNK_STATUS_TEXT = {CHUNK_NOT_CREATED: "Not created",
 
 # arguments used in the options
 CHUNK_PROBLEMS_ARGS = {CHUNK_CORRUPTED: 'corrupted',
-                       CHUNK_WRONG_LOCATED: 'wrong',
+                       CHUNK_WRONG_LOCATED: 'wrong-located',
                        CHUNK_TOO_MANY_ENTITIES: 'entities',
-                       CHUNK_SHARED_OFFSET: 'sharing',
-                       CHUNK_MISSING_ENTITIES_TAG: 'miss_tag'
+                       CHUNK_SHARED_OFFSET: 'shared-offset',
+                       CHUNK_MISSING_ENTITIES_TAG: 'missing_tag'
                        }
 
 # used in some places where there is less space
@@ -100,7 +100,7 @@ CHUNK_SOLUTION_RELOCATE_USING_DATA = 54
 
 CHUNK_PROBLEMS_SOLUTIONS = {CHUNK_CORRUPTED: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE],
                        CHUNK_WRONG_LOCATED: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE, CHUNK_SOLUTION_RELOCATE_USING_DATA],
-                       CHUNK_TOO_MANY_ENTITIES: [CHUNK_SOLUTION_REMOVE_ENTITIES],
+                       CHUNK_TOO_MANY_ENTITIES: [CHUNK_SOLUTION_REMOVE_ENTITIES, CHUNK_SOLUTION_REPLACE],
                        CHUNK_SHARED_OFFSET: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE],
                        CHUNK_MISSING_ENTITIES_TAG: [CHUNK_SOLUTION_REMOVE, CHUNK_SOLUTION_REPLACE]}
 
@@ -168,9 +168,7 @@ REGION_PROBLEMS_ABBR = {REGION_TOO_SMALL: 'ts',
 REGION_SOLUTION_REMOVE = 151
 REGION_SOLUTION_REPLACE = 152
 
-REGION_PROBLEMS_SOLUTIONS = {REGION_TOO_SMALL: [REGION_SOLUTION_REMOVE, REGION_SOLUTION_REPLACE],
-                             REGION_UNREADABLE: [REGION_SOLUTION_REMOVE, REGION_SOLUTION_REPLACE]
-                             }
+REGION_PROBLEMS_SOLUTIONS = {REGION_TOO_SMALL: [REGION_SOLUTION_REMOVE, REGION_SOLUTION_REPLACE]}
 
 # list with problem, status-text, problem arg tuples
 REGION_PROBLEMS_ITERATOR = []
@@ -181,9 +179,6 @@ for problem in REGION_PROBLEMS:
                                          REGION_PROBLEMS_ARGS[problem]))
     except KeyError:
         pass
-
-REGION_PROBLEMS_ARGS = {REGION_TOO_SMALL: 'too-small'}
-
 
 
 
