@@ -26,6 +26,7 @@ from os.path import join, split, exists, isfile
 from os import remove
 from shutil import copy
 import zlib
+import sys
 
 import nbt.region as region
 import nbt.nbt as nbt
@@ -387,11 +388,16 @@ class ScannedRegionFile:
                         raw_chunk = region_file.file.read(m.length - 1)
                         # decompress byte by byte so we can get as much as we can before the error happens
                         dc = zlib.decompressobj()
-                        out = ""
-                        for i in raw_chunk:
-                            out += dc.decompress(i)
+                        out = b""
+
+                        list_of_bytes = [i.to_bytes(1, sys.byteorder) for i in raw_chunk]
+                        try:
+                            for i in list_of_bytes:
+                                out += dc.decompress(i)
+                        except:
+                            out = b""
                         # compare the sizes of the new compressed strem and the old one to see if we've got something good
-                        cdata = zlib.compress(out.encode())
+                        cdata = zlib.compress(out)
                         if len(cdata) == len(raw_chunk):
                             # the chunk is probably good, write it in the region file
                             region_file.write_blockdata(local_coords[0], local_coords[1], out)
