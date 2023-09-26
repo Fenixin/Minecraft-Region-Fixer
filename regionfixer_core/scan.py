@@ -986,7 +986,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         elif chunk_type == c.ENTITIES_DIR:
             # To check if it's a entities chunk check for the tag "Entities"
             # If entities are in the region files, the tag "Entities" is in "Level"
-            # https://minecraft.fandom.com/wiki/Entity_format
+            # https://minecraft.wiki/w/Entity_format
             # We use "Entities" as a differentiating factor
             
             # Entities chunk
