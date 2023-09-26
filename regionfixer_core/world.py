@@ -1831,7 +1831,7 @@ def get_chunk_type(chunk):
     """
     
     # DataVersion was introduced in snapshot 15w32a (1.9)
-    # https://minecraft.fandom.com/wiki/Data_version
+    # https://minecraft.wiki/w/Data_version
     data_version = 0
     if "DataVersion" in chunk:
         data_version = chunk["DataVersion"].value

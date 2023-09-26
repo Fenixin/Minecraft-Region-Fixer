@@ -2,7 +2,7 @@
 Handle a region file, containing 32x32 chunks.
 
 For more information about the region file format:
-https://minecraft.gamepedia.com/Region_file_format
+https://minecraft.wiki/w/Region_file_format
 """
 
 from .nbt import NBTFile, MalformedFileError
