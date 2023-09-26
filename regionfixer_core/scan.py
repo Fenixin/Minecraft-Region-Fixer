@@ -972,7 +972,7 @@ def scan_chunk(region_file, coords, global_coords, entity_limit):
         elif chunk_type == c.POI_DIR:
             # To check if it's a POI chunk check for the tag "Sections"
             # If we give a look to the wiki:
-            # https://minecraft.gamepedia.com/Java_Edition_level_format#poi_format
+            # https://minecraft.wiki/w/Java_Edition_level_format#poi_format
             # We can see that there are two TAGs at root of a POI, "Data" and "DataVersion", but
             # in my tests the TAGs at root are "Sections and "DataVersion", no trace of "Data".
             #
