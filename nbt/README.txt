@@ -13,7 +13,7 @@ From the initial specification by Markus Persson::
   amounts of binary data with smaller amounts of additional data.
   An NBT file consists of a single GZIPped Named Tag of type TAG_Compound.
 
-Current specification is on the official [Minecraft Wiki](https://minecraft.gamepedia.com/NBT_format).
+Current specification is on the official [Minecraft Wiki](https://minecraft.wiki/w/NBT_format).
 
 This library is very suited to inspect & edit the Minecraft data files. Provided
 examples demonstrate how to:

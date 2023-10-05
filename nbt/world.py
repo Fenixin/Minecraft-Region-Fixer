@@ -2,7 +2,7 @@
 Handles a Minecraft world save using either the Anvil or McRegion format.
 
 For more information about the world format:
-https://minecraft.gamepedia.com/Level_format
+https://minecraft.wiki/w/Level_format
 """
 
 import os, glob, re
