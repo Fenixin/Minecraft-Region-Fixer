@@ -391,17 +391,26 @@ class ScannedRegionFile:
                         out = b""
 
                         list_of_bytes = [i.to_bytes(1, sys.byteorder) for i in raw_chunk]
+                        dc_exception = None
                         try:
                             for i in list_of_bytes:
                                 out += dc.decompress(i)
-                        except:
+                        except Exception as e:
+                            dc_exception = e
                             out = b""
-                        # compare the sizes of the new compressed strem and the old one to see if we've got something good
+                        # compare the sizes of the new compressed strem and the old one to see if we've got something that could be good
                         cdata = zlib.compress(out)
                         if len(cdata) == len(raw_chunk):
                             # the chunk is probably good, write it in the region file
                             region_file.write_blockdata(local_coords[0], local_coords[1], out)
-                            print("The chunk {0},{1} in region file {2} was fixed successfully.".format(local_coords[0], local_coords[1], join(self.folder,self.filename)))
+                            # Try to load the chunk to see if we solved anything. Sometimes we can get a good stream of bytes and still not being a chunk.
+                            try:
+                                __c = region_file.get_chunk(*local_coords)
+                                print("The chunk {0},{1} in region file {2} was fixed successfully.".format(local_coords[0], local_coords[1], join(self.folder,self.filename)))
+                                counter += 1
+                            except Exception as e:
+                                pass
+
                         else:
                             print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], join(self.folder,self.filename)))
                         #=======================================================
