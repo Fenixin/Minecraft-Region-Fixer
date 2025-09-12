@@ -409,6 +409,7 @@ class ScannedRegionFile:
                                 print("The chunk {0},{1} in region file {2} was fixed successfully.".format(local_coords[0], local_coords[1], join(self.folder,self.filename)))
                                 counter += 1
                             except Exception as e:
+                                print("The chunk {0},{1} in region file {2} couldn't be fixed.".format(local_coords[0], local_coords[1], join(self.folder,self.filename)))
                                 pass
 
                         else:
@@ -442,6 +443,9 @@ class ScannedRegionFile:
                 counter += 1
 
             elif status == c.CHUNK_WRONG_LOCATED:
+                # TODO: IMPORTANT. Right now the chunk is written in its rightful position without checking if there is another chunk in there.
+                # Sometimes regionfixer will overwrite a good chunk or a corrupted chunk (probably the original). This could be greatly improved
+                # maybe prompt for user input on what to do.
                 data_coords = get_chunk_data_coords(chunk)
                 data_l_coords = _get_local_chunk_coords(*data_coords)
                 region_file.write_chunk(data_l_coords[0], data_l_coords[1], chunk)
