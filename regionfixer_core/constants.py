@@ -79,7 +79,7 @@ CHUNK_PROBLEMS_ARGS = {CHUNK_CORRUPTED: 'corrupted',
                        CHUNK_WRONG_LOCATED: 'wrong-located',
                        CHUNK_TOO_MANY_ENTITIES: 'entities',
                        CHUNK_SHARED_OFFSET: 'shared-offset',
-                       CHUNK_MISSING_ENTITIES_TAG: 'missing_tag'
+                       CHUNK_MISSING_ENTITIES_TAG: 'missing-tag'
                        }
 
 # used in some places where there is less space
@@ -151,9 +151,9 @@ REGION_PROBLEMS = [REGION_TOO_SMALL,
                    REGION_UNREADABLE_PERMISSION_ERROR]
 
 # arguments used in the options
-REGION_PROBLEMS_ARGS = {REGION_TOO_SMALL: 'too_small',
+REGION_PROBLEMS_ARGS = {REGION_TOO_SMALL: 'too-small',
                         REGION_UNREADABLE: 'unreadable',
-                        REGION_UNREADABLE_PERMISSION_ERROR: 'permission_error'
+                        REGION_UNREADABLE_PERMISSION_ERROR: 'permission-error'
                         }
 
 # used in some places where there is less space
