@@ -639,6 +639,22 @@ class DataFileSet(DataSet):
                 return True
         return False
 
+    def has_problems_filtered(self, ignored_filenames=None):
+        """ Like has_problems but skips files whose name is in ignored_filenames.
+
+        Inputs:
+         - ignored_filenames -- Iterable of filenames (basenames) to ignore
+                                when deciding whether this dataset has
+                                problems. Useful for auto-regenerated files
+                                such as 'idcounts.dat'.
+        """
+
+        ignored = set(ignored_filenames or ())
+        for d in self._set.values():
+            if d.status in c.DATAFILE_PROBLEMS and d.filename not in ignored:
+                return True
+        return False
+
     def _replace_in_data_structure(self, data):
         self._set[data.path] = data
 
@@ -800,6 +816,21 @@ class RegionSet(DataSet):
             if self.count_chunks(s):
                 return True
 
+        return False
+
+    def has_problems_filtered(self, ignored_filenames=None):
+        """ Like has_problems but skips region files whose name is in
+        ignored_filenames. A region file listed there contributes nothing
+        to the result, neither for region-level problems nor chunk-level
+        problems contained in it.
+        """
+
+        ignored = set(ignored_filenames or ())
+        for r in self._set.values():
+            if r.filename in ignored:
+                continue
+            if r.has_problems:
+                return True
         return False
 
     def keys(self):
@@ -1203,7 +1234,7 @@ class World:
 
         Return:
          - boolean -- A boolean, True if the world has any problems, false otherwise
-        
+
         """
 
         if self.scanned_level.status in c.DATAFILE_PROBLEMS:
@@ -1215,6 +1246,28 @@ class World:
 
         for r in self.regionsets:
             if r.has_problems:
+                return True
+
+        return False
+
+    def has_problems_filtered(self, ignored_filenames=None):
+        """ Like has_problems but skips files whose basename appears in
+        ignored_filenames. Covers level.dat, data files and region files.
+        """
+
+        ignored = set(ignored_filenames or ())
+
+        if self.scanned_level.status in c.DATAFILE_PROBLEMS:
+            level_name = self.scanned_level.filename or 'level.dat'
+            if level_name not in ignored:
+                return True
+
+        for d in self.datafilesets:
+            if d.has_problems_filtered(ignored):
+                return True
+
+        for r in self.regionsets:
+            if r.has_problems_filtered(ignored):
                 return True
 
         return False
