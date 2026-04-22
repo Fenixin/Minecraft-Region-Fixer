@@ -1,2 +1,5 @@
 # bytecompiled python files
 *.pyc
+
+# graphify
+graphify-out
